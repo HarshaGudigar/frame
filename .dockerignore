@@ -1,0 +1,9 @@
+node_modules
+webapp/node_modules
+backend/node_modules
+desktop/node_modules
+mobile/node_modules
+.next
+out
+.git
+.expo
