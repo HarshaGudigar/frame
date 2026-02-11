@@ -79,26 +79,45 @@ NODE_ENV=production npm start
 
 ---
 
-### 4. Docker (All-in-One Container)
+### 4. Docker & Production Deployment
 
-You can run the entire Backend, Webapp, and an internal MongoDB instance in a single container.
+The application is configured for automated deployment to **AWS Lightsail** using a monolithic Docker container.
 
-**Build and Run:**
+#### **Local Docker Run**
 ```bash
-# Build the image
-docker build -t mern-monolith .
-
-# Run the container
-docker run --name mern-app -d -p 3000:3000 -p 5000:5000 mern-monolith
+# Build and run locally
+docker compose up -d --build
 ```
 
-*The Webapp will be accessible at http://localhost:3000.*
+#### **Production Deployment (AWS Lightsail)**
+
+The deployment is automated via **GitHub Actions**.
+
+**1. Infrastructure**
+- **Platform**: AWS Lightsail (Ubuntu 22.04 LTS).
+- **Public IP**: `13.232.95.78`
+- **Orchestration**: Docker Compose with MongoDB volume persistence.
+
+**2. CI/CD Pipeline**
+Pushing to the `main` branch triggers the [.github/workflows/deploy.yml](.github/workflows/deploy.yml) workflow:
+- Connects to the VM via SSH.
+- Installs Docker automatically (if missing).
+- Pulls the latest code.
+- Rebuilds and restarts the container using `docker compose`.
+
+**3. Required GitHub Secrets**
+To maintain the pipeline, ensure the following secrets are set in your repository:
+- `LIGHTSAIL_HOST`: `13.232.95.78`
+- `LIGHTSAIL_USERNAME`: `ubuntu`
+- `LIGHTSAIL_SSH_KEY`: Your private SSH key (`.pem` content).
 
 ## Environment Variables
 
 - **Backend**: Uses `.env` for `PORT` and `MONGODB_URI`.
-- **Webapp**: Connects to `http://localhost:5000` for API data.
-- **Docker**: Automatically connects to the internal `mongod` instance.
+- **Webapp**: 
+  - **Development**: Uses `.env.local` (Connects to `localhost:5000`).
+  - **Production**: Uses `.env.production` (Connects to `http://13.232.95.78:5000`).
+- **Docker**: Automatically connects to the internal `mongod` instance and persists data in the `mongodb_data` volume.
 
 ## Contributing
 
