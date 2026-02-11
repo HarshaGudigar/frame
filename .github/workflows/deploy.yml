@@ -1,0 +1,27 @@
+name: Deploy to Lightsail
+
+on:
+  push:
+    branches:
+      - main  # Adjust this to your main branch name
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Lightsail via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.LIGHTSAIL_HOST }}
+          username: ${{ secrets.LIGHTSAIL_USERNAME }}
+          key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          script: |
+            cd ~/frame || git clone https://github.com/${{ github.repository }} ~/frame
+            cd ~/frame
+            git pull origin main
+            
+            # Build and restart using Docker Compose
+            docker compose up -d --build
