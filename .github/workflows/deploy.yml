@@ -19,6 +19,16 @@ jobs:
           username: ${{ secrets.LIGHTSAIL_USERNAME }}
           key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
           script: |
+            # Check if docker is installed, if not, install it
+            if ! [ -x "$(command -v docker)" ]; then
+              echo "Docker not found. Installing..."
+              curl -fsSL https://get.docker.com -o get-docker.sh
+              sudo sh get-docker.sh
+              sudo apt-get install -y docker-compose-plugin
+              sudo usermod -aG docker $USER
+              echo "Docker installed. Note: You may need to manually re-login if group permissions fail."
+            fi
+
             cd ~/frame || git clone https://github.com/${{ github.repository }} ~/frame
             cd ~/frame
             git pull origin main
