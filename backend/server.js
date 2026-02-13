@@ -11,17 +11,27 @@ const MONGODB_URI = process.env.MONGODB_URI;
 app.use(cors());
 app.use(express.json());
 
-// Database Connection
-mongoose.connect(MONGODB_URI)
-    .then(() => console.log('MongoDB connected'))
-    .catch(err => console.error('MongoDB connection error:', err));
+// Multi-Tenancy Middleware (Applied globally)
+const tenantMiddleware = require('./middleware/tenantMiddleware');
+app.use(tenantMiddleware);
 
-// Routes
-app.get('/', (req, res) => {
-    res.json({ message: 'Hello World from Backend!' });
+// --- Routes ---
+
+// Auth Routes (Public — no auth required)
+const authRoutes = require('./routes/auth');
+app.use('/api/auth', authRoutes);
+
+// Marketplace Routes (Browse is public, Purchase is protected inside the route)
+const marketplaceRoutes = require('./routes/marketplace');
+app.use('/api/marketplace', marketplaceRoutes);
+
+message: 'Alyxnet Frame API',
+    mode: RUNTIME_MODE,
+        tenant: req.tenant ? req.tenant.name : 'None (Global Context)',
+    });
 });
 
 // Start Server
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+    console.log(`[${RUNTIME_MODE}] Server running on port ${PORT}`);
 });
