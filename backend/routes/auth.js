@@ -5,6 +5,7 @@ const GlobalUser = require('../models/GlobalUser');
 const { successResponse, errorResponse } = require('../utils/responseWrapper');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'CHANGE_ME_IN_PRODUCTION';
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Auth Routes (Global / Control Plane)
@@ -13,6 +14,17 @@ const JWT_SECRET = process.env.JWT_SECRET || 'CHANGE_ME_IN_PRODUCTION';
 // Register a new global user
 router.post('/register', async (req, res) => {
     const { email, password, firstName, lastName } = req.body;
+
+    // Input validation
+    if (!email || !password) {
+        return errorResponse(res, 'Email and password are required', 400);
+    }
+    if (!EMAIL_REGEX.test(email)) {
+        return errorResponse(res, 'Invalid email format', 400);
+    }
+    if (password.length < 6) {
+        return errorResponse(res, 'Password must be at least 6 characters', 400);
+    }
 
     try {
         const existingUser = await GlobalUser.findOne({ email });
@@ -39,6 +51,14 @@ router.post('/register', async (req, res) => {
 // Login
 router.post('/login', async (req, res) => {
     const { email, password } = req.body;
+
+    // Input validation
+    if (!email || !password) {
+        return errorResponse(res, 'Email and password are required', 400);
+    }
+    if (!EMAIL_REGEX.test(email)) {
+        return errorResponse(res, 'Invalid email format', 400);
+    }
 
     try {
         // Explicitly select password since it's excluded by default

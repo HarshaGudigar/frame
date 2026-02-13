@@ -25,8 +25,23 @@ app.use('/api/auth', authRoutes);
 const marketplaceRoutes = require('./routes/marketplace');
 app.use('/api/marketplace', marketplaceRoutes);
 
-message: 'Alyxnet Frame API',
-    mode: RUNTIME_MODE,
+const adminRoutes = require('./routes/admin');
+app.use('/api/admin', adminRoutes);
+
+app.get('/api/health', (req, res) => {
+    res.json({ ok: true, routes: ['/api/auth', '/api/marketplace', '/api/admin'] });
+});
+
+// Database Connection
+const RUNTIME_MODE = process.env.APP_TENANT_ID ? 'SILO' : 'HUB';
+mongoose.connect(MONGODB_URI)
+    .then(() => console.log(`[${RUNTIME_MODE}] MongoDB connected`))
+    .catch(err => console.error(`[${RUNTIME_MODE}] MongoDB error:`, err));
+
+app.get('/', (req, res) => {
+    res.status(200).json({
+        message: 'Alyxnet Frame API',
+        mode: RUNTIME_MODE,
         tenant: req.tenant ? req.tenant.name : 'None (Global Context)',
     });
 });

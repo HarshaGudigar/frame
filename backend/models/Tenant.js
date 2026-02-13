@@ -37,6 +37,20 @@ const tenantSchema = new mongoose.Schema({
     lastDeploymentDuration: {
         type: Number,
     },
+    status: {
+        type: String,
+        enum: ['online', 'offline', 'error'],
+        default: 'offline',
+    },
+    lastSeen: {
+        type: Date,
+    },
+    metrics: {
+        cpu: Number,
+        ram: Number,
+        uptime: Number,
+        version: String,
+    },
     isActive: {
         type: Boolean,
         default: true,

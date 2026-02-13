@@ -21,7 +21,7 @@ router.get('/products', async (req, res) => {
 });
 
 // 2. Purchase a module for a tenant (Protected — requires auth + owner/admin role)
-router.post('/purchase', authMiddleware, async (req, res) => {
+router.post('/purchase', authMiddleware, requireRole('owner', 'admin'), async (req, res) => {
     const { tenantId, productId } = req.body;
 
     if (!tenantId || !productId) {
@@ -29,14 +29,6 @@ router.post('/purchase', authMiddleware, async (req, res) => {
     }
 
     try {
-        // Verify the authenticated user has owner/admin access to this tenant
-        const userTenantAccess = req.user.tenants?.find(
-            t => t.tenant === tenantId
-        );
-
-        if (!userTenantAccess || !['owner', 'admin'].includes(userTenantAccess.role)) {
-            return errorResponse(res, 'Only tenant owners or admins can purchase modules', 403);
-        }
 
         const tenant = await Tenant.findById(tenantId);
         const product = await Product.findById(productId);

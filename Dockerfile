@@ -23,23 +23,24 @@ RUN npm install
 COPY backend/package*.json ./backend/
 RUN cd backend && npm install
 
-# Copy webapp and install dependencies
-COPY webapp/package*.json ./webapp/
-RUN cd webapp && npm install
+# Copy frontend and install dependencies
+COPY frontend/package*.json ./frontend/
+RUN cd frontend && npm install
 
 # Copy the rest of the application code
 COPY . .
 
-# Build Next.js app
-RUN cd webapp && npm run build
+# Build Vite frontend for production
+RUN cd frontend && npm run build
 
-# Expose ports
+# Install 'serve' globally to host the static frontend
+RUN npm install -g serve
+
+# Expose ports: 3000 (frontend), 5000 (backend)
 EXPOSE 3000 5000
 
-# Start script to run Mongo, Backend, and Webapp
-# We use 'serve' to host the static 'out' directory
+# Start Mongo, Backend, and Frontend (static serve)
 CMD ["npx", "concurrently", \
     "\"mongod --bind_ip_all\"", \
     "\"npm run start --prefix backend\"", \
-    "\"npx serve -s webapp/out -l 3000\""]
-
+    "\"serve -s frontend/dist -l 3000\""]
