@@ -415,16 +415,44 @@ function MarketplacePage() {
   const { api } = useAuth();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ name: '', slug: '', description: '', amount: '', interval: 'monthly', features: '' });
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await api.get('/marketplace/products');
-        setProducts(res.data.data || []);
-      } catch { }
-      finally { setLoading(false); }
-    })();
-  }, []);
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/marketplace/products');
+      setProducts(res.data.data || []);
+    } catch { }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { fetchProducts(); }, []);
+
+  const formatPrice = (price) => {
+    if (!price || !price.amount) return 'Free';
+    return `$${price.amount}/${price.interval || 'mo'}`;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    try {
+      await api.post('/marketplace/products', {
+        name: form.name,
+        slug: form.slug,
+        description: form.description,
+        price: { amount: Number(form.amount) || 0, currency: 'USD', interval: form.interval },
+        features: form.features.split(',').map(s => s.trim()).filter(Boolean),
+      });
+      setForm({ name: '', slug: '', description: '', amount: '', interval: 'monthly', features: '' });
+      setShowForm(false);
+      fetchProducts();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to create product');
+    }
+  };
 
   return (
     <div className="page">
@@ -433,7 +461,61 @@ function MarketplacePage() {
           <h1>Marketplace</h1>
           <p className="text-muted">Browse and purchase modules for your tenants</p>
         </div>
+        <button className="deploy-btn" onClick={() => setShowForm(!showForm)}>
+          <Plus size={16} /> Add Product
+        </button>
       </div>
+
+      {showForm && (
+        <div className="glass card form-card">
+          <h3>New Product</h3>
+          <form onSubmit={handleSubmit} className="tenant-form">
+            <div className="form-row">
+              <div className="form-group">
+                <label>Name</label>
+                <input type="text" required value={form.name} placeholder="Hospital Module"
+                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))} className="form-input" />
+              </div>
+              <div className="form-group">
+                <label>Slug</label>
+                <input type="text" required value={form.slug} placeholder="hospital"
+                  onChange={e => setForm(f => ({ ...f, slug: e.target.value }))} className="form-input" />
+              </div>
+            </div>
+            <div className="form-group">
+              <label>Description</label>
+              <input type="text" value={form.description} placeholder="Full hospital management suite"
+                onChange={e => setForm(f => ({ ...f, description: e.target.value }))} className="form-input" />
+            </div>
+            <div className="form-row">
+              <div className="form-group">
+                <label>Price (USD)</label>
+                <input type="number" value={form.amount} placeholder="99"
+                  onChange={e => setForm(f => ({ ...f, amount: e.target.value }))} className="form-input" />
+              </div>
+              <div className="form-group">
+                <label>Billing</label>
+                <select value={form.interval}
+                  onChange={e => setForm(f => ({ ...f, interval: e.target.value }))} className="form-input">
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                  <option value="once">One-time</option>
+                </select>
+              </div>
+            </div>
+            <div className="form-group">
+              <label>Features (comma-separated)</label>
+              <input type="text" value={form.features} placeholder="Patient records, Appointments, Billing"
+                onChange={e => setForm(f => ({ ...f, features: e.target.value }))} className="form-input" />
+            </div>
+            {error && <div className="form-error"><AlertCircle size={14} /> {error}</div>}
+            <div className="form-actions">
+              <button type="submit" className="deploy-btn">Create Product</button>
+              <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {products.length > 0 ? (
         <div className="product-grid">
@@ -442,7 +524,7 @@ function MarketplacePage() {
               <div className="product-icon"><Package size={32} color="var(--primary)" /></div>
               <h3>{p.name}</h3>
               <p className="text-muted">{p.description || 'No description'}</p>
-              <div className="product-price">${p.price || 'Free'}</div>
+              <div className="product-price">{formatPrice(p.price)}</div>
               <ul className="product-features">
                 {p.features?.map((f, i) => <li key={i}>{f}</li>)}
               </ul>
@@ -452,8 +534,8 @@ function MarketplacePage() {
       ) : !loading ? (
         <div className="glass card empty-state-card">
           <Store size={48} color="var(--text-muted)" />
-          <h3>No Products Available</h3>
-          <p className="text-muted">Modules will appear here once they are added to the marketplace.</p>
+          <h3>No Products Yet</h3>
+          <p className="text-muted">Click "Add Product" to create your first marketplace module.</p>
         </div>
       ) : null}
     </div>

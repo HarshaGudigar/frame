@@ -20,6 +20,27 @@ router.get('/products', async (req, res) => {
     }
 });
 
+// 1b. Create a new product (Protected — requires auth)
+router.post('/products', authMiddleware, async (req, res) => {
+    const { name, slug, description, price, features } = req.body;
+
+    if (!name || !slug) {
+        return errorResponse(res, 'Name and slug are required', 400);
+    }
+
+    try {
+        const existing = await Product.findOne({ slug });
+        if (existing) {
+            return errorResponse(res, `Product with slug "${slug}" already exists`, 409);
+        }
+
+        const product = await Product.create({ name, slug, description, price, features });
+        return successResponse(res, product, 'Product created', 201);
+    } catch (err) {
+        return errorResponse(res, 'Failed to create product', 500, err);
+    }
+});
+
 // 2. Purchase a module for a tenant (Protected — requires auth + owner/admin role)
 router.post('/purchase', authMiddleware, requireRole('owner', 'admin'), async (req, res) => {
     const { tenantId, productId } = req.body;
