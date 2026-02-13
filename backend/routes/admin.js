@@ -4,11 +4,11 @@ const Tenant = require('../models/Tenant');
 const { successResponse, errorResponse } = require('../utils/responseWrapper');
 const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
 
-/**
- * Silo Heartbeat API
- * Called by Silo VMs every 60 seconds to report health and metrics.
- * Protected by a shared API key (machine-to-machine, not user JWT).
- */
+// Async route wrapper — catches errors and forwards to Express error handler
+const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+
+// ─── Heartbeat (Machine-to-Machine, API Key auth) ────────────────────────────
+
 const HEARTBEAT_SECRET = process.env.HEARTBEAT_SECRET || 'heartbeat-dev-key';
 
 router.post('/heartbeat', (req, res, next) => {
@@ -17,55 +17,121 @@ router.post('/heartbeat', (req, res, next) => {
         return errorResponse(res, 'Invalid or missing API key', 401);
     }
     next();
-}, async (req, res) => {
+}, asyncHandler(async (req, res) => {
     const { tenantId, metrics } = req.body;
 
     if (!tenantId) {
         return errorResponse(res, 'Tenant ID is required', 400);
     }
 
-    try {
-        // Find tenant by slug (internal ID used by silos)
-        const tenant = await Tenant.findOne({ slug: tenantId });
-        if (!tenant) {
-            return errorResponse(res, 'Tenant not found', 404);
-        }
-
-        // Update health status and metrics
-        tenant.status = 'online';
-        tenant.lastSeen = new Date();
-        tenant.metrics = {
-            cpu: metrics?.cpu || 0,
-            ram: metrics?.ram || 0,
-            uptime: metrics?.uptime || 0,
-            version: metrics?.version || 'unknown'
-        };
-
-        await tenant.save();
-
-        // Return desired config (e.g., active modules) so Silo can sync
-        return successResponse(res, {
-            subscribedModules: tenant.subscribedModules,
-            status: tenant.status
-        }, 'Heartbeat processed');
-
-    } catch (err) {
-        console.error('Heartbeat Processing Error:', err);
-        return errorResponse(res, 'Internal server error', 500);
+    const tenant = await Tenant.findOne({ slug: tenantId });
+    if (!tenant) {
+        return errorResponse(res, 'Tenant not found', 404);
     }
-});
+
+    tenant.status = 'online';
+    tenant.lastSeen = new Date();
+    tenant.metrics = {
+        cpu: metrics?.cpu || 0,
+        ram: metrics?.ram || 0,
+        uptime: metrics?.uptime || 0,
+        version: metrics?.version || 'unknown'
+    };
+
+    await tenant.save();
+
+    return successResponse(res, {
+        subscribedModules: tenant.subscribedModules,
+        status: tenant.status
+    }, 'Heartbeat processed');
+}));
+
+// ─── Tenant CRUD (JWT auth required) ──────────────────────────────────────────
 
 /**
- * List all tenants with status and metrics
- * Protected — requires authenticated user with owner or admin role.
+ * GET /api/admin/tenants — List all tenants
  */
-router.get('/tenants', authMiddleware, async (req, res) => {
-    try {
-        const tenants = await Tenant.find().sort({ lastSeen: -1 });
-        return successResponse(res, tenants, 'Tenants retrieved');
-    } catch (err) {
-        return errorResponse(res, 'Failed to fetch tenants', 500, err);
+router.get('/tenants', authMiddleware, asyncHandler(async (req, res) => {
+    const tenants = await Tenant.find().sort({ lastSeen: -1 });
+    return successResponse(res, tenants, 'Tenants retrieved');
+}));
+
+/**
+ * GET /api/admin/tenants/:id — Get single tenant
+ */
+router.get('/tenants/:id', authMiddleware, asyncHandler(async (req, res) => {
+    const tenant = await Tenant.findById(req.params.id);
+    if (!tenant) {
+        return errorResponse(res, 'Tenant not found', 404);
     }
-});
+    return successResponse(res, tenant, 'Tenant retrieved');
+}));
+
+/**
+ * POST /api/admin/tenants — Create a new tenant
+ */
+router.post('/tenants', authMiddleware, asyncHandler(async (req, res) => {
+    const { name, slug, vmIpAddress, subscribedModules } = req.body;
+
+    // Validation
+    if (!name || !slug) {
+        return errorResponse(res, 'Name and slug are required', 400);
+    }
+
+    if (!/^[a-z0-9-]+$/.test(slug)) {
+        return errorResponse(res, 'Slug must be lowercase letters, numbers, and hyphens only', 400);
+    }
+
+    // Check for duplicate slug
+    const existing = await Tenant.findOne({ slug });
+    if (existing) {
+        return errorResponse(res, `Tenant with slug "${slug}" already exists`, 409);
+    }
+
+    const tenant = await Tenant.create({
+        name,
+        slug,
+        vmIpAddress: vmIpAddress || '',
+        subscribedModules: subscribedModules || [],
+        status: 'offline',
+        deploymentStatus: 'pending',
+    });
+
+    return successResponse(res, tenant, 'Tenant created', 201);
+}));
+
+/**
+ * PUT /api/admin/tenants/:id — Update a tenant
+ */
+router.put('/tenants/:id', authMiddleware, asyncHandler(async (req, res) => {
+    const { name, vmIpAddress, subscribedModules, isActive } = req.body;
+
+    const tenant = await Tenant.findById(req.params.id);
+    if (!tenant) {
+        return errorResponse(res, 'Tenant not found', 404);
+    }
+
+    // Update only provided fields
+    if (name !== undefined) tenant.name = name;
+    if (vmIpAddress !== undefined) tenant.vmIpAddress = vmIpAddress;
+    if (subscribedModules !== undefined) tenant.subscribedModules = subscribedModules;
+    if (isActive !== undefined) tenant.isActive = isActive;
+
+    await tenant.save();
+
+    return successResponse(res, tenant, 'Tenant updated');
+}));
+
+/**
+ * DELETE /api/admin/tenants/:id — Delete a tenant
+ */
+router.delete('/tenants/:id', authMiddleware, asyncHandler(async (req, res) => {
+    const tenant = await Tenant.findByIdAndDelete(req.params.id);
+    if (!tenant) {
+        return errorResponse(res, 'Tenant not found', 404);
+    }
+
+    return successResponse(res, { id: req.params.id }, 'Tenant deleted');
+}));
 
 module.exports = router;
