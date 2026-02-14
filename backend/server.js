@@ -1,63 +1,143 @@
 require('dotenv').config();
+
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const pino = require('pino');
+const config = require('./config');
+
+// Gateway
+const { discoverModules, registerModules, getModuleSummary } = require('./gateway/moduleLoader');
+const createModuleAccessMiddleware = require('./gateway/moduleAccessMiddleware');
+const { createErrorClassifier } = require('./gateway/errorClassifier');
+const { mountSwaggerDocs } = require('./gateway/swagger');
+
+// ─── Logger ──────────────────────────────────────────────────────────────────
+
+const logger = pino({
+    level: config.LOG_LEVEL,
+    transport: config.NODE_ENV === 'development'
+        ? { target: 'pino-pretty', options: { colorize: true, translateTime: 'HH:MM:ss' } }
+        : undefined,
+});
 
 const app = express();
-const PORT = process.env.PORT || 5000;
-const MONGODB_URI = process.env.MONGODB_URI;
 
-// Middleware
-app.use(cors());
-app.use(express.json());
+// ─── Security Middleware ─────────────────────────────────────────────────────
 
-// Multi-Tenancy Middleware (Applied globally)
+app.use(helmet());
+
+// CORS — only allow whitelisted origins
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (!origin || config.CORS_ORIGINS.includes(origin)) {
+        return cors({ origin: true, credentials: true })(req, res, next);
+    }
+    logger.warn({ origin }, 'CORS blocked request');
+    return res.status(403).json({ success: false, message: 'Origin not allowed' });
+});
+
+// Parse JSON with size limit
+app.use(express.json({ limit: config.BODY_SIZE_LIMIT }));
+
+// Rate limiter for auth endpoints
+const authLimiter = rateLimit({
+    windowMs: config.RATE_LIMIT_WINDOW_MS,
+    max: config.RATE_LIMIT_MAX_AUTH,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { success: false, message: 'Too many requests. Please try again later.' },
+});
+
+// ─── Request Logging ─────────────────────────────────────────────────────────
+
+app.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+        logger.info({
+            method: req.method,
+            url: req.originalUrl,
+            status: res.statusCode,
+            duration: `${Date.now() - start}ms`,
+        });
+    });
+    next();
+});
+
+// ─── Multi-Tenancy ───────────────────────────────────────────────────────────
+
 const tenantMiddleware = require('./middleware/tenantMiddleware');
 app.use(tenantMiddleware);
 
-// --- Routes ---
+// ─── Module Discovery ────────────────────────────────────────────────────────
 
-// Auth Routes (Public — no auth required)
+const modules = discoverModules(logger);
+
+// ─── Core Routes ─────────────────────────────────────────────────────────────
+
 const authRoutes = require('./routes/auth');
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
 
-// Marketplace Routes (Browse is public, Purchase is protected inside the route)
 const marketplaceRoutes = require('./routes/marketplace');
 app.use('/api/marketplace', marketplaceRoutes);
 
 const adminRoutes = require('./routes/admin');
 app.use('/api/admin', adminRoutes);
 
+// ─── Module Routes (Auto-registered via gateway) ─────────────────────────────
+
+registerModules(app, modules, createModuleAccessMiddleware, logger);
+
+// ─── Swagger Documentation ───────────────────────────────────────────────────
+
+mountSwaggerDocs(app, modules, logger);
+
+// ─── Health Check ────────────────────────────────────────────────────────────
+
 app.get('/api/health', (req, res) => {
-    res.json({ ok: true, routes: ['/api/auth', '/api/marketplace', '/api/admin'] });
+    const dbState = mongoose.connection.readyState;
+    const dbStatus = { 0: 'disconnected', 1: 'connected', 2: 'connecting', 3: 'disconnecting' };
+
+    res.json({
+        ok: dbState === 1,
+        mode: config.RUNTIME_MODE,
+        uptime: `${Math.floor(process.uptime())}s`,
+        database: dbStatus[dbState] || 'unknown',
+        timestamp: new Date().toISOString(),
+        modules: getModuleSummary(modules),
+        routes: ['/api/auth', '/api/marketplace', '/api/admin', '/api/docs'],
+    });
 });
 
-// Database Connection
-const RUNTIME_MODE = process.env.APP_TENANT_ID ? 'SILO' : 'HUB';
-mongoose.connect(MONGODB_URI)
-    .then(() => console.log(`[${RUNTIME_MODE}] MongoDB connected`))
-    .catch(err => console.error(`[${RUNTIME_MODE}] MongoDB error:`, err));
+// ─── Database ────────────────────────────────────────────────────────────────
+
+mongoose.connect(config.MONGODB_URI)
+    .then(() => logger.info(`[${config.RUNTIME_MODE}] MongoDB connected`))
+    .catch(err => logger.error({ err }, `[${config.RUNTIME_MODE}] MongoDB connection failed`));
 
 app.get('/', (req, res) => {
     res.status(200).json({
         message: 'Alyxnet Frame API',
-        mode: RUNTIME_MODE,
+        mode: config.RUNTIME_MODE,
         tenant: req.tenant ? req.tenant.name : 'None (Global Context)',
+        docs: '/api/docs',
     });
 });
 
-// Global Error Handler — catches all unhandled errors from routes
-app.use((err, req, res, next) => {
-    console.error(`[ERROR] ${req.method} ${req.path}:`, err.message);
-    const statusCode = err.statusCode || 500;
-    res.status(statusCode).json({
-        success: false,
-        message: process.env.NODE_ENV === 'production' ? 'Internal server error' : err.message,
-        ...(process.env.NODE_ENV !== 'production' && { stack: err.stack }),
-    });
+// ─── Error Handler (Smart Classifier) ────────────────────────────────────────
+
+app.use(createErrorClassifier(logger));
+
+// ─── Start Server ────────────────────────────────────────────────────────────
+
+app.listen(config.PORT, () => {
+    logger.info(`[${config.RUNTIME_MODE}] Server running on port ${config.PORT}`);
+    logger.info(`[${config.RUNTIME_MODE}] CORS origins: ${config.CORS_ORIGINS.join(', ')}`);
+    logger.info(`[${config.RUNTIME_MODE}] Auth rate limit: ${config.RATE_LIMIT_MAX_AUTH} req / ${config.RATE_LIMIT_WINDOW_MS / 60000} min`);
+    logger.info(`[${config.RUNTIME_MODE}] ${modules.length} module(s) loaded`);
+    logger.info(`[${config.RUNTIME_MODE}] API docs at http://localhost:${config.PORT}/api/docs`);
 });
 
-// Start Server
-app.listen(PORT, () => {
-    console.log(`[${RUNTIME_MODE}] Server running on port ${PORT}`);
-});
+module.exports = { app, logger };

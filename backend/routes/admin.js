@@ -3,14 +3,46 @@ const router = express.Router();
 const Tenant = require('../models/Tenant');
 const { successResponse, errorResponse } = require('../utils/responseWrapper');
 const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
+const { HEARTBEAT_SECRET } = require('../config');
 
-// Async route wrapper — catches errors and forwards to Express error handler
+// Async route wrapper
 const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
-// ─── Heartbeat (Machine-to-Machine, API Key auth) ────────────────────────────
+// ─── Heartbeat (Machine-to-Machine) ──────────────────────────────────────────
 
-const HEARTBEAT_SECRET = process.env.HEARTBEAT_SECRET || 'heartbeat-dev-key';
-
+/**
+ * @openapi
+ * /api/admin/heartbeat:
+ *   post:
+ *     tags: [Admin]
+ *     summary: Silo heartbeat
+ *     description: Machine-to-machine endpoint for tenant silo instances to report their status and metrics.
+ *     security:
+ *       - apiKey: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [tenantId]
+ *             properties:
+ *               tenantId: { type: string, example: "acme-corp" }
+ *               metrics:
+ *                 type: object
+ *                 properties:
+ *                   cpu: { type: number, example: 45.2 }
+ *                   ram: { type: number, example: 68.1 }
+ *                   uptime: { type: number, example: 86400 }
+ *                   version: { type: string, example: "1.0.0" }
+ *     responses:
+ *       200:
+ *         description: Heartbeat processed
+ *       401:
+ *         description: Invalid or missing API key
+ *       404:
+ *         description: Tenant not found
+ */
 router.post('/heartbeat', (req, res, next) => {
     const apiKey = req.headers['x-api-key'];
     if (!apiKey || apiKey !== HEARTBEAT_SECRET) {
@@ -46,34 +78,55 @@ router.post('/heartbeat', (req, res, next) => {
     }, 'Heartbeat processed');
 }));
 
-// ─── Tenant CRUD (JWT auth required) ──────────────────────────────────────────
+// ─── Tenant CRUD ─────────────────────────────────────────────────────────────
 
 /**
- * GET /api/admin/tenants — List all tenants
+ * @openapi
+ * /api/admin/tenants:
+ *   get:
+ *     tags: [Admin]
+ *     summary: List all tenants
+ *     description: Returns all tenants sorted by last seen (most recent first).
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of tenants
+ *       401:
+ *         description: Authentication required
+ *   post:
+ *     tags: [Admin]
+ *     summary: Create a new tenant
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, slug]
+ *             properties:
+ *               name: { type: string, example: "Acme Corporation" }
+ *               slug: { type: string, pattern: "^[a-z0-9-]+$", example: "acme-corp" }
+ *               vmIpAddress: { type: string, example: "10.0.1.5" }
+ *               subscribedModules: { type: array, items: { type: string }, example: ["accounting", "crm"] }
+ *     responses:
+ *       201:
+ *         description: Tenant created
+ *       400:
+ *         description: Validation error
+ *       409:
+ *         description: Slug already exists
  */
 router.get('/tenants', authMiddleware, asyncHandler(async (req, res) => {
     const tenants = await Tenant.find().sort({ lastSeen: -1 });
     return successResponse(res, tenants, 'Tenants retrieved');
 }));
 
-/**
- * GET /api/admin/tenants/:id — Get single tenant
- */
-router.get('/tenants/:id', authMiddleware, asyncHandler(async (req, res) => {
-    const tenant = await Tenant.findById(req.params.id);
-    if (!tenant) {
-        return errorResponse(res, 'Tenant not found', 404);
-    }
-    return successResponse(res, tenant, 'Tenant retrieved');
-}));
-
-/**
- * POST /api/admin/tenants — Create a new tenant
- */
 router.post('/tenants', authMiddleware, asyncHandler(async (req, res) => {
     const { name, slug, vmIpAddress, subscribedModules } = req.body;
 
-    // Validation
     if (!name || !slug) {
         return errorResponse(res, 'Name and slug are required', 400);
     }
@@ -82,7 +135,6 @@ router.post('/tenants', authMiddleware, asyncHandler(async (req, res) => {
         return errorResponse(res, 'Slug must be lowercase letters, numbers, and hyphens only', 400);
     }
 
-    // Check for duplicate slug
     const existing = await Tenant.findOne({ slug });
     if (existing) {
         return errorResponse(res, `Tenant with slug "${slug}" already exists`, 409);
@@ -101,8 +153,72 @@ router.post('/tenants', authMiddleware, asyncHandler(async (req, res) => {
 }));
 
 /**
- * PUT /api/admin/tenants/:id — Update a tenant
+ * @openapi
+ * /api/admin/tenants/{id}:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get a tenant by ID
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Tenant details
+ *       404:
+ *         description: Tenant not found
+ *   put:
+ *     tags: [Admin]
+ *     summary: Update a tenant
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name: { type: string }
+ *               vmIpAddress: { type: string }
+ *               subscribedModules: { type: array, items: { type: string } }
+ *               isActive: { type: boolean }
+ *     responses:
+ *       200:
+ *         description: Tenant updated
+ *       404:
+ *         description: Tenant not found
+ *   delete:
+ *     tags: [Admin]
+ *     summary: Delete a tenant
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Tenant deleted
+ *       404:
+ *         description: Tenant not found
  */
+router.get('/tenants/:id', authMiddleware, asyncHandler(async (req, res) => {
+    const tenant = await Tenant.findById(req.params.id);
+    if (!tenant) {
+        return errorResponse(res, 'Tenant not found', 404);
+    }
+    return successResponse(res, tenant, 'Tenant retrieved');
+}));
+
 router.put('/tenants/:id', authMiddleware, asyncHandler(async (req, res) => {
     const { name, vmIpAddress, subscribedModules, isActive } = req.body;
 
@@ -111,7 +227,6 @@ router.put('/tenants/:id', authMiddleware, asyncHandler(async (req, res) => {
         return errorResponse(res, 'Tenant not found', 404);
     }
 
-    // Update only provided fields
     if (name !== undefined) tenant.name = name;
     if (vmIpAddress !== undefined) tenant.vmIpAddress = vmIpAddress;
     if (subscribedModules !== undefined) tenant.subscribedModules = subscribedModules;
@@ -122,9 +237,6 @@ router.put('/tenants/:id', authMiddleware, asyncHandler(async (req, res) => {
     return successResponse(res, tenant, 'Tenant updated');
 }));
 
-/**
- * DELETE /api/admin/tenants/:id — Delete a tenant
- */
 router.delete('/tenants/:id', authMiddleware, asyncHandler(async (req, res) => {
     const tenant = await Tenant.findByIdAndDelete(req.params.id);
     if (!tenant) {

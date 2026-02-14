@@ -1,7 +1,6 @@
 const jwt = require('jsonwebtoken');
 const { errorResponse } = require('../utils/responseWrapper');
-
-const JWT_SECRET = process.env.JWT_SECRET || 'CHANGE_ME_IN_PRODUCTION';
+const { JWT_SECRET } = require('../config');
 
 /**
  * Auth Middleware

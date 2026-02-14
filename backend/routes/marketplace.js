@@ -7,10 +7,42 @@ const { successResponse, errorResponse } = require('../utils/responseWrapper');
 const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
 
 /**
- * Marketplace API
+ * @openapi
+ * /api/marketplace/products:
+ *   get:
+ *     tags: [Marketplace]
+ *     summary: List all products
+ *     description: Browse available modules/products in the marketplace. Public endpoint.
+ *     responses:
+ *       200:
+ *         description: List of active marketplace products
+ *   post:
+ *     tags: [Marketplace]
+ *     summary: Create a product
+ *     description: Add a new product/module to the marketplace.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, slug]
+ *             properties:
+ *               name: { type: string, example: "Accounting & Billing" }
+ *               slug: { type: string, example: "accounting" }
+ *               description: { type: string, example: "Full accounting suite with invoicing" }
+ *               price: { type: number, example: 29.99 }
+ *               features: { type: array, items: { type: string }, example: ["Invoicing", "Expense Tracking", "Reports"] }
+ *     responses:
+ *       201:
+ *         description: Product created
+ *       400:
+ *         description: Missing required fields
+ *       409:
+ *         description: Product slug already exists
  */
-
-// 1. List all available products/modules (Public — anyone can browse)
 router.get('/products', async (req, res) => {
     try {
         const products = await Product.find({ isActive: true });
@@ -20,7 +52,6 @@ router.get('/products', async (req, res) => {
     }
 });
 
-// 1b. Create a new product (Protected — requires auth)
 router.post('/products', authMiddleware, async (req, res) => {
     const { name, slug, description, price, features } = req.body;
 
@@ -41,7 +72,37 @@ router.post('/products', authMiddleware, async (req, res) => {
     }
 });
 
-// 2. Purchase a module for a tenant (Protected — requires auth + owner/admin role)
+/**
+ * @openapi
+ * /api/marketplace/purchase:
+ *   post:
+ *     tags: [Marketplace]
+ *     summary: Purchase a module
+ *     description: Subscribe a tenant to a marketplace product. Requires owner or admin role for the tenant.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - $ref: '#/components/parameters/tenantId'
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [tenantId, productId]
+ *             properties:
+ *               tenantId: { type: string, description: "MongoDB ObjectId of the tenant" }
+ *               productId: { type: string, description: "MongoDB ObjectId of the product" }
+ *     responses:
+ *       200:
+ *         description: Successfully subscribed
+ *       400:
+ *         description: Missing required fields
+ *       404:
+ *         description: Tenant or product not found
+ *       409:
+ *         description: Already subscribed to this product
+ */
 router.post('/purchase', authMiddleware, requireRole('owner', 'admin'), async (req, res) => {
     const { tenantId, productId } = req.body;
 
@@ -50,7 +111,6 @@ router.post('/purchase', authMiddleware, requireRole('owner', 'admin'), async (r
     }
 
     try {
-
         const tenant = await Tenant.findById(tenantId);
         const product = await Product.findById(productId);
 
@@ -58,7 +118,6 @@ router.post('/purchase', authMiddleware, requireRole('owner', 'admin'), async (r
             return errorResponse(res, 'Tenant or Product not found', 404);
         }
 
-        // Check for duplicate subscription
         const existingSub = await Subscription.findOne({
             tenant: tenantId,
             product: productId,
@@ -69,14 +128,12 @@ router.post('/purchase', authMiddleware, requireRole('owner', 'admin'), async (r
             return errorResponse(res, `Already subscribed to ${product.name}`, 409);
         }
 
-        // Create the subscription
         const subscription = new Subscription({
             tenant: tenantId,
             product: productId,
         });
         await subscription.save();
 
-        // Add the module slug to the tenant's active list
         if (!tenant.subscribedModules.includes(product.slug)) {
             tenant.subscribedModules.push(product.slug);
             await tenant.save();
