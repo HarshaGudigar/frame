@@ -19,7 +19,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
     await clearCollections();
-    token = await registerAndGetToken(request);
+    token = await registerAndGetToken(request, { role: 'admin' });
 });
 
 describe('GET /api/marketplace/products', () => {
@@ -97,13 +97,20 @@ describe('POST /api/marketplace/purchase', () => {
     });
 
     it('should require tenant context for role check', async () => {
-        // Authenticated but no tenant context → 400
+        // We need a 'user' role token specifically for this 403 check
+        const { registerAndGetToken } = require('./helpers');
+        const userToken = await registerAndGetToken(request, {
+            email: 'regular@test.com',
+            password: 'Test123!',
+            role: 'user',
+        });
+
         const res = await request
             .post('/api/marketplace/purchase')
-            .set('Authorization', `Bearer ${token}`)
+            .set('Authorization', `Bearer ${userToken}`)
             .send({ tenantId: '507f1f77bcf86cd799439011', productId: '507f1f77bcf86cd799439011' });
 
-        // Without x-tenant-id header, user has 'user' role which is not allowed -> 403
+        // Without x-tenant-id header and with 'user' role -> 403
         expect(res.status).toBe(403);
     });
 

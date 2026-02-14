@@ -50,8 +50,10 @@ async function clearCollections() {
 
 /**
  * Register a user and return the token.
+ * Supports passing a 'role' to override the default 'user' role.
  */
 async function registerAndGetToken(request, userData = {}) {
+    const GlobalUser = require('../models/GlobalUser');
     const defaults = {
         email: 'test@example.com',
         password: 'Test123!',
@@ -59,7 +61,28 @@ async function registerAndGetToken(request, userData = {}) {
         lastName: 'User',
     };
 
-    const res = await request.post('/api/auth/register').send({ ...defaults, ...userData });
+    const payload = { ...defaults, ...userData };
+    const { role, ...registrationData } = payload;
+
+    const res = await request.post('/api/auth/register').send(registrationData);
+
+    if (role && res.body.data?.user?._id) {
+        // Registration route defaults to 'user', so we manually update the role in DB
+        // then resign a token if necessary, but actually the dashboard logic
+        // re-signs based on the user in DB during login.
+        // For tests, let's just update the document.
+        await GlobalUser.findByIdAndUpdate(res.body.data.user._id, { role });
+
+        // Re-calculate token with correct role for test requests
+        const jwt = require('jsonwebtoken');
+        const { JWT_SECRET, JWT_EXPIRY } = require('../config');
+        const token = jwt.sign(
+            { userId: res.body.data.user._id, email: payload.email, role },
+            JWT_SECRET,
+            { expiresIn: JWT_EXPIRY },
+        );
+        return token;
+    }
 
     return res.body.data?.token;
 }

@@ -296,7 +296,7 @@ router.delete(
  *       200:
  *         description: List of users
  */
-router.get('/users', authMiddleware, requireRole('owner', 'admin'), async (req, res) => {
+router.get('/users', authMiddleware, requireRole('owner'), async (req, res) => {
     try {
         const users = await GlobalUser.find({}, 'firstName lastName email role isActive createdAt');
         res.json({ success: true, count: users.length, data: users });

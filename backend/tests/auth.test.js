@@ -137,13 +137,12 @@ describe('Protected routes', () => {
     });
 
     it('should accept requests with a valid token', async () => {
-        const regRes = await request
-            .post('/api/auth/register')
-            .send({ email: 'user@test.com', password: 'Test123!' });
-
-        expect(regRes.status).toBe(201);
-        const token = regRes.body.data.token;
-        expect(token).toBeDefined();
+        const { registerAndGetToken } = require('./helpers');
+        const token = await registerAndGetToken(request, {
+            email: 'admin@test.com',
+            password: 'Test123!',
+            role: 'admin',
+        });
 
         const res = await request.get('/api/admin/tenants').set('Authorization', `Bearer ${token}`);
 
