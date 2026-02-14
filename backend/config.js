@@ -47,7 +47,7 @@ module.exports = {
 
     // Rate Limiting
     RATE_LIMIT_WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 15 * 60 * 1000, // 15 min
-    RATE_LIMIT_MAX_AUTH: parseInt(process.env.RATE_LIMIT_MAX_AUTH, 10) || 100, // Increased for testing
+    RATE_LIMIT_MAX_AUTH: parseInt(process.env.RATE_LIMIT_MAX_AUTH, 10) || 1000, // Increased for dev/testing
 
     // Request Limits
     BODY_SIZE_LIMIT: process.env.BODY_SIZE_LIMIT || '10kb',

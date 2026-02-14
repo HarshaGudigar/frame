@@ -3,6 +3,7 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 const express = require('express');
+const http = require('http'); // Added for Socket.io
 const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -111,6 +112,11 @@ function createApp() {
 
 if (require.main === module) {
     const { app, modules } = createApp();
+    const server = http.createServer(app); // Core server instance
+    const socketService = require('./utils/socket');
+
+    // Initialize SocketService
+    socketService.init(server);
 
     // Database
     mongoose
@@ -121,8 +127,10 @@ if (require.main === module) {
         );
 
     // Start Server
-    app.listen(config.PORT, () => {
-        logger.info(`[${config.RUNTIME_MODE}] Server running on port ${config.PORT}`);
+    server.listen(config.PORT, () => {
+        logger.info(
+            `[${config.RUNTIME_MODE}] Server running on port ${config.PORT} (with WebSockets)`,
+        );
         logger.info(`[${config.RUNTIME_MODE}] CORS origins: ${config.CORS_ORIGINS.join(', ')}`);
         logger.info(
             `[${config.RUNTIME_MODE}] Auth rate limit: ${config.RATE_LIMIT_MAX_AUTH} req / ${config.RATE_LIMIT_WINDOW_MS / 60000} min`,

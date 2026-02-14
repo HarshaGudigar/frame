@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const Tenant = require('../models/Tenant');
 const { successResponse, errorResponse } = require('../utils/responseWrapper');
+const { logAction } = require('../middleware/auditLogger');
+const socketService = require('../utils/socket');
 const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
 const { HEARTBEAT_SECRET } = require('../config');
 const { validate } = require('../middleware/validate');
@@ -166,6 +168,20 @@ router.post(
             subscribedModules: subscribedModules || [],
             status: 'offline',
             deploymentStatus: 'pending',
+            createdBy: req.user.id,
+        });
+
+        // Audit Log
+        await logAction(req, 'TENANT_CREATED', tenant.id, {
+            name: tenant.name,
+            slug: tenant.slug,
+        });
+
+        // Real-time notification
+        socketService.emitEvent('tenant:created', {
+            id: tenant.id,
+            name: tenant.name,
+            owner: req.user.id,
         });
 
         return successResponse(res, tenant, 'Tenant created', 201);
@@ -265,6 +281,20 @@ router.put(
 
         await tenant.save();
 
+        // Audit Log
+        await logAction(req, 'TENANT_UPDATED', tenant.id, {
+            updates: req.body,
+        });
+
+        // Real-time notification for status change
+        if (isActive !== undefined) {
+            socketService.emitEvent('tenant:status_change', {
+                id: tenant.id,
+                name: tenant.name,
+                isActive,
+            });
+        }
+
         return successResponse(res, tenant, 'Tenant updated');
     }),
 );
@@ -279,6 +309,12 @@ router.delete(
         if (!tenant) {
             return errorResponse(res, 'Tenant not found', 404);
         }
+
+        // Audit Log
+        await logAction(req, 'TENANT_DELETED', tenant.id, {
+            name: tenant.name,
+            slug: tenant.slug,
+        });
 
         return successResponse(res, { id: req.params.id }, 'Tenant deleted');
     }),
@@ -364,6 +400,17 @@ router.post(
 
             logger.info({ adminId: req.user.id, newUserId: newUser.id }, 'User invited');
 
+            // Audit Log
+            await logAction(req, 'USER_INVITED', email, {
+                role,
+            });
+
+            // Real-time notification
+            socketService.emitEvent('user:invited', {
+                email,
+                role,
+            });
+
             res.status(201).json({
                 success: true,
                 message: 'User invited successfully',
@@ -418,6 +465,11 @@ router.delete(
             }
 
             logger.info({ adminId: req.user.id, targetUserId: id }, 'User deactivated');
+
+            // Audit Log
+            await logAction(req, 'USER_DEACTIVATED', id, {
+                targetEmail: user.email,
+            });
 
             res.json({ success: true, message: 'User deactivated' });
         } catch (error) {
@@ -475,6 +527,12 @@ router.patch(
                 { adminId: req.user.id, targetUserId: id, newRole: role },
                 'User role updated',
             );
+
+            // Audit Log
+            await logAction(req, 'USER_ROLE_UPDATED', id, {
+                newRole: role,
+                targetEmail: user.email,
+            });
 
             res.json({ success: true, message: 'Role updated successfully', data: user });
         } catch (error) {
@@ -557,6 +615,69 @@ router.get(
         };
 
         res.json({ success: true, data: stats });
+    }),
+);
+
+/**
+ * @route GET /api/admin/audit-logs
+ * @desc Get all audit logs
+ * @access Private (Owner Only)
+ */
+router.get(
+    '/audit-logs',
+    authMiddleware,
+    requireRole('owner'),
+    asyncHandler(async (req, res) => {
+        const { page = 1, limit = 20, action, userId, startDate, endDate } = req.query;
+        const AuditLog = require('../models/AuditLog');
+
+        const query = {};
+
+        // Filter by Action
+        if (action) {
+            query.action = action;
+        }
+
+        // Filter by User
+        if (userId) {
+            query.user = userId;
+        }
+
+        // Filter by Date Range
+        if (startDate || endDate) {
+            query.createdAt = {};
+            if (startDate) {
+                query.createdAt.$gte = new Date(startDate);
+            }
+            if (endDate) {
+                query.createdAt.$lte = new Date(endDate);
+            }
+        }
+
+        const skip = (page - 1) * limit;
+
+        const [logs, total] = await Promise.all([
+            AuditLog.find(query)
+                .populate('user', 'firstName lastName email')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(Number(limit)),
+            AuditLog.countDocuments(query),
+        ]);
+
+        return successResponse(
+            res,
+            {
+                logs,
+                pagination: {
+                    total,
+                    page: Number(page),
+                    limit: Number(limit),
+                    totalPages: Math.ceil(total / limit),
+                },
+            },
+            'Audit logs retrieved',
+        );
     }),
 );
 

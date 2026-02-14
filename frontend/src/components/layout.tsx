@@ -9,7 +9,9 @@ import {
     LogOut,
     Server,
     Building2,
+    ShieldCheck,
 } from 'lucide-react';
+import { NotificationCenter } from '@/components/notifications/notification-center';
 import {
     Sidebar,
     SidebarContent,
@@ -31,6 +33,7 @@ const navItems = [
     { to: '/users', icon: UsersIcon, label: 'Users', role: 'admin' },
     { to: '/marketplace', icon: Store, label: 'Marketplace' },
     { to: '/settings', icon: Settings, label: 'Settings' },
+    { to: '/audit-logs', icon: ShieldCheck, label: 'Audit Logs', role: 'owner' },
 ];
 
 function AppSidebar() {
@@ -99,6 +102,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <SidebarProvider>
             <AppSidebar />
             <SidebarInset>
+                <header className="flex h-16 shrink-0 items-center justify-between px-6 border-b">
+                    <div className="flex items-center gap-2">
+                        {/* Title or Breadcrumbs could go here */}
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <NotificationCenter />
+                    </div>
+                </header>
                 <main className="flex-1 p-6">{children}</main>
             </SidebarInset>
         </SidebarProvider>

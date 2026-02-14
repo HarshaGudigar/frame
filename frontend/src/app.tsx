@@ -8,6 +8,7 @@ import { TenantsPage } from '@/pages/tenants';
 import { MarketplacePage } from '@/pages/marketplace';
 import UsersPage from '@/pages/users';
 import { SettingsPage } from '@/pages/settings';
+import { AuditLogsPage } from '@/pages/audit-logs';
 
 function AppRoutes() {
     const { token } = useAuth();
@@ -22,20 +23,24 @@ function AppRoutes() {
                 <Route path="/marketplace" element={<MarketplacePage />} />
                 <Route path="/users" element={<UsersPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/audit-logs" element={<AuditLogsPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
         </Layout>
     );
 }
 
+import { SocketProvider } from '@/components/providers/socket-provider';
 import { Toaster } from '@/components/ui/toaster';
 
 function App() {
     return (
         <ErrorBoundary>
             <AuthProvider>
-                <AppRoutes />
-                <Toaster />
+                <SocketProvider>
+                    <AppRoutes />
+                    <Toaster />
+                </SocketProvider>
             </AuthProvider>
         </ErrorBoundary>
     );
