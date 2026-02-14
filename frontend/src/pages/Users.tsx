@@ -3,6 +3,7 @@ import { User } from '../contexts/auth-context';
 import { useAuth } from '../contexts/auth-context';
 import { usePermission } from '../hooks/usePermission';
 import { InviteUserModal } from '@/components/users/InviteUserModal';
+import { EditRoleModal } from '@/components/users/EditRoleModal';
 import {
     Table,
     TableBody,
@@ -19,12 +20,14 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Trash2 } from 'lucide-react';
+import { MoreHorizontal, Trash2, ShieldCheck } from 'lucide-react';
 
 export default function Users() {
     const { api } = useAuth();
     const [users, setUsers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [editUser, setEditUser] = useState<User | null>(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const { hasRole } = usePermission();
 
     const fetchUsers = async () => {
@@ -122,15 +125,26 @@ export default function Users() {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                             {hasRole('owner') && (
-                                                <DropdownMenuItem
-                                                    className="text-red-600"
-                                                    onClick={() =>
-                                                        user._id && handleDelete(user._id)
-                                                    }
-                                                >
-                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                    Deactivate
-                                                </DropdownMenuItem>
+                                                <>
+                                                    <DropdownMenuItem
+                                                        onClick={() => {
+                                                            setEditUser(user);
+                                                            setIsEditModalOpen(true);
+                                                        }}
+                                                    >
+                                                        <ShieldCheck className="mr-2 h-4 w-4" />
+                                                        Edit Role
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        className="text-red-600"
+                                                        onClick={() =>
+                                                            user._id && handleDelete(user._id)
+                                                        }
+                                                    >
+                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                        Deactivate
+                                                    </DropdownMenuItem>
+                                                </>
                                             )}
                                         </DropdownMenuContent>
                                     </DropdownMenu>
@@ -140,6 +154,13 @@ export default function Users() {
                     </TableBody>
                 </Table>
             </div>
+
+            <EditRoleModal
+                user={editUser}
+                open={isEditModalOpen}
+                onOpenChange={setIsEditModalOpen}
+                onRoleUpdated={fetchUsers}
+            />
         </div>
     );
 }

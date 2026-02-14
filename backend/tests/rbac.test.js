@@ -131,4 +131,43 @@ describe('RBAC & User Management', () => {
             expect(res.statusCode).toBe(400);
         });
     });
+
+    describe('PATCH /api/admin/users/:id/role', () => {
+        it('should allow owner to update a user role', async () => {
+            const user = await GlobalUser.findOne({ email: 'user@example.com' });
+
+            const res = await requestAgent
+                .patch(`/api/admin/users/${user._id}/role`)
+                .set('Authorization', `Bearer ${ownerToken}`)
+                .send({ role: 'admin' });
+
+            expect(res.statusCode).toBe(200);
+            expect(res.body.data.role).toBe('admin');
+
+            const updatedUser = await GlobalUser.findById(user._id);
+            expect(updatedUser.role).toBe('admin');
+        });
+
+        it('should deny role update by admin (Owner only)', async () => {
+            const user = await GlobalUser.findOne({ email: 'staff@example.com' });
+
+            const res = await requestAgent
+                .patch(`/api/admin/users/${user._id}/role`)
+                .set('Authorization', `Bearer ${adminToken}`)
+                .send({ role: 'owner' });
+
+            expect(res.statusCode).toBe(403);
+        });
+
+        it('should prevent changing your own role', async () => {
+            const owner = await GlobalUser.findOne({ email: 'owner@example.com' });
+
+            const res = await requestAgent
+                .patch(`/api/admin/users/${owner._id}/role`)
+                .set('Authorization', `Bearer ${ownerToken}`)
+                .send({ role: 'user' });
+
+            expect(res.statusCode).toBe(400);
+        });
+    });
 });

@@ -8,11 +8,13 @@ const { validate } = require('../middleware/validate');
 const { z } = require('zod');
 const logger = require('../utils/logger');
 const GlobalUser = require('../models/GlobalUser');
+const Metric = require('../models/Metric');
 const {
     createTenantSchema,
     updateTenantSchema,
     heartbeatSchema,
     mongoIdParam,
+    updateUserRoleSchema,
 } = require('../schemas/admin');
 
 // Async route wrapper
@@ -71,25 +73,24 @@ router.post(
             return errorResponse(res, 'Tenant not found', 404);
         }
 
-        tenant.status = 'online';
-        tenant.lastSeen = new Date();
-        tenant.metrics = {
-            cpu: metrics?.cpu || 0,
-            ram: metrics?.ram || 0,
-            uptime: metrics?.uptime || 0,
-            version: metrics?.version || 'unknown',
-        };
+        // Save history
+        await Metric.create({
+            tenantId,
+            metrics,
+        });
 
+        // Update latest status in Tenant document
+        tenant.lastHeartbeat = new Date();
+        if (metrics) {
+            tenant.metrics = {
+                ...tenant.metrics,
+                ...metrics,
+            };
+        }
+        tenant.status = 'online';
         await tenant.save();
 
-        return successResponse(
-            res,
-            {
-                subscribedModules: tenant.subscribedModules,
-                status: tenant.status,
-            },
-            'Heartbeat processed',
-        );
+        res.json({ success: true, message: 'Heartbeat processed' });
     }),
 );
 
@@ -137,6 +138,7 @@ router.post(
 router.get(
     '/tenants',
     authMiddleware,
+    requireRole('admin', 'staff', 'owner'),
     asyncHandler(async (req, res) => {
         const tenants = await Tenant.find().sort({ lastSeen: -1 });
         return successResponse(res, tenants, 'Tenants retrieved');
@@ -146,6 +148,7 @@ router.get(
 router.post(
     '/tenants',
     authMiddleware,
+    requireRole('admin', 'owner'),
     validate({ body: createTenantSchema }),
     asyncHandler(async (req, res) => {
         const { name, slug, vmIpAddress, subscribedModules } = req.body;
@@ -231,6 +234,7 @@ router.post(
 router.get(
     '/tenants/:id',
     authMiddleware,
+    requireRole('admin', 'staff', 'owner'),
     validate({ params: mongoIdParam }),
     asyncHandler(async (req, res) => {
         const tenant = await Tenant.findById(req.params.id);
@@ -244,6 +248,7 @@ router.get(
 router.put(
     '/tenants/:id',
     authMiddleware,
+    requireRole('admin', 'owner'),
     validate({ params: mongoIdParam, body: updateTenantSchema }),
     asyncHandler(async (req, res) => {
         const { name, vmIpAddress, subscribedModules, isActive } = req.body;
@@ -267,6 +272,7 @@ router.put(
 router.delete(
     '/tenants/:id',
     authMiddleware,
+    requireRole('admin', 'owner'),
     validate({ params: mongoIdParam }),
     asyncHandler(async (req, res) => {
         const tenant = await Tenant.findByIdAndDelete(req.params.id);
@@ -290,7 +296,7 @@ router.delete(
  *       200:
  *         description: List of users
  */
-router.get('/users', authMiddleware, requireRole('owner'), async (req, res) => {
+router.get('/users', authMiddleware, requireRole('owner', 'admin'), async (req, res) => {
     try {
         const users = await GlobalUser.find({}, 'firstName lastName email role isActive createdAt');
         res.json({ success: true, count: users.length, data: users });
@@ -419,6 +425,139 @@ router.delete(
             errorResponse(res, 'Failed to deactivate user', 500);
         }
     },
+);
+
+/**
+ * @swagger
+ * /api/admin/users/{id}/role:
+ *   patch:
+ *     summary: Update a user's role
+ *     tags: [Admin]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [role]
+ *             properties:
+ *               role: { type: string, enum: [owner, admin, staff, user] }
+ *     responses:
+ *       200:
+ *         description: Role updated
+ */
+router.patch(
+    '/users/:id/role',
+    authMiddleware,
+    requireRole('owner'),
+    validate({ params: mongoIdParam, body: updateUserRoleSchema }),
+    async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { role } = req.body;
+
+            if (id === req.user.id) {
+                return errorResponse(res, 'Cannot change your own role', 400);
+            }
+
+            const user = await GlobalUser.findByIdAndUpdate(id, { role }, { new: true });
+
+            if (!user) {
+                return errorResponse(res, 'User not found', 404);
+            }
+
+            logger.info(
+                { adminId: req.user.id, targetUserId: id, newRole: role },
+                'User role updated',
+            );
+
+            res.json({ success: true, message: 'Role updated successfully', data: user });
+        } catch (error) {
+            logger.error({ err: error }, 'Failed to update user role');
+            errorResponse(res, 'Failed to update user role', 500);
+        }
+    },
+);
+
+// ─── Analytics & Fleet Stats ───────────────────────────────────────────────
+
+/**
+ * @swagger
+ * /api/admin/metrics/{tenantId}:
+ *   get:
+ *     summary: Get historical metrics for a tenant
+ *     tags: [Admin]
+ *     parameters:
+ *       - in: path
+ *         name: tenantId
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Historical metrics
+ */
+router.get(
+    '/metrics/:id',
+    authMiddleware,
+    requireRole('admin', 'owner'),
+    asyncHandler(async (req, res) => {
+        const { id } = req.params; // slug or id
+
+        // Find last 24 entries (approximately 24h if pinged hourly)
+        // In a real app, we'd filter by time range
+        const history = await Metric.find({ tenantId: id }).sort({ timestamp: -1 }).limit(24);
+
+        res.json({
+            success: true,
+            data: history.reverse(), // Sort chronologically for charts
+        });
+    }),
+);
+
+/**
+ * @swagger
+ * /api/admin/fleet/stats:
+ *   get:
+ *     summary: Get aggregate fleet statistics
+ *     tags: [Admin]
+ *     responses:
+ *       200:
+ *         description: Fleet statistics
+ */
+router.get(
+    '/fleet/stats',
+    authMiddleware,
+    requireRole('admin', 'owner'),
+    asyncHandler(async (req, res) => {
+        const totalTenants = await Tenant.countDocuments();
+        const onlineTenants = await Tenant.countDocuments({ status: 'online' });
+        const offlineTenants = await Tenant.countDocuments({ status: 'offline' });
+
+        // Calculate average metrics
+        const aggs = await Tenant.aggregate([
+            {
+                $group: {
+                    _id: null,
+                    avgCpu: { $avg: '$metrics.cpu' },
+                    avgRam: { $avg: '$metrics.ram' },
+                },
+            },
+        ]);
+
+        const stats = {
+            total: totalTenants,
+            online: onlineTenants,
+            offline: offlineTenants,
+            averages: aggs[0] || { avgCpu: 0, avgRam: 0 },
+        };
+
+        res.json({ success: true, data: stats });
+    }),
 );
 
 module.exports = router;

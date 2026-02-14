@@ -62,7 +62,14 @@ const requireRole = (...allowedRoles) => {
             return errorResponse(res, 'Unauthorized', 403);
         }
 
-        if (!allowedRoles.includes(req.user.role)) {
+        const userRole = String(req.user.role);
+
+        // Owner bypass — owner has superuser access to all admin routes
+        if (userRole === 'owner') {
+            return next();
+        }
+
+        if (!allowedRoles.includes(userRole)) {
             return errorResponse(res, `Forbidden. Requires: ${allowedRoles.join(', ')}`, 403);
         }
 

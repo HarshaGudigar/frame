@@ -25,7 +25,7 @@ export function LoginPage() {
         try {
             const endpoint = isRegister ? 'register' : 'login';
             const res = await axios.post(`${API_BASE}/auth/${endpoint}`, form);
-            login(res.data.data.token);
+            login(res.data.data.token, res.data.data.user);
         } catch (err: any) {
             setError(err.response?.data?.message || 'Authentication failed');
         } finally {
@@ -57,7 +57,9 @@ export function LoginPage() {
                                         id="firstName"
                                         placeholder="John"
                                         value={form.firstName}
-                                        onChange={(e) => setForm(f => ({ ...f, firstName: e.target.value }))}
+                                        onChange={(e) =>
+                                            setForm((f) => ({ ...f, firstName: e.target.value }))
+                                        }
                                     />
                                 </div>
                                 <div className="space-y-1.5">
@@ -66,7 +68,9 @@ export function LoginPage() {
                                         id="lastName"
                                         placeholder="Doe"
                                         value={form.lastName}
-                                        onChange={(e) => setForm(f => ({ ...f, lastName: e.target.value }))}
+                                        onChange={(e) =>
+                                            setForm((f) => ({ ...f, lastName: e.target.value }))
+                                        }
                                     />
                                 </div>
                             </div>
@@ -80,7 +84,7 @@ export function LoginPage() {
                                 placeholder="you@example.com"
                                 required
                                 value={form.email}
-                                onChange={(e) => setForm(f => ({ ...f, email: e.target.value }))}
+                                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                             />
                         </div>
 
@@ -92,7 +96,9 @@ export function LoginPage() {
                                 placeholder="Min 6 characters"
                                 required
                                 value={form.password}
-                                onChange={(e) => setForm(f => ({ ...f, password: e.target.value }))}
+                                onChange={(e) =>
+                                    setForm((f) => ({ ...f, password: e.target.value }))
+                                }
                             />
                         </div>
 
@@ -110,7 +116,10 @@ export function LoginPage() {
                         <button
                             type="button"
                             className="w-full text-sm text-primary hover:underline bg-transparent border-none cursor-pointer"
-                            onClick={() => { setIsRegister(!isRegister); setError(null); }}
+                            onClick={() => {
+                                setIsRegister(!isRegister);
+                                setError(null);
+                            }}
                         >
                             {isRegister ? '← Back to Sign In' : "Don't have an account? Register"}
                         </button>

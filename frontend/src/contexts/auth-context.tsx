@@ -40,7 +40,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [token, setToken] = useState<string | null>(localStorage.getItem('token') || null);
     const [user, setUser] = useState<User | null>(() => {
         const savedUser = localStorage.getItem('user');
-        return savedUser ? JSON.parse(savedUser) : null;
+        if (!savedUser || savedUser === 'undefined') return null;
+        try {
+            return JSON.parse(savedUser);
+        } catch {
+            return null;
+        }
     });
     const [isLoading, setIsLoading] = useState(false); // Initial load is instant from localStorage
 

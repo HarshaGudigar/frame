@@ -40,8 +40,20 @@ const heartbeatSchema = z.object({
         .optional(),
 });
 
+const updateUserRoleSchema = z.object({
+    role: z.enum(['owner', 'admin', 'staff', 'user'], {
+        required_error: 'Role is required',
+    }),
+});
+
 const mongoIdParam = z.object({
     id: z.string().regex(/^[a-f\d]{24}$/i, 'Invalid ID format'),
 });
 
-module.exports = { createTenantSchema, updateTenantSchema, heartbeatSchema, mongoIdParam };
+module.exports = {
+    createTenantSchema,
+    updateTenantSchema,
+    heartbeatSchema,
+    mongoIdParam,
+    updateUserRoleSchema,
+};
