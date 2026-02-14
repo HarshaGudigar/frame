@@ -103,8 +103,8 @@ describe('POST /api/marketplace/purchase', () => {
             .set('Authorization', `Bearer ${token}`)
             .send({ tenantId: '507f1f77bcf86cd799439011', productId: '507f1f77bcf86cd799439011' });
 
-        // Without x-tenant-id header, requireRole returns 400 "Tenant context required"
-        expect(res.status).toBe(400);
+        // Without x-tenant-id header, user has 'user' role which is not allowed -> 403
+        expect(res.status).toBe(403);
     });
 
     it('should reject empty body (Zod)', async () => {
