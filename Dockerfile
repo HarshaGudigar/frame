@@ -17,15 +17,15 @@ RUN mkdir -p /data/db
 COPY package*.json ./
 
 # Install root dependencies (production only — skip lint/format tools)
-RUN npm install --omit=dev --ignore-scripts
+RUN npm install --omit=dev --ignore-scripts --legacy-peer-deps
 
 # Copy backend and install dependencies
 COPY backend/package*.json ./backend/
-RUN cd backend && npm install --omit=dev
+RUN cd backend && npm install --omit=dev --legacy-peer-deps
 
 # Copy frontend and install dependencies (needs devDeps for build)
 COPY frontend/package*.json ./frontend/
-RUN cd frontend && npm install
+RUN cd frontend && npm install --legacy-peer-deps
 
 # Copy the rest of the application code
 COPY . .
