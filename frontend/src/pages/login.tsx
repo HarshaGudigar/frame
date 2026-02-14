@@ -26,7 +26,16 @@ export function LoginPage() {
             login(res.data.data.accessToken, res.data.data.refreshToken, res.data.data.user);
         } catch (err: any) {
             console.error('Login error:', err);
-            const msg = err.response?.data?.message || err.message || 'Authentication failed';
+            let msg = err.response?.data?.message || err.message || 'Authentication failed';
+
+            // Handle Zod validation errors
+            if (err.response?.data?.errors?.length > 0) {
+                const validationErrors = err.response.data.errors
+                    .map((e: any) => `${e.field}: ${e.message}`)
+                    .join(', ');
+                msg = `Validation failed: ${validationErrors}`;
+            }
+
             setError(msg);
         } finally {
             setLoading(false);
