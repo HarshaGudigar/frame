@@ -1,9 +1,7 @@
 import React, { useState, createContext, useContext, useEffect } from 'react';
 import axios, { AxiosInstance } from 'axios';
 
-const API_BASE = import.meta.env.DEV
-    ? 'http://localhost:5000/api'
-    : `${window.location.protocol}//${window.location.hostname}:5000/api`;
+const API_BASE = `${window.location.protocol}//${window.location.hostname}:5000/api`;
 
 export interface User {
     _id: string; // Backend uses _id

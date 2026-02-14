@@ -7,9 +7,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/auth-context';
 
-const API_BASE = import.meta.env.DEV
-    ? 'http://localhost:5000/api'
-    : `${window.location.protocol}//${window.location.hostname}:5000/api`;
+const API_BASE = `${window.location.protocol}//${window.location.hostname}:5000/api`;
 
 export function LoginPage() {
     const { login } = useAuth();
