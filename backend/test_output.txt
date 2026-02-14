@@ -1,0 +1,54 @@
+
+> backend@1.0.0 test
+> jest --runInBand tests/health.test.js
+
+FAIL tests/health.test.js
+  Health Check
+    GET /api/health
+      × should return 200 OK and health status (57 ms)
+
+  ● Health Check › GET /api/health › should return 200 OK and health status
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  4
+    + Received  + 14
+
+    - ObjectContaining {
+    -   "database": ObjectContaining {
+    + Object {
+    +   "database": Object {
+    +     "host": "127.0.0.1",
+          "status": "connected",
+        },
+    -   "mode": "test",
+    -   "modules": Any<Array>,
+    +   "memory": Object {
+    +     "arrayBuffers": 27048620,
+    +     "external": 30828210,
+    +     "heapTotal": 106827776,
+    +     "heapUsed": 77935768,
+    +     "rss": 167174144,
+    +   },
+    +   "mode": "HUB",
+    +   "modules": Array [],
+        "success": true,
+    +   "timestamp": "2026-02-14T05:29:50.316Z",
+    +   "uptime": "1s",
+      }
+
+    [0m [90m 21 |[39m
+     [90m 22 |[39m             expect(res[33m.[39mstatusCode)[33m.[39mtoBe([35m200[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 23 |[39m             expect(res[33m.[39mbody)[33m.[39mtoEqual(expect[33m.[39mobjectContaining({
+     [90m    |[39m                              [31m[1m^[22m[39m
+     [90m 24 |[39m                 success[33m:[39m [36mtrue[39m[33m,[39m
+     [90m 25 |[39m                 mode[33m:[39m [32m'test'[39m[33m,[39m
+     [90m 26 |[39m                 database[33m:[39m expect[33m.[39mobjectContaining({[0m
+
+      at Object.toEqual (tests/health.test.js:23:30)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Snapshots:   0 total
+Time:        1.528 s, estimated 2 s
+Ran all test suites matching tests/health.test.js.

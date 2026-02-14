@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Layout } from '@/components/layout';
@@ -29,11 +29,9 @@ function AppRoutes() {
 function App() {
     return (
         <ErrorBoundary>
-            <BrowserRouter>
-                <AuthProvider>
-                    <AppRoutes />
-                </AuthProvider>
-            </BrowserRouter>
+            <AuthProvider>
+                <AppRoutes />
+            </AuthProvider>
         </ErrorBoundary>
     );
 }

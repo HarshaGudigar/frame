@@ -1,23 +1,25 @@
 /**
  * Centralized Configuration — Alyxnet Frame
- * 
+ *
  * All environment variables are read here and validated.
  * The server will REFUSE to start if required secrets are missing.
  * No hardcoded fallbacks for security-critical values.
  */
 
-// ─── Required Secrets (fail-fast if missing) ─────────────────────────────────
+// ─── Required Secrets (fail-fast if missing, skip in test mode) ──────────────
 
-if (!process.env.JWT_SECRET) {
-    console.error('❌ FATAL: JWT_SECRET is not set in environment variables.');
-    console.error('   Add it to backend/.env: JWT_SECRET=your-secure-secret-here');
-    process.exit(1);
-}
+if (process.env.NODE_ENV !== 'test') {
+    if (!process.env.JWT_SECRET) {
+        console.error('❌ FATAL: JWT_SECRET is not set in environment variables.');
+        console.error('   Add it to backend/.env: JWT_SECRET=your-secure-secret-here');
+        process.exit(1);
+    }
 
-if (!process.env.HEARTBEAT_SECRET) {
-    console.error('❌ FATAL: HEARTBEAT_SECRET is not set in environment variables.');
-    console.error('   Add it to backend/.env: HEARTBEAT_SECRET=your-secure-key-here');
-    process.exit(1);
+    if (!process.env.HEARTBEAT_SECRET) {
+        console.error('❌ FATAL: HEARTBEAT_SECRET is not set in environment variables.');
+        console.error('   Add it to backend/.env: HEARTBEAT_SECRET=your-secure-key-here');
+        process.exit(1);
+    }
 }
 
 // ─── Exports ─────────────────────────────────────────────────────────────────
@@ -38,7 +40,7 @@ module.exports = {
     // CORS — comma-separated list of allowed origins
     CORS_ORIGINS: (process.env.CORS_ORIGINS || 'http://localhost:5173,http://localhost:3000')
         .split(',')
-        .map(origin => origin.trim())
+        .map((origin) => origin.trim())
         .filter(Boolean),
 
     // Rate Limiting

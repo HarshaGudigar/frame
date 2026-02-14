@@ -1,4 +1,6 @@
 const mongoose = require('mongoose');
+const config = require('../config');
+const logger = require('./logger');
 
 // Cache for tenant-specific connections
 const tenantConnections = {};
@@ -17,8 +19,10 @@ const getTenantConnection = async (tenantId, dbUri) => {
     // Create a new connection if it doesn't exist
     const connection = mongoose.createConnection(dbUri);
 
-    connection.on('connected', () => console.log(`Connected to database for tenant: ${tenantId}`));
-    connection.on('error', (err) => console.error(`Error in tenant ${tenantId} connection:`, err));
+    connection.on('connected', () => logger.info(`Connected to database for tenant: ${tenantId}`));
+    connection.on('error', (err) =>
+        logger.error({ err }, `Error in tenant ${tenantId} connection`),
+    );
 
     tenantConnections[tenantId] = connection;
     return connection;
