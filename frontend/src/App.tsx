@@ -6,7 +6,7 @@ import { LoginPage } from '@/pages/login';
 import { DashboardPage } from '@/pages/dashboard';
 import { TenantsPage } from '@/pages/tenants';
 import { MarketplacePage } from '@/pages/marketplace';
-import UsersPage from '@/pages/Users';
+import UsersPage from '@/pages/users';
 import { SettingsPage } from '@/pages/settings';
 
 function AppRoutes() {
