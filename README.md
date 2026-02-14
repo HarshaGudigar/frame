@@ -1,14 +1,14 @@
 # Alyxnet Frame - MERN Monorepo
 
-A full-stack monorepo featuring a Webapp (Next.js), Desktop App (Electron), Mobile App (React Native/Expo), and a Backend (Express + MongoDB).
+A full-stack monorepo featuring a Dashboard (Vite + React + shadcn/ui), Desktop App (Electron), Mobile App (React Native/Expo), and a Backend (Express + MongoDB).
 
 ## Project Structure
 
 ```text
 /
 ├── backend/       # Node.js Express server with MongoDB
-├── webapp/        # Next.js web application (Shared codebase)
-├── desktop/       # Electron wrapper for the webapp
+├── frontend/      # Vite + React + TypeScript + shadcn/ui dashboard
+├── desktop/       # Electron wrapper for the frontend
 ├── mobile/        # React Native (Expo) mobile application
 ├── Dockerfile     # Monolithic container definition
 └── package.json   # Root script manager
@@ -17,14 +17,14 @@ A full-stack monorepo featuring a Webapp (Next.js), Desktop App (Electron), Mobi
 ## Getting Started
 
 ### 1. Simultaneous Run (Recommended)
-You can start the Backend, Webapp, and Desktop app all together from the root directory:
+You can start the Backend and Frontend together from the root directory:
 
 ```bash
 npm install
 npm run dev
 ```
 
-*This starts the Backend (5000), Webapp (3000), and launches the Electron application.*
+*This starts the Backend (5000) and Frontend dev server (5173).*
 
 ---
 
@@ -39,18 +39,30 @@ npm install
 node server.js
 ```
 
-**Webapp (Development)**
+**Frontend (Development)**
 ```bash
-cd webapp
+cd frontend
 npm install
 npm run dev
 ```
 
 **Desktop (Electron Development)**
 ```bash
+# First, start the frontend dev server, then:
 cd desktop
 npm install
 npm start
+```
+
+**Desktop (Electron Production)**
+```bash
+# Build the frontend first
+cd frontend
+npm run build
+
+# Then start Electron in production mode
+cd ../desktop
+NODE_ENV=production npm start
 ```
 
 **Mobile (Expo)**
@@ -62,24 +74,7 @@ npx expo start
 
 ---
 
-### 3. Shared Codebase (Next.js + Electron)
-
-The Desktop app uses the Webapp as its UI. For production, the Webapp is exported as a static site that Electron loads locally.
-
-**Production Build:**
-```bash
-# 1. Build Webapp to static files
-cd webapp
-npm run build
-
-# 2. Start Electron in production mode
-cd ../desktop
-NODE_ENV=production npm start
-```
-
----
-
-### 4. Docker & Production Deployment
+### 3. Docker & Production Deployment
 
 The application is configured for automated deployment to **AWS Lightsail** using a monolithic Docker container.
 
@@ -114,8 +109,8 @@ To maintain the pipeline, ensure the following secrets are set in your repositor
 ## Environment Variables
 
 - **Backend**: Uses `.env` for `PORT` and `MONGODB_URI`.
-- **Webapp**: 
-  - **Development**: Uses `.env.local` (Connects to `localhost:5000`).
+- **Frontend**: 
+  - **Development**: Uses `.env.development` (Connects to `localhost:5000`).
   - **Production**: Uses `.env.production` (Connects to `http://13.232.95.78:5000`).
 - **Docker**: Automatically connects to the internal `mongod` instance and persists data in the `mongodb_data` volume.
 

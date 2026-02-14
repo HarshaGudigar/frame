@@ -10,12 +10,10 @@ yarn-error.log*
 .env.production
 .env.development
 
-# Next.js
-.next/
-out/
+# Build output
+frontend/dist/
 
 # Electron
-dist/
 build/
 
 # Expo

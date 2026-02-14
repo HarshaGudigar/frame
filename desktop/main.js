@@ -6,8 +6,8 @@ const isDev = !app.isPackaged && process.env.NODE_ENV !== 'production';
 
 function createWindow() {
     const win = new BrowserWindow({
-        width: 800,
-        height: 600,
+        width: 1200,
+        height: 800,
         webPreferences: {
             nodeIntegration: true,
             contextIsolation: false,
@@ -15,24 +15,20 @@ function createWindow() {
     });
 
     if (isDev) {
-        win.loadURL('http://localhost:3000');
+        // In development, load from the Vite dev server
+        win.loadURL('http://localhost:5173');
         // win.webContents.openDevTools();
-        console.log('Running in development mode');
+        console.log('Running in development mode (Vite dev server)');
     } else {
-        // In production, load the index.html from the webapp export
-        // Assuming the webapp 'out' directory is copied to 'resources/app/out' or similar
-        // For this setup, we'll look for it relative to the main.js or resources
-        const indexPath = path.join(__dirname, '../webapp/out/index.html');
+        // In production, load the static build from frontend/dist
+        const indexPath = path.join(__dirname, '../frontend/dist/index.html');
 
-        // Check if file exists to avoid errors
         if (fs.existsSync(indexPath)) {
             win.loadFile(indexPath);
             console.log('Loaded static file from:', indexPath);
-            // Open DevTools in production for debugging
-            // win.webContents.openDevTools();
         } else {
             console.error('Could not find index.html at:', indexPath);
-            // Fallback or error handling
+            console.error('Run "cd frontend && npm run build" first.');
         }
     }
 }
