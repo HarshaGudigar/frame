@@ -27,7 +27,9 @@ export function LoginPage() {
             const res = await axios.post(`${API_BASE}/auth/${endpoint}`, form);
             login(res.data.data.accessToken, res.data.data.refreshToken, res.data.data.user);
         } catch (err: any) {
-            setError(err.response?.data?.message || 'Authentication failed');
+            console.error('Login error:', err);
+            const msg = err.response?.data?.message || err.message || 'Authentication failed';
+            setError(msg);
         } finally {
             setLoading(false);
         }
