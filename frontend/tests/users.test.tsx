@@ -1,8 +1,8 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import Users from '../src/pages/Users';
+import Users from '../src/pages/users';
 import { AuthProvider, useAuth } from '../src/contexts/auth-context';
-import { usePermission } from '../src/hooks/usePermission';
+import { usePermission } from '../src/hooks/use-permission';
 
 // Mock dependencies
 vi.mock('../src/contexts/auth-context', async () => {
@@ -13,7 +13,7 @@ vi.mock('../src/contexts/auth-context', async () => {
     };
 });
 
-vi.mock('../src/hooks/usePermission', () => ({
+vi.mock('../src/hooks/use-permission', () => ({
     usePermission: vi.fn(),
 }));
 

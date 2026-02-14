@@ -12,8 +12,8 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { MetricsChart } from '@/components/dashboard/MetricsChart';
-import { FleetStats } from '@/components/dashboard/FleetStats';
+import { MetricsChart } from '@/components/dashboard/metrics-chart';
+import { FleetStats } from '@/components/dashboard/fleet-stats';
 
 export function DashboardPage() {
     const { api } = useAuth();

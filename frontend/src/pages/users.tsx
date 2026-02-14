@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { User } from '../contexts/auth-context';
 import { useAuth } from '../contexts/auth-context';
-import { usePermission } from '../hooks/usePermission';
-import { InviteUserModal } from '@/components/users/InviteUserModal';
-import { EditRoleModal } from '@/components/users/EditRoleModal';
+import { usePermission } from '../hooks/use-permission';
+import { InviteUserModal } from '@/components/users/invite-user-modal';
+import { EditRoleModal } from '@/components/users/edit-role-modal';
 import {
     Table,
     TableBody,
