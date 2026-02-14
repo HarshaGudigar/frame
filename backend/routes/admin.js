@@ -4,6 +4,13 @@ const Tenant = require('../models/Tenant');
 const { successResponse, errorResponse } = require('../utils/responseWrapper');
 const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
 const { HEARTBEAT_SECRET } = require('../config');
+const { validate } = require('../middleware/validate');
+const {
+    createTenantSchema,
+    updateTenantSchema,
+    heartbeatSchema,
+    mongoIdParam,
+} = require('../schemas/admin');
 
 // Async route wrapper
 const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -43,40 +50,45 @@ const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, ne
  *       404:
  *         description: Tenant not found
  */
-router.post('/heartbeat', (req, res, next) => {
-    const apiKey = req.headers['x-api-key'];
-    if (!apiKey || apiKey !== HEARTBEAT_SECRET) {
-        return errorResponse(res, 'Invalid or missing API key', 401);
-    }
-    next();
-}, asyncHandler(async (req, res) => {
-    const { tenantId, metrics } = req.body;
+router.post(
+    '/heartbeat',
+    (req, res, next) => {
+        const apiKey = req.headers['x-api-key'];
+        if (!apiKey || apiKey !== HEARTBEAT_SECRET) {
+            return errorResponse(res, 'Invalid or missing API key', 401);
+        }
+        next();
+    },
+    validate({ body: heartbeatSchema }),
+    asyncHandler(async (req, res) => {
+        const { tenantId, metrics } = req.body;
 
-    if (!tenantId) {
-        return errorResponse(res, 'Tenant ID is required', 400);
-    }
+        const tenant = await Tenant.findOne({ slug: tenantId });
+        if (!tenant) {
+            return errorResponse(res, 'Tenant not found', 404);
+        }
 
-    const tenant = await Tenant.findOne({ slug: tenantId });
-    if (!tenant) {
-        return errorResponse(res, 'Tenant not found', 404);
-    }
+        tenant.status = 'online';
+        tenant.lastSeen = new Date();
+        tenant.metrics = {
+            cpu: metrics?.cpu || 0,
+            ram: metrics?.ram || 0,
+            uptime: metrics?.uptime || 0,
+            version: metrics?.version || 'unknown',
+        };
 
-    tenant.status = 'online';
-    tenant.lastSeen = new Date();
-    tenant.metrics = {
-        cpu: metrics?.cpu || 0,
-        ram: metrics?.ram || 0,
-        uptime: metrics?.uptime || 0,
-        version: metrics?.version || 'unknown'
-    };
+        await tenant.save();
 
-    await tenant.save();
-
-    return successResponse(res, {
-        subscribedModules: tenant.subscribedModules,
-        status: tenant.status
-    }, 'Heartbeat processed');
-}));
+        return successResponse(
+            res,
+            {
+                subscribedModules: tenant.subscribedModules,
+                status: tenant.status,
+            },
+            'Heartbeat processed',
+        );
+    }),
+);
 
 // ─── Tenant CRUD ─────────────────────────────────────────────────────────────
 
@@ -119,38 +131,40 @@ router.post('/heartbeat', (req, res, next) => {
  *       409:
  *         description: Slug already exists
  */
-router.get('/tenants', authMiddleware, asyncHandler(async (req, res) => {
-    const tenants = await Tenant.find().sort({ lastSeen: -1 });
-    return successResponse(res, tenants, 'Tenants retrieved');
-}));
+router.get(
+    '/tenants',
+    authMiddleware,
+    asyncHandler(async (req, res) => {
+        const tenants = await Tenant.find().sort({ lastSeen: -1 });
+        return successResponse(res, tenants, 'Tenants retrieved');
+    }),
+);
 
-router.post('/tenants', authMiddleware, asyncHandler(async (req, res) => {
-    const { name, slug, vmIpAddress, subscribedModules } = req.body;
+router.post(
+    '/tenants',
+    authMiddleware,
+    validate({ body: createTenantSchema }),
+    asyncHandler(async (req, res) => {
+        const { name, slug, vmIpAddress, subscribedModules } = req.body;
 
-    if (!name || !slug) {
-        return errorResponse(res, 'Name and slug are required', 400);
-    }
+        // Check for duplicate slug
+        const existing = await Tenant.findOne({ slug });
+        if (existing) {
+            return errorResponse(res, `Tenant with slug "${slug}" already exists`, 409);
+        }
 
-    if (!/^[a-z0-9-]+$/.test(slug)) {
-        return errorResponse(res, 'Slug must be lowercase letters, numbers, and hyphens only', 400);
-    }
+        const tenant = await Tenant.create({
+            name,
+            slug,
+            vmIpAddress: vmIpAddress || '',
+            subscribedModules: subscribedModules || [],
+            status: 'offline',
+            deploymentStatus: 'pending',
+        });
 
-    const existing = await Tenant.findOne({ slug });
-    if (existing) {
-        return errorResponse(res, `Tenant with slug "${slug}" already exists`, 409);
-    }
-
-    const tenant = await Tenant.create({
-        name,
-        slug,
-        vmIpAddress: vmIpAddress || '',
-        subscribedModules: subscribedModules || [],
-        status: 'offline',
-        deploymentStatus: 'pending',
-    });
-
-    return successResponse(res, tenant, 'Tenant created', 201);
-}));
+        return successResponse(res, tenant, 'Tenant created', 201);
+    }),
+);
 
 /**
  * @openapi
@@ -211,39 +225,54 @@ router.post('/tenants', authMiddleware, asyncHandler(async (req, res) => {
  *       404:
  *         description: Tenant not found
  */
-router.get('/tenants/:id', authMiddleware, asyncHandler(async (req, res) => {
-    const tenant = await Tenant.findById(req.params.id);
-    if (!tenant) {
-        return errorResponse(res, 'Tenant not found', 404);
-    }
-    return successResponse(res, tenant, 'Tenant retrieved');
-}));
+router.get(
+    '/tenants/:id',
+    authMiddleware,
+    validate({ params: mongoIdParam }),
+    asyncHandler(async (req, res) => {
+        const tenant = await Tenant.findById(req.params.id);
+        if (!tenant) {
+            return errorResponse(res, 'Tenant not found', 404);
+        }
+        return successResponse(res, tenant, 'Tenant retrieved');
+    }),
+);
 
-router.put('/tenants/:id', authMiddleware, asyncHandler(async (req, res) => {
-    const { name, vmIpAddress, subscribedModules, isActive } = req.body;
+router.put(
+    '/tenants/:id',
+    authMiddleware,
+    validate({ params: mongoIdParam, body: updateTenantSchema }),
+    asyncHandler(async (req, res) => {
+        const { name, vmIpAddress, subscribedModules, isActive } = req.body;
 
-    const tenant = await Tenant.findById(req.params.id);
-    if (!tenant) {
-        return errorResponse(res, 'Tenant not found', 404);
-    }
+        const tenant = await Tenant.findById(req.params.id);
+        if (!tenant) {
+            return errorResponse(res, 'Tenant not found', 404);
+        }
 
-    if (name !== undefined) tenant.name = name;
-    if (vmIpAddress !== undefined) tenant.vmIpAddress = vmIpAddress;
-    if (subscribedModules !== undefined) tenant.subscribedModules = subscribedModules;
-    if (isActive !== undefined) tenant.isActive = isActive;
+        if (name !== undefined) tenant.name = name;
+        if (vmIpAddress !== undefined) tenant.vmIpAddress = vmIpAddress;
+        if (subscribedModules !== undefined) tenant.subscribedModules = subscribedModules;
+        if (isActive !== undefined) tenant.isActive = isActive;
 
-    await tenant.save();
+        await tenant.save();
 
-    return successResponse(res, tenant, 'Tenant updated');
-}));
+        return successResponse(res, tenant, 'Tenant updated');
+    }),
+);
 
-router.delete('/tenants/:id', authMiddleware, asyncHandler(async (req, res) => {
-    const tenant = await Tenant.findByIdAndDelete(req.params.id);
-    if (!tenant) {
-        return errorResponse(res, 'Tenant not found', 404);
-    }
+router.delete(
+    '/tenants/:id',
+    authMiddleware,
+    validate({ params: mongoIdParam }),
+    asyncHandler(async (req, res) => {
+        const tenant = await Tenant.findByIdAndDelete(req.params.id);
+        if (!tenant) {
+            return errorResponse(res, 'Tenant not found', 404);
+        }
 
-    return successResponse(res, { id: req.params.id }, 'Tenant deleted');
-}));
+        return successResponse(res, { id: req.params.id }, 'Tenant deleted');
+    }),
+);
 
 module.exports = router;

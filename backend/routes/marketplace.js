@@ -5,6 +5,8 @@ const Tenant = require('../models/Tenant');
 const Subscription = require('../models/Subscription');
 const { successResponse, errorResponse } = require('../utils/responseWrapper');
 const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
+const { validate } = require('../middleware/validate');
+const { createProductSchema, purchaseSchema } = require('../schemas/marketplace');
 
 /**
  * @openapi
@@ -52,25 +54,26 @@ router.get('/products', async (req, res) => {
     }
 });
 
-router.post('/products', authMiddleware, async (req, res) => {
-    const { name, slug, description, price, features } = req.body;
+router.post(
+    '/products',
+    authMiddleware,
+    validate({ body: createProductSchema }),
+    async (req, res) => {
+        const { name, slug, description, price, features } = req.body;
 
-    if (!name || !slug) {
-        return errorResponse(res, 'Name and slug are required', 400);
-    }
+        try {
+            const existing = await Product.findOne({ slug });
+            if (existing) {
+                return errorResponse(res, `Product with slug "${slug}" already exists`, 409);
+            }
 
-    try {
-        const existing = await Product.findOne({ slug });
-        if (existing) {
-            return errorResponse(res, `Product with slug "${slug}" already exists`, 409);
+            const product = await Product.create({ name, slug, description, price, features });
+            return successResponse(res, product, 'Product created', 201);
+        } catch (err) {
+            return errorResponse(res, 'Failed to create product', 500, err);
         }
-
-        const product = await Product.create({ name, slug, description, price, features });
-        return successResponse(res, product, 'Product created', 201);
-    } catch (err) {
-        return errorResponse(res, 'Failed to create product', 500, err);
-    }
-});
+    },
+);
 
 /**
  * @openapi
@@ -103,46 +106,52 @@ router.post('/products', authMiddleware, async (req, res) => {
  *       409:
  *         description: Already subscribed to this product
  */
-router.post('/purchase', authMiddleware, requireRole('owner', 'admin'), async (req, res) => {
-    const { tenantId, productId } = req.body;
+router.post(
+    '/purchase',
+    authMiddleware,
+    requireRole('owner', 'admin'),
+    validate({ body: purchaseSchema }),
+    async (req, res) => {
+        const { tenantId, productId } = req.body;
 
-    if (!tenantId || !productId) {
-        return errorResponse(res, 'tenantId and productId are required', 400);
-    }
+        try {
+            const tenant = await Tenant.findById(tenantId);
+            const product = await Product.findById(productId);
 
-    try {
-        const tenant = await Tenant.findById(tenantId);
-        const product = await Product.findById(productId);
+            if (!tenant || !product) {
+                return errorResponse(res, 'Tenant or Product not found', 404);
+            }
 
-        if (!tenant || !product) {
-            return errorResponse(res, 'Tenant or Product not found', 404);
+            const existingSub = await Subscription.findOne({
+                tenant: tenantId,
+                product: productId,
+                status: 'active',
+            });
+
+            if (existingSub) {
+                return errorResponse(res, `Already subscribed to ${product.name}`, 409);
+            }
+
+            const subscription = new Subscription({
+                tenant: tenantId,
+                product: productId,
+            });
+            await subscription.save();
+
+            if (!tenant.subscribedModules.includes(product.slug)) {
+                tenant.subscribedModules.push(product.slug);
+                await tenant.save();
+            }
+
+            return successResponse(
+                res,
+                { tenant, subscription },
+                `Successfully subscribed to ${product.name}!`,
+            );
+        } catch (err) {
+            return errorResponse(res, 'Purchase failed', 500, err);
         }
-
-        const existingSub = await Subscription.findOne({
-            tenant: tenantId,
-            product: productId,
-            status: 'active',
-        });
-
-        if (existingSub) {
-            return errorResponse(res, `Already subscribed to ${product.name}`, 409);
-        }
-
-        const subscription = new Subscription({
-            tenant: tenantId,
-            product: productId,
-        });
-        await subscription.save();
-
-        if (!tenant.subscribedModules.includes(product.slug)) {
-            tenant.subscribedModules.push(product.slug);
-            await tenant.save();
-        }
-
-        return successResponse(res, { tenant, subscription }, `Successfully subscribed to ${product.name}!`);
-    } catch (err) {
-        return errorResponse(res, 'Purchase failed', 500, err);
-    }
-});
+    },
+);
 
 module.exports = router;

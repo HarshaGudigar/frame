@@ -1,18 +1,38 @@
 {
-  "name": "frame",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "dev": "concurrently -n backend,frontend,electron -c blue,green,magenta \"npm run start --prefix backend\" \"npm run dev --prefix frontend\" \"npm run dev:electron\"",
-    "dev:electron": "node -e \"setTimeout(()=>{},5000)\" && npm start --prefix desktop",
-    "start": "concurrently \"mongod --bind_ip_all\" \"npm run start --prefix backend\" \"npx serve -s frontend/dist -l 3000\"",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "devDependencies": {
-    "concurrently": "^9.2.1"
-  }
+    "name": "frame",
+    "version": "1.0.0",
+    "description": "Alyxnet Frame — Multi-tenant SaaS platform",
+    "main": "index.js",
+    "scripts": {
+        "dev": "concurrently -n backend,frontend,electron -c blue,green,magenta \"npm run start --prefix backend\" \"npm run dev --prefix frontend\" \"npm run dev:electron\"",
+        "dev:electron": "node -e \"setTimeout(()=>{},5000)\" && npm start --prefix desktop",
+        "start": "concurrently \"mongod --bind_ip_all\" \"npm run start --prefix backend\" \"npx serve -s frontend/dist -l 3000\"",
+        "lint": "eslint backend/",
+        "lint:fix": "eslint backend/ --fix",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "prepare": "husky",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "devDependencies": {
+        "@eslint/js": "^10.0.1",
+        "concurrently": "^9.2.1",
+        "eslint": "^9.39.1",
+        "eslint-config-prettier": "^10.1.5",
+        "husky": "^9.1.7",
+        "lint-staged": "^16.1.0",
+        "prettier": "^3.5.3"
+    },
+    "lint-staged": {
+        "*.{js,ts,tsx,jsx}": [
+            "prettier --write",
+            "eslint --fix --no-error-on-unmatched-pattern"
+        ],
+        "*.{json,md,css,html,yml,yaml}": [
+            "prettier --write"
+        ]
+    }
 }

@@ -4,8 +4,8 @@ const router = express.Router();
 const GlobalUser = require('../models/GlobalUser');
 const { successResponse, errorResponse } = require('../utils/responseWrapper');
 const { JWT_SECRET, JWT_EXPIRY } = require('../config');
-
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const { validate } = require('../middleware/validate');
+const { registerSchema, loginSchema } = require('../schemas/auth');
 
 /**
  * @openapi
@@ -34,18 +34,8 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  *       409:
  *         description: Email already registered
  */
-router.post('/register', async (req, res) => {
+router.post('/register', validate({ body: registerSchema }), async (req, res) => {
     const { email, password, firstName, lastName } = req.body;
-
-    if (!email || !password) {
-        return errorResponse(res, 'Email and password are required', 400);
-    }
-    if (!EMAIL_REGEX.test(email)) {
-        return errorResponse(res, 'Invalid email format', 400);
-    }
-    if (password.length < 6) {
-        return errorResponse(res, 'Password must be at least 6 characters', 400);
-    }
 
     try {
         const existingUser = await GlobalUser.findOne({ email });
@@ -59,10 +49,15 @@ router.post('/register', async (req, res) => {
         const token = jwt.sign(
             { userId: user._id, email: user.email, tenants: user.tenants },
             JWT_SECRET,
-            { expiresIn: JWT_EXPIRY }
+            { expiresIn: JWT_EXPIRY },
         );
 
-        return successResponse(res, { token, user: { _id: user._id, email: user.email, firstName, lastName } }, 'User registered successfully', 201);
+        return successResponse(
+            res,
+            { token, user: { _id: user._id, email: user.email, firstName, lastName } },
+            'User registered successfully',
+            201,
+        );
     } catch (err) {
         return errorResponse(res, 'Registration failed', 500, err);
     }
@@ -95,15 +90,8 @@ router.post('/register', async (req, res) => {
  *       429:
  *         description: Rate limit exceeded (10 attempts per 15 minutes)
  */
-router.post('/login', async (req, res) => {
+router.post('/login', validate({ body: loginSchema }), async (req, res) => {
     const { email, password } = req.body;
-
-    if (!email || !password) {
-        return errorResponse(res, 'Email and password are required', 400);
-    }
-    if (!EMAIL_REGEX.test(email)) {
-        return errorResponse(res, 'Invalid email format', 400);
-    }
 
     try {
         const user = await GlobalUser.findOne({ email }).select('+password');
@@ -120,10 +108,14 @@ router.post('/login', async (req, res) => {
         const token = jwt.sign(
             { userId: user._id, email: user.email, tenants: user.tenants },
             JWT_SECRET,
-            { expiresIn: JWT_EXPIRY }
+            { expiresIn: JWT_EXPIRY },
         );
 
-        return successResponse(res, { token, user: { _id: user._id, email: user.email, firstName: user.firstName } }, 'Login successful');
+        return successResponse(
+            res,
+            { token, user: { _id: user._id, email: user.email, firstName: user.firstName } },
+            'Login successful',
+        );
     } catch (err) {
         return errorResponse(res, 'Login failed', 500, err);
     }
