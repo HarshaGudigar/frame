@@ -1,0 +1,39 @@
+
+> backend@1.0.0 test
+> jest --runInBand tests/rbac.test.js
+
+FAIL tests/rbac.test.js
+  RBAC & User Management
+    GET /api/admin/users
+      √ should allow owner to list users (20 ms)
+      √ should deny access to admin (Owner only route) (11 ms)
+      √ should deny access to staff (9 ms)
+    POST /api/admin/users/invite
+      √ should allow admin to invite new user (240 ms)
+      √ should deny staff from inviting users (11 ms)
+    DELETE /api/admin/users/:id
+      × should allow owner to deactivate user (14 ms)
+      √ should prevent deleting yourself (10 ms)
+
+  ● RBAC & User Management › DELETE /api/admin/users/:id › should allow owner to deactivate user
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 400
+
+    [0m [90m 116 |[39m                 [33m.[39m[36mset[39m([32m'Authorization'[39m[33m,[39m [32m`Bearer ${ownerToken}`[39m)[33m;[39m
+     [90m 117 |[39m
+    [31m[1m>[22m[39m[90m 118 |[39m             expect(res[33m.[39mstatusCode)[33m.[39mtoBe([35m200[39m)[33m;[39m
+     [90m     |[39m                                    [31m[1m^[22m[39m
+     [90m 119 |[39m
+     [90m 120 |[39m             [36mconst[39m deletedUser [33m=[39m [36mawait[39m [33mGlobalUser[39m[33m.[39mfindById(user[33m.[39m_id)[33m;[39m
+     [90m 121 |[39m             expect(deletedUser[33m.[39misActive)[33m.[39mtoBe([36mfalse[39m)[33m;[39m[0m
+
+      at Object.toBe (tests/rbac.test.js:118:36)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 6 passed, 7 total
+Snapshots:   0 total
+Time:        2.824 s, estimated 3 s
+Ran all test suites matching tests/rbac.test.js.

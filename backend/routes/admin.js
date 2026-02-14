@@ -5,6 +5,9 @@ const { successResponse, errorResponse } = require('../utils/responseWrapper');
 const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
 const { HEARTBEAT_SECRET } = require('../config');
 const { validate } = require('../middleware/validate');
+const { z } = require('zod');
+const logger = require('../utils/logger');
+const GlobalUser = require('../models/GlobalUser');
 const {
     createTenantSchema,
     updateTenantSchema,
@@ -273,6 +276,149 @@ router.delete(
 
         return successResponse(res, { id: req.params.id }, 'Tenant deleted');
     }),
+);
+
+// ─── User Management Routes ───────────────────────────────────────────────
+
+/**
+ * @swagger
+ * /api/admin/users:
+ *   get:
+ *     summary: List all users (Global Owner only)
+ *     tags: [Admin]
+ *     responses:
+ *       200:
+ *         description: List of users
+ */
+router.get('/users', authMiddleware, requireRole('owner'), async (req, res) => {
+    try {
+        const users = await GlobalUser.find({}, 'firstName lastName email role isActive createdAt');
+        res.json({ success: true, count: users.length, data: users });
+    } catch (error) {
+        logger.error({ err: error }, 'Failed to fetch users');
+        errorResponse(res, 'Failed to fetch users', 500);
+    }
+});
+
+/**
+ * @swagger
+ * /api/admin/users/invite:
+ *   post:
+ *     summary: Invite a new user
+ *     tags: [Admin]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, firstName, lastName, role]
+ *             properties:
+ *               email: { type: string }
+ *               firstName: { type: string }
+ *               lastName: { type: string }
+ *               role: { type: string, enum: [admin, staff, user] }
+ *     responses:
+ *       201:
+ *         description: User invited
+ */
+router.post(
+    '/users/invite',
+    authMiddleware,
+    requireRole('owner', 'admin'),
+    validate({
+        body: z.object({
+            email: z.string().email(),
+            firstName: z.string().min(1),
+            lastName: z.string().min(1),
+            role: z.enum(['admin', 'staff', 'user']),
+        }),
+    }),
+    async (req, res) => {
+        try {
+            const { email, firstName, lastName, role } = req.body;
+
+            const existingUser = await GlobalUser.findOne({ email });
+            if (existingUser) {
+                return errorResponse(res, 'User already exists', 409);
+            }
+
+            // In a real app, we'd generate a token and send an email.
+            // For now, we set a temporary password.
+            const tempPassword = 'Welcome123!';
+
+            const newUser = await GlobalUser.create({
+                email,
+                firstName,
+                lastName,
+                role,
+                password: tempPassword,
+                isActive: true,
+            });
+
+            logger.info({ adminId: req.user.id, newUserId: newUser.id }, 'User invited');
+
+            res.status(201).json({
+                success: true,
+                message: 'User invited successfully',
+                data: {
+                    user: {
+                        id: newUser._id,
+                        email: newUser.email,
+                        role: newUser.role,
+                    },
+                    tempPassword, // Return this only in dev/MVP
+                },
+            });
+        } catch (error) {
+            logger.error({ err: error }, 'Failed to invite user');
+            errorResponse(res, 'Failed to invite user', 500);
+        }
+    },
+);
+
+/**
+ * @swagger
+ * /api/admin/users/{id}:
+ *   delete:
+ *     summary: Deactivate a user
+ *     tags: [Admin]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: User deactivated
+ */
+router.delete(
+    '/users/:id',
+    authMiddleware,
+    requireRole('owner'),
+    validate({ params: mongoIdParam }),
+    async (req, res) => {
+        try {
+            const { id } = req.params;
+
+            if (id === req.user.id) {
+                return errorResponse(res, 'Cannot deactivate yourself', 400);
+            }
+
+            const user = await GlobalUser.findByIdAndUpdate(id, { isActive: false }, { new: true });
+
+            if (!user) {
+                return errorResponse(res, 'User not found', 404);
+            }
+
+            logger.info({ adminId: req.user.id, targetUserId: id }, 'User deactivated');
+
+            res.json({ success: true, message: 'User deactivated' });
+        } catch (error) {
+            logger.error({ err: error }, 'Failed to deactivate user');
+            errorResponse(res, 'Failed to deactivate user', 500);
+        }
+    },
 );
 
 module.exports = router;

@@ -6,6 +6,7 @@ import { LoginPage } from '@/pages/login';
 import { DashboardPage } from '@/pages/dashboard';
 import { TenantsPage } from '@/pages/tenants';
 import { MarketplacePage } from '@/pages/marketplace';
+import UsersPage from '@/pages/Users';
 import { SettingsPage } from '@/pages/settings';
 
 function AppRoutes() {
@@ -19,6 +20,7 @@ function AppRoutes() {
                 <Route path="/" element={<DashboardPage />} />
                 <Route path="/tenants" element={<TenantsPage />} />
                 <Route path="/marketplace" element={<MarketplacePage />} />
+                <Route path="/users" element={<UsersPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

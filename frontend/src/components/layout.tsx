@@ -1,12 +1,14 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth-context';
+import { usePermission } from '@/hooks/usePermission';
 import {
     LayoutDashboard,
-    Users,
+    Users as UsersIcon,
     Store,
     Settings,
     LogOut,
     Server,
+    Building2,
 } from 'lucide-react';
 import {
     Sidebar,
@@ -25,13 +27,15 @@ import { Separator } from '@/components/ui/separator';
 
 const navItems = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/tenants', icon: Users, label: 'Tenants' },
+    { to: '/tenants', icon: Building2, label: 'Tenants' },
+    { to: '/users', icon: UsersIcon, label: 'Users', role: 'admin' },
     { to: '/marketplace', icon: Store, label: 'Marketplace' },
     { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 
 function AppSidebar() {
     const { logout } = useAuth();
+    const { hasRole } = usePermission();
 
     return (
         <Sidebar variant="inset" collapsible="icon">
@@ -45,7 +49,9 @@ function AppSidebar() {
                                 </div>
                                 <div className="grid flex-1 text-left text-sm leading-tight">
                                     <span className="truncate font-semibold">Alyxnet</span>
-                                    <span className="truncate text-xs text-muted-foreground">Control Plane</span>
+                                    <span className="truncate text-xs text-muted-foreground">
+                                        Control Plane
+                                    </span>
                                 </div>
                             </NavLink>
                         </SidebarMenuButton>
@@ -57,16 +63,19 @@ function AppSidebar() {
                 <SidebarGroup>
                     <SidebarGroupContent>
                         <SidebarMenu>
-                            {navItems.map((item) => (
-                                <SidebarMenuItem key={item.to}>
-                                    <SidebarMenuButton asChild tooltip={item.label}>
-                                        <NavLink to={item.to} end={item.to === '/'}>
-                                            <item.icon className="size-4" />
-                                            <span>{item.label}</span>
-                                        </NavLink>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                            ))}
+                            {navItems.map((item) => {
+                                if (item.role && !hasRole(item.role as any)) return null;
+                                return (
+                                    <SidebarMenuItem key={item.to}>
+                                        <SidebarMenuButton asChild tooltip={item.label}>
+                                            <NavLink to={item.to} end={item.to === '/'}>
+                                                <item.icon className="size-4" />
+                                                <span>{item.label}</span>
+                                            </NavLink>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                );
+                            })}
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
@@ -90,9 +99,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <SidebarProvider>
             <AppSidebar />
             <SidebarInset>
-                <main className="flex-1 p-6">
-                    {children}
-                </main>
+                <main className="flex-1 p-6">{children}</main>
             </SidebarInset>
         </SidebarProvider>
     );

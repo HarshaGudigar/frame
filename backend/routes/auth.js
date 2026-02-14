@@ -47,14 +47,17 @@ router.post('/register', validate({ body: registerSchema }), async (req, res) =>
         await user.save();
 
         const token = jwt.sign(
-            { userId: user._id, email: user.email, tenants: user.tenants },
+            { userId: user._id, email: user.email, role: user.role, tenants: user.tenants },
             JWT_SECRET,
             { expiresIn: JWT_EXPIRY },
         );
 
         return successResponse(
             res,
-            { token, user: { _id: user._id, email: user.email, firstName, lastName } },
+            {
+                token,
+                user: { _id: user._id, email: user.email, firstName, lastName, role: user.role },
+            },
             'User registered successfully',
             201,
         );
@@ -106,14 +109,22 @@ router.post('/login', validate({ body: loginSchema }), async (req, res) => {
         }
 
         const token = jwt.sign(
-            { userId: user._id, email: user.email, tenants: user.tenants },
+            { userId: user._id, email: user.email, role: user.role, tenants: user.tenants },
             JWT_SECRET,
             { expiresIn: JWT_EXPIRY },
         );
 
         return successResponse(
             res,
-            { token, user: { _id: user._id, email: user.email, firstName: user.firstName } },
+            {
+                token,
+                user: {
+                    _id: user._id,
+                    email: user.email,
+                    firstName: user.firstName,
+                    role: user.role,
+                },
+            },
             'Login successful',
         );
     } catch (err) {
