@@ -1,0 +1,78 @@
+
+> backend@1.0.0 test
+> jest --runInBand tests/auth.test.js
+
+FAIL tests/auth.test.js
+  POST /api/auth/register
+    √ should register a new user and return access + refresh tokens (362 ms)
+  POST /api/auth/login
+    √ should login and return access + refresh tokens (489 ms)
+  POST /api/auth/refresh-token
+    √ should refresh token pair with valid refresh token (273 ms)
+    √ should reject invalid refresh token (258 ms)
+    √ should reject reused (revoked) refresh token (274 ms)
+  POST /api/auth/logout
+    √ should revoke refresh token on logout (258 ms)
+    √ should not allow refresh after logout (266 ms)
+  PATCH /api/auth/profile
+    × should update user profile details (260 ms)
+    × should change password successfully (254 ms)
+    × should reject password change with incorrect current password (254 ms)
+    √ should reject password change if new passwords do not match (254 ms)
+
+  ● PATCH /api/auth/profile › should update user profile details
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 404
+
+    [0m [90m 157 |[39m             [33m.[39msend({ firstName[33m:[39m [32m'David'[39m[33m,[39m lastName[33m:[39m [32m'Bowman'[39m })[33m;[39m
+     [90m 158 |[39m
+    [31m[1m>[22m[39m[90m 159 |[39m         expect(res[33m.[39mstatus)[33m.[39mtoBe([35m200[39m)[33m;[39m
+     [90m     |[39m                            [31m[1m^[22m[39m
+     [90m 160 |[39m         expect(res[33m.[39mbody[33m.[39msuccess)[33m.[39mtoBe([36mtrue[39m)[33m;[39m
+     [90m 161 |[39m         expect(res[33m.[39mbody[33m.[39mdata[33m.[39muser[33m.[39mfirstName)[33m.[39mtoBe([32m'David'[39m)[33m;[39m
+     [90m 162 |[39m         expect(res[33m.[39mbody[33m.[39mdata[33m.[39muser[33m.[39mlastName)[33m.[39mtoBe([32m'Bowman'[39m)[33m;[39m[0m
+
+      at Object.toBe (tests/auth.test.js:159:28)
+
+  ● PATCH /api/auth/profile › should change password successfully
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 404
+
+    [0m [90m 173 |[39m             })[33m;[39m
+     [90m 174 |[39m
+    [31m[1m>[22m[39m[90m 175 |[39m         expect(res[33m.[39mstatus)[33m.[39mtoBe([35m200[39m)[33m;[39m
+     [90m     |[39m                            [31m[1m^[22m[39m
+     [90m 176 |[39m
+     [90m 177 |[39m         [90m// Verify login with new password[39m
+     [90m 178 |[39m         [36mconst[39m loginRes [33m=[39m [36mawait[39m request[33m.[39mpost([32m'/api/auth/login'[39m)[33m.[39msend({[0m
+
+      at Object.toBe (tests/auth.test.js:175:28)
+
+  ● PATCH /api/auth/profile › should reject password change with incorrect current password
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 401
+    Received: 404
+
+    [0m [90m 193 |[39m             })[33m;[39m
+     [90m 194 |[39m
+    [31m[1m>[22m[39m[90m 195 |[39m         expect(res[33m.[39mstatus)[33m.[39mtoBe([35m401[39m)[33m;[39m
+     [90m     |[39m                            [31m[1m^[22m[39m
+     [90m 196 |[39m     })[33m;[39m
+     [90m 197 |[39m
+     [90m 198 |[39m     it([32m'should reject password change if new passwords do not match'[39m[33m,[39m [36masync[39m () [33m=>[39m {[0m
+
+      at Object.toBe (tests/auth.test.js:195:28)
+
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 8 passed, 11 total
+Snapshots:   0 total
+Time:        4.687 s, estimated 5 s
+Ran all test suites matching tests/auth.test.js.

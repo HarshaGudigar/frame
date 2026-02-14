@@ -6,8 +6,9 @@ const GlobalUser = require('../models/GlobalUser');
 const RefreshToken = require('../models/RefreshToken');
 const { successResponse, errorResponse } = require('../utils/responseWrapper');
 const { JWT_SECRET, JWT_EXPIRY, REFRESH_TOKEN_EXPIRY } = require('../config');
+const { authMiddleware } = require('../middleware/authMiddleware');
 const { validate } = require('../middleware/validate');
-const { registerSchema, loginSchema } = require('../schemas/auth');
+const { registerSchema, loginSchema, updateProfileSchema } = require('../schemas/auth');
 
 // Helper: Generate Access & Refresh Token Pair
 const generateTokens = async (user, ipAddress) => {
@@ -187,6 +188,62 @@ router.post('/refresh-token', async (req, res) => {
         return errorResponse(res, 'Refresh failed', 500, err);
     }
 });
+
+/**
+ * @openapi
+ * /api/auth/profile:
+ *   patch:
+ *     summary: Update user profile
+ *     description: Update name and/or password.
+ *     security:
+ *       - bearerAuth: []
+ */
+router.patch(
+    '/profile',
+    authMiddleware,
+    validate({ body: updateProfileSchema }),
+    async (req, res) => {
+        const { firstName, lastName, currentPassword, newPassword } = req.body;
+        const userId = req.user.id;
+
+        try {
+            const user = await GlobalUser.findById(userId).select('+password');
+            if (!user) {
+                return errorResponse(res, 'User not found', 404);
+            }
+
+            if (firstName) user.firstName = firstName;
+            if (lastName) user.lastName = lastName;
+
+            if (newPassword) {
+                // verify current password
+                const isMatch = await user.comparePassword(currentPassword);
+                if (!isMatch) {
+                    return errorResponse(res, 'Incorrect current password', 401);
+                }
+                user.password = newPassword;
+            }
+
+            await user.save();
+
+            return successResponse(
+                res,
+                {
+                    user: {
+                        _id: user._id,
+                        email: user.email,
+                        firstName: user.firstName,
+                        lastName: user.lastName,
+                        role: user.role,
+                    },
+                },
+                'Profile updated successfully',
+            );
+        } catch (err) {
+            return errorResponse(res, 'Profile update failed', 500, err);
+        }
+    },
+);
 
 /**
  * @openapi

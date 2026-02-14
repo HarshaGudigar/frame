@@ -136,3 +136,75 @@ describe('POST /api/auth/logout', () => {
         expect(res.status).toBe(401);
     });
 });
+
+describe('PATCH /api/auth/profile', () => {
+    let accessToken, user;
+
+    beforeEach(async () => {
+        const res = await request.post('/api/auth/register').send({
+            email: 'dave@example.com',
+            password: 'OldPassword123!',
+            firstName: 'Dave',
+        });
+        accessToken = res.body.data.accessToken;
+        user = res.body.data.user;
+    });
+
+    it('should update user profile details', async () => {
+        const res = await request
+            .patch('/api/auth/profile')
+            .set('Authorization', `Bearer ${accessToken}`)
+            .send({ firstName: 'David', lastName: 'Bowman' });
+
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(res.body.data.user.firstName).toBe('David');
+        expect(res.body.data.user.lastName).toBe('Bowman');
+    });
+
+    it('should change password successfully', async () => {
+        const res = await request
+            .patch('/api/auth/profile')
+            .set('Authorization', `Bearer ${accessToken}`)
+            .send({
+                currentPassword: 'OldPassword123!',
+                newPassword: 'NewPassword456!',
+                confirmNewPassword: 'NewPassword456!',
+            });
+
+        expect(res.status).toBe(200);
+
+        // Verify login with new password
+        const loginRes = await request.post('/api/auth/login').send({
+            email: 'dave@example.com',
+            password: 'NewPassword456!',
+        });
+        expect(loginRes.status).toBe(200);
+    });
+
+    it('should reject password change with incorrect current password', async () => {
+        const res = await request
+            .patch('/api/auth/profile')
+            .set('Authorization', `Bearer ${accessToken}`)
+            .send({
+                currentPassword: 'WrongPassword',
+                newPassword: 'NewPassword456!',
+                confirmNewPassword: 'NewPassword456!',
+            });
+
+        expect(res.status).toBe(401);
+    });
+
+    it('should reject password change if new passwords do not match', async () => {
+        const res = await request
+            .patch('/api/auth/profile')
+            .set('Authorization', `Bearer ${accessToken}`)
+            .send({
+                currentPassword: 'OldPassword123!',
+                newPassword: 'NewPassword456!',
+                confirmNewPassword: 'MismatchPassword!',
+            });
+
+        expect(res.status).toBe(400); // Validation error
+    });
+});
