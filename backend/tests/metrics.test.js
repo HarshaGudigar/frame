@@ -19,7 +19,7 @@ describe('Analytics & Metrics', () => {
             firstName: 'Admin',
             lastName: 'Metrics',
         });
-        adminToken = res.body.data.token;
+        adminToken = res.body.data.accessToken;
         await GlobalUser.updateOne({ email: 'admin-metrics@example.com' }, { role: 'admin' });
 
         // Create a test tenant

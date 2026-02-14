@@ -25,7 +25,7 @@ export function LoginPage() {
         try {
             const endpoint = isRegister ? 'register' : 'login';
             const res = await axios.post(`${API_BASE}/auth/${endpoint}`, form);
-            login(res.data.data.token, res.data.data.user);
+            login(res.data.data.accessToken, res.data.data.refreshToken, res.data.data.user);
         } catch (err: any) {
             setError(err.response?.data?.message || 'Authentication failed');
         } finally {

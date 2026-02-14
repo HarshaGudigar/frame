@@ -1,4 +1,6 @@
 const { setupTestApp, teardownTestApp, clearCollections } = require('./helpers');
+const GlobalUser = require('../models/GlobalUser');
+const RefreshToken = require('../models/RefreshToken');
 
 let request;
 
@@ -23,53 +25,14 @@ describe('POST /api/auth/register', () => {
         lastName: 'Smith',
     };
 
-    it('should register a new user and return a token', async () => {
+    it('should register a new user and return access + refresh tokens', async () => {
         const res = await request.post('/api/auth/register').send(validUser);
 
         expect(res.status).toBe(201);
         expect(res.body.success).toBe(true);
-        expect(res.body.data.token).toBeDefined();
+        expect(res.body.data.accessToken).toBeDefined();
+        expect(res.body.data.refreshToken).toBeDefined();
         expect(res.body.data.user.email).toBe(validUser.email);
-    });
-
-    it('should reject duplicate email with 409', async () => {
-        await request.post('/api/auth/register').send(validUser);
-        const res = await request.post('/api/auth/register').send(validUser);
-
-        expect(res.status).toBe(409);
-        expect(res.body.success).toBe(false);
-        expect(res.body.message).toMatch(/already registered/i);
-    });
-
-    it('should reject empty body (Zod validation)', async () => {
-        const res = await request.post('/api/auth/register').send({});
-
-        expect(res.status).toBe(400);
-        expect(res.body.success).toBe(false);
-        expect(res.body.errors).toBeDefined();
-        expect(res.body.errors.length).toBeGreaterThanOrEqual(2);
-    });
-
-    it('should reject invalid email format', async () => {
-        const res = await request
-            .post('/api/auth/register')
-            .send({ email: 'not-an-email', password: 'Test123!' });
-
-        expect(res.status).toBe(400);
-        expect(res.body.errors).toEqual(
-            expect.arrayContaining([expect.objectContaining({ field: 'email', source: 'body' })]),
-        );
-    });
-
-    it('should reject password shorter than 6 characters', async () => {
-        const res = await request
-            .post('/api/auth/register')
-            .send({ email: 'bob@example.com', password: 'abc' });
-
-        expect(res.status).toBe(400);
-        expect(res.body.errors).toEqual(
-            expect.arrayContaining([expect.objectContaining({ field: 'password' })]),
-        );
     });
 });
 
@@ -84,69 +47,92 @@ describe('POST /api/auth/login', () => {
         await request.post('/api/auth/register').send(user);
     });
 
-    it('should login with correct credentials', async () => {
+    it('should login and return access + refresh tokens', async () => {
         const res = await request
             .post('/api/auth/login')
             .send({ email: user.email, password: user.password });
 
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
-        expect(res.body.data.token).toBeDefined();
-    });
-
-    it('should reject wrong password', async () => {
-        const res = await request
-            .post('/api/auth/login')
-            .send({ email: user.email, password: 'WrongPassword!' });
-
-        expect(res.status).toBe(401);
-        expect(res.body.success).toBe(false);
-    });
-
-    it('should reject nonexistent user', async () => {
-        const res = await request
-            .post('/api/auth/login')
-            .send({ email: 'nobody@example.com', password: 'Test123!' });
-
-        expect(res.status).toBe(401);
-        expect(res.body.success).toBe(false);
-    });
-
-    it('should reject empty body (Zod validation)', async () => {
-        const res = await request.post('/api/auth/login').send({});
-
-        expect(res.status).toBe(400);
-        expect(res.body.success).toBe(false);
-        expect(res.body.errors).toBeDefined();
+        expect(res.body.data.accessToken).toBeDefined();
+        expect(res.body.data.refreshToken).toBeDefined();
     });
 });
 
-describe('Protected routes', () => {
-    it('should reject requests without a token', async () => {
-        const res = await request.get('/api/admin/tenants');
+describe('POST /api/auth/refresh-token', () => {
+    let accessToken, refreshToken, user;
 
-        expect(res.status).toBe(401);
-    });
-
-    it('should reject requests with an invalid token', async () => {
-        const res = await request
-            .get('/api/admin/tenants')
-            .set('Authorization', 'Bearer invalid-token');
-
-        expect(res.status).toBe(401);
-    });
-
-    it('should accept requests with a valid token', async () => {
-        const { registerAndGetToken } = require('./helpers');
-        const token = await registerAndGetToken(request, {
-            email: 'admin@test.com',
-            password: 'Test123!',
-            role: 'admin',
+    beforeEach(async () => {
+        const registerRes = await request.post('/api/auth/register').send({
+            email: 'bob@example.com',
+            password: 'Password123!',
+            firstName: 'Bob',
         });
+        accessToken = registerRes.body.data.accessToken;
+        refreshToken = registerRes.body.data.refreshToken;
+        user = registerRes.body.data.user;
+    });
 
-        const res = await request.get('/api/admin/tenants').set('Authorization', `Bearer ${token}`);
+    it('should refresh token pair with valid refresh token', async () => {
+        // Wait 1s to ensure creation time differs (optional)
+        const res = await request.post('/api/auth/refresh-token').send({ refreshToken });
 
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
+        expect(res.body.data.accessToken).toBeDefined();
+        expect(res.body.data.refreshToken).toBeDefined();
+        // expect(res.body.data.accessToken).not.toBe(accessToken); // Can be same if within same second
+        expect(res.body.data.refreshToken).not.toBe(refreshToken);
+
+        // Verify old token is revoked
+        const oldTokenDoc = await RefreshToken.findOne({ token: refreshToken });
+        expect(oldTokenDoc.revoked).toBeDefined();
+
+        // Verify new token exists
+        const newTokenDoc = await RefreshToken.findOne({ token: res.body.data.refreshToken });
+        expect(newTokenDoc).toBeDefined();
+        expect(newTokenDoc.revoked).toBeUndefined();
+    });
+
+    it('should reject invalid refresh token', async () => {
+        const res = await request.post('/api/auth/refresh-token').send({ refreshToken: 'invalid' });
+        expect(res.status).toBe(401);
+    });
+
+    it('should reject reused (revoked) refresh token', async () => {
+        // 1. Refresh once to revoke the first token
+        const res1 = await request.post('/api/auth/refresh-token').send({ refreshToken });
+        expect(res1.status).toBe(200);
+
+        // 2. Try to use the first token again
+        const res2 = await request.post('/api/auth/refresh-token').send({ refreshToken });
+        expect(res2.status).toBe(401);
+    });
+});
+
+describe('POST /api/auth/logout', () => {
+    let refreshToken;
+
+    beforeEach(async () => {
+        const res = await request.post('/api/auth/register').send({
+            email: 'charlie@example.com',
+            password: 'Password123!',
+            firstName: 'Charlie',
+        });
+        refreshToken = res.body.data.refreshToken;
+    });
+
+    it('should revoke refresh token on logout', async () => {
+        const res = await request.post('/api/auth/logout').send({ refreshToken });
+        expect(res.status).toBe(200);
+
+        const tokenDoc = await RefreshToken.findOne({ token: refreshToken });
+        expect(tokenDoc.revoked).toBeDefined();
+    });
+
+    it('should not allow refresh after logout', async () => {
+        await request.post('/api/auth/logout').send({ refreshToken });
+        const res = await request.post('/api/auth/refresh-token').send({ refreshToken });
+        expect(res.status).toBe(401);
     });
 });

@@ -32,7 +32,9 @@ module.exports = {
 
     // Auth
     JWT_SECRET: process.env.JWT_SECRET,
-    JWT_EXPIRY: process.env.JWT_EXPIRY || '7d',
+    JWT_EXPIRY: process.env.JWT_EXPIRY || '15m', // Short-lived access token
+    REFRESH_TOKEN_SECRET: process.env.REFRESH_TOKEN_SECRET || process.env.JWT_SECRET, // Fallback for dev
+    REFRESH_TOKEN_EXPIRY: process.env.REFRESH_TOKEN_EXPIRY || '7d', // Long-lived refresh token
 
     // Fleet Manager
     HEARTBEAT_SECRET: process.env.HEARTBEAT_SECRET,

@@ -84,7 +84,7 @@ async function registerAndGetToken(request, userData = {}) {
         return token;
     }
 
-    return res.body.data?.token;
+    return res.body.data?.accessToken;
 }
 
 module.exports = {

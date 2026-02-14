@@ -1,41 +1,49 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const router = express.Router();
 const GlobalUser = require('../models/GlobalUser');
+const RefreshToken = require('../models/RefreshToken');
 const { successResponse, errorResponse } = require('../utils/responseWrapper');
-const { JWT_SECRET, JWT_EXPIRY } = require('../config');
+const { JWT_SECRET, JWT_EXPIRY, REFRESH_TOKEN_EXPIRY } = require('../config');
 const { validate } = require('../middleware/validate');
 const { registerSchema, loginSchema } = require('../schemas/auth');
+
+// Helper: Generate Access & Refresh Token Pair
+const generateTokens = async (user, ipAddress) => {
+    // 1. Access Token (JWT) - Short lived
+    const accessToken = jwt.sign(
+        { userId: user._id, email: user.email, role: user.role, tenants: user.tenants },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRY },
+    );
+
+    // 2. Refresh Token (Random String) - Long lived
+    const refreshTokenString = crypto.randomBytes(40).toString('hex');
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // Hardcoded 7 days matching config default
+
+    const refreshToken = new RefreshToken({
+        user: user._id,
+        token: refreshTokenString,
+        expiresAt,
+        createdByIp: ipAddress,
+    });
+    await refreshToken.save();
+
+    return { accessToken, refreshToken: refreshTokenString };
+};
 
 /**
  * @openapi
  * /api/auth/register:
  *   post:
- *     tags: [Auth]
  *     summary: Register a new user
- *     description: Creates a global user account. Password is hashed automatically.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [email, password]
- *             properties:
- *               email: { type: string, format: email, example: "user@example.com" }
- *               password: { type: string, minLength: 6, example: "securepass123" }
- *               firstName: { type: string, example: "John" }
- *               lastName: { type: string, example: "Doe" }
- *     responses:
- *       201:
- *         description: User registered successfully
- *       400:
- *         description: Validation error (missing fields, invalid email, short password)
- *       409:
- *         description: Email already registered
+ *     description: Creates account and returns access + refresh tokens.
  */
 router.post('/register', validate({ body: registerSchema }), async (req, res) => {
     const { email, password, firstName, lastName } = req.body;
+    const ipAddress = req.ip;
 
     try {
         const existingUser = await GlobalUser.findOne({ email });
@@ -46,16 +54,13 @@ router.post('/register', validate({ body: registerSchema }), async (req, res) =>
         const user = new GlobalUser({ email, password, firstName, lastName });
         await user.save();
 
-        const token = jwt.sign(
-            { userId: user._id, email: user.email, role: user.role, tenants: user.tenants },
-            JWT_SECRET,
-            { expiresIn: JWT_EXPIRY },
-        );
+        const { accessToken, refreshToken } = await generateTokens(user, ipAddress);
 
         return successResponse(
             res,
             {
-                token,
+                accessToken,
+                refreshToken,
                 user: { _id: user._id, email: user.email, firstName, lastName, role: user.role },
             },
             'User registered successfully',
@@ -70,31 +75,12 @@ router.post('/register', validate({ body: registerSchema }), async (req, res) =>
  * @openapi
  * /api/auth/login:
  *   post:
- *     tags: [Auth]
  *     summary: Login
- *     description: Authenticates a user and returns a JWT token.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [email, password]
- *             properties:
- *               email: { type: string, format: email, example: "user@example.com" }
- *               password: { type: string, example: "securepass123" }
- *     responses:
- *       200:
- *         description: Login successful, returns JWT token
- *       400:
- *         description: Missing email or password
- *       401:
- *         description: Invalid credentials
- *       429:
- *         description: Rate limit exceeded (10 attempts per 15 minutes)
+ *     description: Authenticates user and returns access + refresh tokens.
  */
 router.post('/login', validate({ body: loginSchema }), async (req, res) => {
     const { email, password } = req.body;
+    const ipAddress = req.ip;
 
     try {
         const user = await GlobalUser.findOne({ email }).select('+password');
@@ -108,16 +94,13 @@ router.post('/login', validate({ body: loginSchema }), async (req, res) => {
             return errorResponse(res, 'Invalid credentials', 401);
         }
 
-        const token = jwt.sign(
-            { userId: user._id, email: user.email, role: user.role, tenants: user.tenants },
-            JWT_SECRET,
-            { expiresIn: JWT_EXPIRY },
-        );
+        const { accessToken, refreshToken } = await generateTokens(user, ipAddress);
 
         return successResponse(
             res,
             {
-                token,
+                accessToken,
+                refreshToken,
                 user: {
                     _id: user._id,
                     email: user.email,
@@ -129,6 +112,106 @@ router.post('/login', validate({ body: loginSchema }), async (req, res) => {
         );
     } catch (err) {
         return errorResponse(res, 'Login failed', 500, err);
+    }
+});
+
+/**
+ * @openapi
+ * /api/auth/refresh-token:
+ *   post:
+ *     summary: Refresh Access Token
+ *     description: Rotates refresh token and issues new access token.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [refreshToken]
+ *             properties:
+ *               refreshToken: { type: string }
+ */
+router.post('/refresh-token', async (req, res) => {
+    const { refreshToken } = req.body;
+    const ipAddress = req.ip;
+
+    if (!refreshToken) {
+        return errorResponse(res, 'Refresh token required', 400);
+    }
+
+    try {
+        const tokenDoc = await RefreshToken.findOne({ token: refreshToken });
+
+        if (!tokenDoc) {
+            return errorResponse(res, 'Invalid refresh token', 401);
+        }
+
+        // Reuse Detection: If token is already revoked, it might be a theft attempt.
+        if (tokenDoc.revoked) {
+            // Security: Revoke the token that replaced this one (and so on) to stop the chain
+            // For MVP, we'll just log it. A strict implementation would proactively revoke all tokens for this user.
+            // logger.warn({ userId: tokenDoc.user, ip: ipAddress }, 'Reuse of revoked refresh token detected!');
+            return errorResponse(res, 'Invalid refresh token', 401);
+        }
+
+        if (tokenDoc.expiresAt < new Date()) {
+            return errorResponse(res, 'Refresh token expired', 401);
+        }
+
+        // Token Rotation: Revoke old token, issue new one
+        const user = await GlobalUser.findById(tokenDoc.user);
+        if (!user) {
+            return errorResponse(res, 'User not found', 401);
+        }
+
+        // Revoke current
+        tokenDoc.revoked = new Date();
+        tokenDoc.replacedByToken = 'ROTATED'; // We will set this to new token logic if strictly needed, but simple revoked is enough for now
+
+        // Generate new pair
+        const { accessToken, refreshToken: newRefreshToken } = await generateTokens(
+            user,
+            ipAddress,
+        );
+
+        // Update the replacedBy link for audit trail
+        tokenDoc.replacedByToken = newRefreshToken;
+        await tokenDoc.save();
+
+        return successResponse(
+            res,
+            { accessToken, refreshToken: newRefreshToken },
+            'Token refreshed',
+        );
+    } catch (err) {
+        return errorResponse(res, 'Refresh failed', 500, err);
+    }
+});
+
+/**
+ * @openapi
+ * /api/auth/logout:
+ *   post:
+ *     summary: Logout
+ *     description: Revokes the provided refresh token.
+ */
+router.post('/logout', async (req, res) => {
+    const { refreshToken } = req.body;
+
+    if (!refreshToken) {
+        // If no token provided, just return success (client might have lost it)
+        return successResponse(res, null, 'Logged out');
+    }
+
+    try {
+        const tokenDoc = await RefreshToken.findOne({ token: refreshToken });
+        if (tokenDoc) {
+            tokenDoc.revoked = new Date();
+            await tokenDoc.save();
+        }
+        return successResponse(res, null, 'Logged out successfully');
+    } catch (err) {
+        return errorResponse(res, 'Logout failed', 500, err);
     }
 });
 

@@ -23,7 +23,7 @@ interface AuthContextType {
     user: User | null;
     token: string | null;
     api: AxiosInstance;
-    login: (token: string, user: User) => void;
+    login: (token: string, refreshToken: string, user: User) => void;
     logout: () => void;
     isLoading: boolean;
 }
@@ -38,6 +38,9 @@ export function useAuth() {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [token, setToken] = useState<string | null>(localStorage.getItem('token') || null);
+    const [refreshToken, setRefreshToken] = useState<string | null>(
+        localStorage.getItem('refreshToken') || null,
+    );
     const [user, setUser] = useState<User | null>(() => {
         const savedUser = localStorage.getItem('user');
         if (!savedUser || savedUser === 'undefined') return null;
@@ -47,36 +50,122 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return null;
         }
     });
-    const [isLoading, setIsLoading] = useState(false); // Initial load is instant from localStorage
+    const [isLoading, setIsLoading] = useState(false);
 
-    const api = axios.create({ baseURL: API_BASE });
+    // Refs to hold latest values for interceptors
+    const tokenRef = React.useRef(token);
+    const refreshTokenRef = React.useRef(refreshToken);
+    const isRefreshing = React.useRef(false);
+    const failedQueue = React.useRef<any[]>([]);
 
-    api.interceptors.request.use((config) => {
-        if (token) config.headers.Authorization = `Bearer ${token}`;
-        return config;
-    });
+    useEffect(() => {
+        tokenRef.current = token;
+        refreshTokenRef.current = refreshToken;
+    }, [token, refreshToken]);
 
+    const api = React.useMemo(() => axios.create({ baseURL: API_BASE }), []);
+
+    const processQueue = (error: any, newToken: string | null = null) => {
+        failedQueue.current.forEach((prom) => {
+            if (error) {
+                prom.reject(error);
+            } else {
+                prom.resolve(newToken);
+            }
+        });
+        failedQueue.current = [];
+    };
+
+    // Request Interceptor
+    api.interceptors.request.use(
+        (config) => {
+            // Use ref to get latest token even if closure is stale
+            if (tokenRef.current) {
+                config.headers.Authorization = `Bearer ${tokenRef.current}`;
+            }
+            return config;
+        },
+        (error) => Promise.reject(error),
+    );
+
+    // Response Interceptor
     api.interceptors.response.use(
         (res) => res,
-        (err) => {
-            if (err.response?.status === 401 && token) {
-                logout();
+        async (err) => {
+            const originalRequest = err.config;
+
+            if (err.response?.status === 401 && !originalRequest._retry) {
+                if (isRefreshing.current) {
+                    // Queue concurrent requests while refreshing
+                    return new Promise((resolve, reject) => {
+                        failedQueue.current.push({ resolve, reject });
+                    })
+                        .then((newToken) => {
+                            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+                            return api(originalRequest);
+                        })
+                        .catch((err) => Promise.reject(err));
+                }
+
+                originalRequest._retry = true;
+                isRefreshing.current = true;
+
+                try {
+                    const currentRefreshToken = refreshTokenRef.current;
+                    if (!currentRefreshToken) {
+                        throw new Error('No refresh token available');
+                    }
+
+                    // Call refresh endpoint directly using axios to avoid interceptor loop
+                    const response = await axios.post(`${API_BASE}/auth/refresh-token`, {
+                        refreshToken: currentRefreshToken,
+                    });
+
+                    const { accessToken, refreshToken: newRefreshToken } = response.data.data;
+
+                    setToken(accessToken);
+                    setRefreshToken(newRefreshToken);
+                    localStorage.setItem('token', accessToken);
+                    localStorage.setItem('refreshToken', newRefreshToken);
+
+                    processQueue(null, accessToken);
+
+                    originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+                    return api(originalRequest);
+                } catch (refreshErr) {
+                    processQueue(refreshErr, null);
+                    logout();
+                    return Promise.reject(refreshErr);
+                } finally {
+                    isRefreshing.current = false;
+                }
             }
             return Promise.reject(err);
         },
     );
 
-    const login = (newToken: string, newUser: User) => {
+    const login = (newToken: string, newRefreshToken: string, newUser: User) => {
         setToken(newToken);
+        setRefreshToken(newRefreshToken);
         setUser(newUser);
         localStorage.setItem('token', newToken);
+        localStorage.setItem('refreshToken', newRefreshToken);
         localStorage.setItem('user', JSON.stringify(newUser));
     };
 
     const logout = () => {
+        // Optional: Call backend logout
+        if (refreshTokenRef.current) {
+            axios
+                .post(`${API_BASE}/auth/logout`, { refreshToken: refreshTokenRef.current })
+                .catch(() => {});
+        }
+
         setToken(null);
+        setRefreshToken(null);
         setUser(null);
         localStorage.removeItem('token');
+        localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
     };
 
