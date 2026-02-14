@@ -16,14 +16,14 @@ RUN mkdir -p /data/db
 # Copy root package files
 COPY package*.json ./
 
-# Install root dependencies (concurrently)
-RUN npm install
+# Install root dependencies (production only — skip lint/format tools)
+RUN npm install --omit=dev --ignore-scripts
 
 # Copy backend and install dependencies
 COPY backend/package*.json ./backend/
-RUN cd backend && npm install
+RUN cd backend && npm install --omit=dev
 
-# Copy frontend and install dependencies
+# Copy frontend and install dependencies (needs devDeps for build)
 COPY frontend/package*.json ./frontend/
 RUN cd frontend && npm install
 
