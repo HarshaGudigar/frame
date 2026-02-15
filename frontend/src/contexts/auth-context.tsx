@@ -12,6 +12,7 @@ export interface User {
     lastName: string;
     role: Role;
     isActive?: boolean;
+    isEmailVerified?: boolean;
     tenants?: any[];
 }
 

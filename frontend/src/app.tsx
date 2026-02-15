@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from '@/contexts/auth-context';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { Layout } from '@/components/layout';
 import { Loader2 } from 'lucide-react';
+import { EmailVerificationRequired } from '@/components/email-verification-required';
 
 // Lazy load pages
 const LoginPage = lazy(() =>
@@ -26,22 +27,57 @@ const AuditLogsPage = lazy(() =>
     import('@/pages/audit-logs').then((module) => ({ default: module.AuditLogsPage })),
 );
 
-function AppRoutes() {
-    const { token } = useAuth();
+// Auth pages (unauthenticated)
+const AcceptInvitePage = lazy(() =>
+    import('@/pages/accept-invite').then((module) => ({ default: module.AcceptInvitePage })),
+);
+const VerifyEmailPage = lazy(() =>
+    import('@/pages/verify-email').then((module) => ({ default: module.VerifyEmailPage })),
+);
+const ForgotPasswordPage = lazy(() =>
+    import('@/pages/forgot-password').then((module) => ({ default: module.ForgotPasswordPage })),
+);
+const ResetPasswordPage = lazy(() =>
+    import('@/pages/reset-password').then((module) => ({ default: module.ResetPasswordPage })),
+);
 
+const FullPageLoader = (
+    <div className="h-screen w-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+    </div>
+);
+
+function AppRoutes() {
+    const { token, user } = useAuth();
+
+    // Unauthenticated — show login or public auth pages
     if (!token)
         return (
-            <Suspense
-                fallback={
-                    <div className="h-screen w-screen flex items-center justify-center">
-                        <Loader2 className="h-8 w-8 animate-spin" />
-                    </div>
-                }
-            >
-                <LoginPage />
+            <Suspense fallback={FullPageLoader}>
+                <Routes>
+                    <Route path="/accept-invite" element={<AcceptInvitePage />} />
+                    <Route path="/verify-email" element={<VerifyEmailPage />} />
+                    <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                    <Route path="/reset-password" element={<ResetPasswordPage />} />
+                    <Route path="*" element={<LoginPage />} />
+                </Routes>
             </Suspense>
         );
 
+    // Authenticated but email not verified — show interstitial
+    // Allow verify-email route through so they can verify after clicking the link
+    if (user && !user.isEmailVerified) {
+        return (
+            <Suspense fallback={FullPageLoader}>
+                <Routes>
+                    <Route path="/verify-email" element={<VerifyEmailPage />} />
+                    <Route path="*" element={<EmailVerificationRequired />} />
+                </Routes>
+            </Suspense>
+        );
+    }
+
+    // Authenticated and verified
     return (
         <Layout>
             <Suspense

@@ -4,106 +4,270 @@
 
 ---
 
-## 🟢 Phase 1: Foundation & Core Infrastructure (Completed)
+## Phase 1: Foundation & Core Infrastructure (Completed)
 
-> **Status**: ✅ **100% Complete**
+> **Status**: 100% Complete
 > The technological bedrock is solid. We have a working monorepo, deployment pipeline, and base functionality.
 
 - [x] **Monorepo Structure**: Unified codebase for Backend, Frontend, Desktop, and Mobile.
 - [x] **Containerization**: Single Docker container for Backend + Frontend + Database.
 - [x] **CI/CD Pipeline**: Automated deployment to AWS Lightsail via GitHub Actions.
-- [x] **Authentication & RBAC**: Secure login and role management.
-- [x] **Core UI**: Dashboard, Tenant Management, and basic Marketplace UI.
+- [x] **Authentication & RBAC**: JWT access/refresh token rotation with role-based access control.
+- [x] **Core UI**: Dashboard, Tenant Management, User Management, Audit Logs, and basic Marketplace UI.
+- [x] **Fleet Monitoring**: Heartbeat-based metrics collection with dashboard visualization.
+- [x] **Module Gateway**: Pluggable module system with auto-discovery, per-module Swagger docs, and tenant-scoped access.
+- [x] **Real-Time Foundation**: Socket.io for live notifications (tenant creation, status changes, user invites).
 - [x] **Cross-Platform**: Electron Desktop App and React Native Mobile scaffolding.
 
 ---
 
-## 🟡 Phase 2: The Business Engine (Monetization & Operations)
+## Phase 1.5: Platform Hardening (Critical Gaps)
 
-> **Status**: 🚧 **In Progress**
-> Turning the "framewok" into a "platform" that processes money and manages real customers.
+> **Status**: In Progress
+> Gaps discovered during code audit that must be resolved before onboarding real customers. These are not features — they are foundational reliability and security requirements that Phase 1 deferred.
+
+### 1. Authentication & Security Hardening
+
+- [x] **Email-Based User Invites**: Replaced hardcoded `Welcome123!` with a secure invite flow using `VerificationToken` model and Resend email service. Invited users receive a one-time link to set their own password.
+- [x] **Email Verification on Registration**: New users are marked unverified on registration. Verification email sent via Resend. Frontend gate blocks access to protected routes until verified. Resend verification endpoint available.
+- [x] **Password Reset Flow**: Added `POST /api/auth/forgot-password` and `POST /api/auth/reset-password` with Resend email integration. Anti-enumeration (always returns success). Revokes all refresh tokens on reset.
+- [ ] **Two-Factor Authentication (TOTP)**: Add optional TOTP-based 2FA using `otplib`. Store encrypted TOTP secret per user. Require 2FA code on login when enabled. Add setup/disable endpoints under `/api/auth/2fa/*`.
+- [x] **Socket.io Authentication**: Added JWT verification middleware on socket connection. Rejects unauthenticated sockets. Associates sessions with user IDs via `user:{id}` rooms. Admin/owner auto-join `admin` room.
+- [x] **Refresh Token Cleanup Job**: Added `node-cron` job running daily at 03:00. Purges revoked refresh tokens (>30 days), expired refresh tokens, and stale verification tokens (>7 days).
+- [x] **Rate Limit Tightening**: Production default set to `20 req/15min`. Added dedicated rate limiters for `/login` (10), `/register` (5), and `/forgot-password` (5) with dev overrides.
+- [x] **CSRF Protection**: Documented as not needed — localStorage + Bearer header pattern is inherently CSRF-safe. XSS risk mitigated by Helmet CSP. Migration notes added for future httpOnly cookie adoption.
+
+### 2. Data Layer Reliability
+
+- [ ] **MongoDB Backup Strategy**: Add a cron-based `mongodump` script that runs nightly inside the Docker container and uploads compressed backups to S3 (or Lightsail Object Storage). Include a `restore.sh` script for disaster recovery.
+- [ ] **Metrics TTL Activation**: Uncomment and enable the 30-day TTL index on the `Metric` model (`backend/models/Metric.js`) to prevent unbounded collection growth.
+- [ ] **Tenant Database Provisioning**: The `Tenant.dbUri` field exists but is never used. Implement actual database provisioning logic: when a tenant is created in SILO mode, auto-create a dedicated MongoDB database (or use a naming convention like `frame_tenant_{slug}`). Wire `tenantDBCache.js` (currently unused) into the request lifecycle.
+- [ ] **Graceful Shutdown**: Add `SIGTERM`/`SIGINT` handlers in `server.js` that close the HTTP server, disconnect mongoose, and drain Socket.io connections before exiting. Critical for zero-downtime Docker restarts.
+
+### 3. Frontend Stability
+
+- [ ] **Global Error Handling**: Replace silent `catch {}` blocks in `dashboard.tsx`, `tenants.tsx`, `marketplace.tsx`, and `users.tsx` with consistent toast-based error notifications using the existing toast system.
+- [ ] **Loading States**: Add skeleton loaders (using the existing `Skeleton` component from shadcn/ui) to all data-fetching pages: Dashboard, Tenants, Users, Marketplace, Audit Logs.
+- [ ] **Empty States**: Add informative empty-state UI when lists are empty (e.g., "No tenants yet. Create your first tenant to get started.").
+- [ ] **Fix Auth Context Bug**: The `User` interface in `auth-context.tsx` defines `lastName` twice. Remove the duplicate. Also remove the unused `isLoading` state variable.
+- [ ] **Debounce Audit Log Filters**: The userId filter input in `audit-logs.tsx` triggers an API call on every keystroke. Add a 300ms debounce.
+- [ ] **Date Picker for Audit Logs**: Replace raw text inputs for date range filtering with a proper date picker component.
+- [ ] **Reconnection Strategy for Socket.io**: Add exponential backoff reconnection logic in `socket-provider.tsx`. Show a connection status indicator in the UI when disconnected.
+
+### 4. DevOps & Deployment Hardening
+
+- [ ] **Docker Compose Separation**: Split the monolithic Dockerfile into three services in `docker-compose.yml`: `mongo` (official image), `backend` (Node.js), `frontend` (Nginx serving static build). This enables independent scaling, proper health checks, and standard MongoDB backup tooling.
+- [ ] **Health Check in Docker**: Add `HEALTHCHECK` instruction to the Dockerfile that hits `GET /api/health` and verifies the database connection is alive.
+- [ ] **Deployment Rollback**: Add a rollback mechanism to `deploy.yml`. Before pulling new code, tag the current running image as `frame-app:rollback`. If the new container fails health checks within 60 seconds, auto-revert to the rollback image.
+- [ ] **Environment Variable Validation**: Add `.env.example` files for both `backend/` and `frontend/` documenting every required and optional variable with descriptions.
+- [ ] **Separate Build and Test Stages**: In `test.yml`, add a build step that produces the Docker image and runs integration tests against it, catching Dockerfile regressions.
+
+---
+
+## Phase 2: The Business Engine (Operations & Tenant Lifecycle)
+
+> **Status**: Not Started
+> Turning the framework into a platform that manages real customers. Payment processing is deferred to Phase 5 — this phase focuses on marketplace operations, provisioning, and tenant management.
 
 ### 1. Marketplace & Provisioning (The "App Store" Logic)
 
-- [ ] **Provisioning Engine**: Automate the "install" process. When a user buys "CRM Module", appropriate flags/tables are enabled for that tenant.
-- [ ] **Dependencies**: Logic to handle prerequisites (e.g., "Field Service" requires "Maps Integration").
-- [ ] **Versioning**: Support rolling out module updates to specific tenants.
+- [ ] **Provisioning Engine**: Automate the "install" process. When a user assigns a product to a tenant, the system should: (a) create a `Subscription` record, (b) add the module slug to `tenant.subscribedModules`, (c) call the module's `init()` hook to set up any required database collections or seed data, and (d) emit a `module:provisioned` socket event.
+- [ ] **Module Dependencies**: Add a `dependencies` field to the module manifest (`index.js`). Before provisioning, validate that all dependency modules are already subscribed. Surface missing dependencies in the assignment flow UI.
+- [ ] **Module Versioning & Rollout**: Add `version` and `minPlatformVersion` to module manifests. Support canary rollouts by allowing specific tenants to be pinned to a module version. Track `moduleVersion` per tenant in the Subscription model.
+- [ ] **Product CRUD Completion**: The marketplace currently has no edit or delete endpoints. Add `PUT /api/marketplace/products/:id` and `DELETE /api/marketplace/products/:id` (soft delete via `isActive: false`). Add the corresponding UI in the frontend.
+- [ ] **Product Categories & Search**: Add a `category` field to the Product model. Add search/filter capabilities to `GET /api/marketplace/products` (query by name, category). Implement frontend filtering UI.
+- [ ] **First Production Module**: Build one real module (e.g., a simple CRM or Task Manager) end-to-end to validate the entire module lifecycle: discovery, provisioning, access control, API routing, and Swagger docs.
 
-### 2. Commercialization Layer
+### 2. Tenant Lifecycle Management
 
-- [ ] **Stripe Integration**: Automated subscription billing and invoicing.
-- [ ] **Usage Metering**: Infrastructure to count API calls/storage for pay-as-you-go billing.
-- [ ] **Data Isolation (Silo Mode)**: Logic to support "Enterprise" tenants who need a separate DB or schema.
+- [ ] **Tenant Onboarding Wizard**: After a new tenant is created, redirect to a multi-step onboarding flow: (1) choose modules, (2) invite team members, (3) configure basic settings. Track onboarding completion percentage.
+- [ ] **Tenant Suspension & Reactivation**: Add `suspended` status to the Tenant model. Suspended tenants cannot access any API routes (enforced in `tenantMiddleware`). Allow manual suspension and reactivation from the admin panel.
+- [ ] **Tenant Data Export**: Add `GET /api/admin/tenants/:id/export` that generates a JSON dump of all tenant data (users, subscriptions, metrics). Required for GDPR compliance and tenant offboarding.
+- [ ] **White-Labeling**: Add a `branding` subdocument to the Tenant model with fields: `logo` (URL), `primaryColor`, `faviconUrl`, `loginDomain`. Serve tenant-specific branding via a new `GET /api/branding/:slug` public endpoint. Apply branding dynamically in the frontend login page and sidebar.
+- [ ] **Trial Period Support**: Add `trialDays` to the Product model. When a tenant is assigned a trial-eligible product, set `Subscription.status = 'trialing'` with an `expiryDate`. Add a scheduled job (node-cron) that transitions expired trials to `expired` and removes module access. No payment integration needed — trials are admin-managed.
 
-### 3. Tenant Customization
+### 3. Usage Tracking (Pre-Billing Foundation)
 
-- [ ] **White-Labeling**: Allow tenants to set their own logo, colors, and login domain (`start.mycompany.com`).
-
----
-
-## 🟣 Phase 3: The AI & Modern Edge (Differentiation)
-
-> **Status**: 💡 **Next Up**
-> Features that make the platform "smart" and "alive", separating it from legacy competitors.
-
-### 1. AI Revenue Agents (High Value Modules)
-
-- [ ] **AI Sales Rep (SDR)**: Agent that connects to CRM to qualify leads and book meetings via email/LinkedIn.
-- [ ] **Automated Consultant**: Agent that ingests client data to generate instant Audit Reports (SEO, Finance, Security).
-- [ ] **Content Factory**: Agent that auto-generates localized marketing content for tenants.
-
-### 2. Real-Time Interaction
-
-- [ ] **Multiplayer Mode**: Live cursors and presence verification for team collaboration.
-- [ ] **Contextual Collaboration**: "Comment anywhere" functionality on the dashboard.
-
-### 3. Smart User Experience
-
-- [ ] **Generative Analytics**: "Ask your data" interface (Text-to-SQL for tenant admins).
-- [ ] **Smart Copilot**: Navigation assistant to help users find features or settings.
+- [ ] **API Call Metering**: Add a lightweight middleware that counts API calls per tenant per module. Store hourly aggregates in a `UsageMeter` collection. This data will feed into Stripe billing when payment is added in Phase 5.
+- [ ] **Usage Dashboard**: Expose `GET /api/admin/usage/:tenantId` for admin visibility. Build a frontend Usage page showing API call counts, storage usage, and trends per tenant. No billing logic — purely operational insight.
 
 ---
 
-## 🔵 Phase 4: Vertical Solutions (Go-to-Market Strategy)
+## Phase 3: Platform Intelligence (AI & Automation)
 
-> **Status**: 💼 **Strategic Planning**
-> Specific "Flavors" of the platform tailored to industry needs.
+> **Status**: Planned
+> Features that make the platform smart and reduce manual operations.
+
+### 1. Operational Intelligence (Internal AI)
+
+- [ ] **Anomaly Detection for Fleet Metrics**: Analyze heartbeat data to detect anomalies (CPU spikes, memory leaks, unusual downtime patterns). Use a simple rolling-average threshold or integrate with a lightweight ML model. Trigger alerts via Socket.io and email when anomalies are detected.
+- [ ] **Predictive Scaling Recommendations**: Based on historical metrics, suggest when a tenant should upgrade their silo resources. Surface recommendations in the fleet dashboard.
+- [ ] **Smart Audit Log Summarization**: Use an LLM to generate daily/weekly summaries of audit log activity (e.g., "3 new tenants created, 2 users deactivated, 1 failed deployment"). Deliver via email digest to owners.
+- [ ] **Automated Incident Response**: Define runbook-style rules (e.g., "if tenant offline for >10 minutes, attempt SSH restart"). Execute automated recovery actions and log results.
+
+### 2. Tenant-Facing AI Features (Revenue Generators)
+
+- [ ] **Generative Analytics ("Ask Your Data")**: Text-to-query interface for tenant admins. User types a natural language question, system generates a MongoDB aggregation pipeline, executes it against the tenant's database, and returns formatted results with charts. Implement as a marketplace module.
+- [ ] **AI Sales Rep (SDR Module)**: Marketplace module that connects to a tenant's CRM data. Uses LLM to qualify leads, draft outreach emails, and suggest next actions. Integrates with email APIs (SendGrid) for automated sequences.
+- [ ] **Content Factory Module**: Marketplace module for auto-generating marketing content. Takes brand guidelines and topic inputs, produces blog posts, social media copy, and email templates. Supports localization.
+- [ ] **Smart Copilot**: In-app assistant (chat widget) that helps users navigate the platform, find features, and answer questions about their data. Context-aware based on current page and user role.
+
+### 3. Real-Time Collaboration
+
+- [ ] **Presence System**: Track which users are online and what page they're viewing. Show avatar indicators on shared resources (tenants, settings). Use Socket.io rooms per page.
+- [ ] **Live Cursors**: For collaborative editing views (e.g., tenant settings, module configuration), show other users' cursor positions in real-time using CRDT or OT.
+- [ ] **Contextual Comments**: "Comment anywhere" functionality. Users can attach comments to any entity (tenant, product, user, metric data point). Threaded replies with @mentions. Store in a polymorphic `Comment` collection.
+
+---
+
+## Phase 4: Vertical Solutions (Go-to-Market)
+
+> **Status**: Strategic Planning
+> Specific "flavors" of the platform tailored to industry needs. Each vertical is a collection of marketplace modules with industry-specific configurations.
 
 ### 1. "Alyxnet Health" (Clinic Management)
 
-- **Focus**: Privacy & Patient Engagement.
-- **Key Modules**: EMR, Telemedicine (WebRTC), Appointment Scheduling.
+- **Focus**: Privacy, compliance (HIPAA-readiness), and patient engagement.
+- **Key Modules**:
+    - EMR (Electronic Medical Records) with field-level encryption
+    - Telemedicine (WebRTC video calls with recording)
+    - Appointment Scheduling with SMS/email reminders
+    - Patient Portal (self-service booking, lab results, prescriptions)
+    - Consent Management (digital signatures, form versioning)
+- **Technical Requirements**: Audit trail per-record, data residency controls, encrypted backups
 
 ### 2. "Alyxnet Retail" (POS & Inventory)
 
-- **Focus**: Offline Reliability & Inventory.
-- **Key Modules**: Barcode Scanning (Mobile), Offline Mode (WatermelonDB), Receipt Printing.
+- **Focus**: Offline reliability, real-time inventory, and multi-location support.
+- **Key Modules**:
+    - POS Terminal (barcode scanning via mobile camera, receipt printing)
+    - Inventory Management (stock levels, reorder alerts, supplier tracking)
+    - Offline Mode (WatermelonDB for local-first data, sync on reconnect)
+    - Loyalty Program (points, tiers, promotions engine)
+    - Multi-Store Dashboard (aggregate sales, compare locations)
+- **Technical Requirements**: Conflict resolution for offline sync, thermal printer integration, low-latency barcode lookup
 
 ### 3. "Alyxnet Field" (Service & Logistics)
 
-- **Focus**: Geo-location & Evidence.
-- **Key Modules**: Job Dispatch, GPS Tracking, Signature Capture, Photo Upload.
+- **Focus**: Geo-location, evidence capture, and job dispatch.
+- **Key Modules**:
+    - Job Dispatch (assign, schedule, route optimization)
+    - GPS Tracking (live worker location on map, geofencing)
+    - Evidence Capture (photo upload with GPS metadata, signature pad, timestamped notes)
+    - Customer Portal (job status tracking, approval workflows)
+    - Fleet Vehicle Tracking (OBD-II integration, mileage logging)
+- **Technical Requirements**: Background location on mobile, offline photo queue, map tile caching
+
+### 4. "Alyxnet Agency" (Digital Agency / Consultancy)
+
+- **Focus**: Client management, project delivery, and automated reporting.
+- **Key Modules**:
+    - Client Portal (branded per-client dashboard with shared files and reports)
+    - Project Tracker (Kanban boards, time tracking, milestones)
+    - Automated Reporting (scheduled PDF/email reports with charts from client data)
+    - Proposal Builder (template-based proposals with e-signature)
+    - White-Label Reseller (agency resells the platform under their own brand)
+- **Technical Requirements**: PDF generation, email templating, multi-brand theming
 
 ---
 
-## 🔴 Phase 5: Enterprise Scale (Long Term)
+## Phase 5: Enterprise Scale & Commercialization
 
-> **Status**: 📅 **Planned**
-> Requirements for landing "Whale" clients (Fortune 500).
+> **Status**: Planned
+> Requirements for landing large enterprise clients and processing payments. Payment infrastructure is intentionally deferred to this phase — the platform must be operationally stable before handling money.
 
-- [ ] **Fleet Management**: "God View" dashboard to monitor thousands of tenant instances.
-- [ ] **Advanced Security**: SSO (SAML/OIDC), Audit Log Export (to Splunk/S3), 2FA enforcement.
-- [ ] **Developer Ecosystem**: Webhooks and Plugin Architecture for 3rd party extensions.
-- [ ] **Global Performance**: CDN integration and Edge caching strategies.
+### 1. Commercialization Layer (Payments & Billing)
+
+- [ ] **Stripe Integration**: Integrate Stripe Checkout for subscription billing. Map each `Product` to a Stripe Price ID. On purchase, create a Stripe Checkout session. On webhook confirmation (`checkout.session.completed`, `invoice.paid`, `customer.subscription.deleted`), update the `Subscription` status. Store Stripe customer ID on the `GlobalUser` model.
+- [ ] **Usage-Based Billing**: Connect the `UsageMeter` data (built in Phase 2) to Stripe usage-based pricing. Report metered usage to Stripe at the end of each billing cycle. Support per-module and per-tenant metering.
+- [ ] **Invoice & Billing History**: Add `GET /api/billing/invoices` that returns Stripe invoice history for the authenticated user's tenant. Build a frontend Billing page showing payment history, current plan, and upcoming charges.
+- [ ] **Payment-Triggered Suspension**: Wire Stripe `invoice.payment_failed` webhook to automatically suspend tenants after grace period. Reactivate on successful payment via `invoice.paid` webhook.
+- [ ] **Pricing Tiers**: Support multiple pricing tiers per product (e.g., Starter, Professional, Enterprise) with feature gating. Store tier metadata on the Subscription model. Enforce tier limits in module access middleware.
+- [ ] **Self-Service Plan Management**: Allow tenant admins to upgrade/downgrade plans, add/remove modules, and update payment methods through a Billing Settings page. Proxy through Stripe Customer Portal.
+
+### 2. Identity & Access Management
+
+- [ ] **SSO Integration (SAML 2.0 / OIDC)**: Allow enterprise tenants to connect their identity provider (Okta, Azure AD, Google Workspace). Map IdP groups to platform roles. Support SP-initiated and IdP-initiated login.
+- [ ] **Mandatory 2FA Enforcement**: Tenant-level policy to require 2FA for all users. Block login for users who haven't set up 2FA. Support backup codes and recovery flows.
+- [ ] **Session Management Dashboard**: Show active sessions per user with device info, IP, and location. Allow admins to force-logout specific sessions.
+- [ ] **API Key Management**: Allow tenants to create scoped API keys for M2M integrations. Support key rotation, expiry dates, and IP whitelisting. Rate limit per key.
+
+### 3. Fleet Management at Scale
+
+- [ ] **"God View" Dashboard**: Real-time map showing all tenant silo instances with status indicators. Drill-down to individual tenant metrics. Support filtering by region, status, version, and resource usage.
+- [ ] **Centralized Log Aggregation**: Ship backend logs from all silo instances to a central location (ELK stack, Loki, or CloudWatch). Provide a log search UI in the hub dashboard.
+- [ ] **Automated Silo Provisioning**: When a new enterprise tenant is created, automatically spin up a dedicated VM (via Lightsail API or Terraform), deploy the silo container, configure DNS, and register the heartbeat. Full infrastructure-as-code.
+- [ ] **Rolling Updates**: Push module or platform updates to silos in batches with health-check gates. If a batch fails, halt the rollout and alert. Support version pinning per tenant.
+
+### 4. Compliance & Governance
+
+- [ ] **Audit Log Export**: Export audit logs to external systems (S3 as JSON/CSV, Splunk via HEC, or SIEM webhook). Add a scheduled export job configurable per tenant.
+- [ ] **Data Residency Controls**: Allow tenants to specify their data region. Route database writes and backups to region-specific infrastructure. Tag all stored data with region metadata.
+- [ ] **Retention Policies**: Configurable data retention periods per tenant. Auto-archive or delete data beyond the retention window. Required for GDPR and industry compliance.
+- [ ] **Consent & Privacy Center**: A UI where end-users can view what data is stored about them, request export (GDPR Article 15), or request deletion (GDPR Article 17). Backed by an automated data discovery and purge pipeline.
+
+### 5. Developer Ecosystem
+
+- [ ] **Webhook System**: Allow tenants to register webhook URLs for platform events (tenant.created, user.invited, subscription.purchased, heartbeat.missed). Include HMAC signature verification, retry logic with exponential backoff, and a delivery log.
+- [ ] **Public REST API with Versioning**: Version all API endpoints (`/api/v1/`, `/api/v2/`). Maintain backward compatibility for one major version. Publish a developer portal with interactive API reference, SDKs, and code samples.
+- [ ] **Plugin Architecture**: Define a formal Plugin SDK that extends beyond modules. Plugins can register custom middleware, add UI panels (micro-frontends), and hook into lifecycle events. Publish an npm package (`@alyxnet/plugin-sdk`).
+- [ ] **Marketplace for Third-Party Modules**: Open the module marketplace to external developers. Add a submission/review pipeline, revenue sharing model, and developer dashboard with analytics.
+
+### 6. Global Performance
+
+- [ ] **CDN Integration**: Serve the frontend via CloudFront (or Cloudflare). Configure cache headers, asset fingerprinting, and purge-on-deploy.
+- [ ] **API Response Caching**: Add Redis as a caching layer for read-heavy endpoints (product listings, tenant metadata, fleet stats). Implement cache invalidation on writes.
+- [ ] **Database Read Replicas**: For high-traffic hubs, configure MongoDB replica sets with read preference `secondaryPreferred` for analytics queries. Keep writes on primary.
+- [ ] **Edge Functions**: Deploy latency-sensitive endpoints (health checks, static config) as edge functions (Cloudflare Workers or Lambda@Edge) to reduce round-trip time for global users.
 
 ---
 
-## 🛠 Ongoing: Technical Health & Maintenance
+## Phase 6: Platform Maturity & Operational Excellence
 
-> **Status**: 🔄 **Continuous**
+> **Status**: Long-Term
+> The practices and systems that separate a startup product from a production-grade platform.
+
+### 1. Observability Stack
+
+- [ ] **Distributed Tracing**: Instrument backend with OpenTelemetry. Trace requests across hub-to-silo communication, database queries, and external API calls. Visualize in Jaeger or Grafana Tempo.
+- [ ] **Metrics Pipeline**: Export application metrics (request latency, error rates, queue depth) to Prometheus. Build Grafana dashboards for SRE use. Set up alerting rules (PagerDuty/OpsGenie integration).
+- [ ] **Structured Error Tracking**: Integrate Sentry (or self-hosted GlitchTip) for frontend and backend error tracking. Auto-create issues on new error types. Link errors to deployments for regression detection.
+- [ ] **Uptime Monitoring**: External synthetic monitoring (Checkly, Uptime Robot) that hits `/api/health` from multiple regions. Publish a status page (`status.alyxnet.com`) showing real-time and historical uptime.
+
+### 2. Testing & Quality Gates
+
+- [ ] **Frontend Test Suite**: Write Vitest + React Testing Library tests for all pages and components. Target 80% coverage. Focus on: auth flows, CRUD operations, error states, permission-gated UI.
+- [ ] **End-to-End Tests**: Add Playwright tests covering critical user journeys: registration, login, create tenant, purchase module, invite user, view dashboard. Run in CI on every PR.
+- [ ] **Contract Testing**: Add Pact or similar contract tests between frontend and backend to catch API breaking changes before deployment.
+- [ ] **Load Testing**: Add k6 or Artillery scripts that simulate concurrent users hitting auth, tenant CRUD, and heartbeat endpoints. Run before major releases. Establish baseline performance budgets.
+- [ ] **Security Scanning**: Add `npm audit` and Snyk to CI pipeline. Run OWASP ZAP against the deployed staging environment weekly. Address critical/high findings within 48 hours.
+
+### 3. Developer Experience
+
+- [ ] **Local Development Setup**: Add a `docker-compose.dev.yml` with hot-reload for backend (nodemon), frontend (Vite HMR), and a local MongoDB. One command to start: `docker compose -f docker-compose.dev.yml up`.
+- [ ] **Seed Data Script**: Create a `backend/scripts/seed.js` that populates the database with realistic test data: admin user, sample tenants, products, subscriptions, metrics history, and audit logs.
+- [ ] **Module Scaffolding CLI**: Build a CLI tool (`npx alyxnet-create-module <name>`) that generates a new module from the `_template` directory with the correct boilerplate, registers it, and adds a basic test file.
+- [ ] **Contributing Guide**: Document the module development workflow, coding conventions, PR process, and how to run tests locally.
+
+### 4. Notification System
+
+- [x] **Email Service Integration**: Integrated Resend as the transactional email provider (`support.alyxnet.com` domain verified). Created `services/email.js` with `sendInviteEmail()`, `sendPasswordResetEmail()`, `sendVerificationEmail()`. Inline HTML templates with styled button links. `sendAlertEmail()` deferred to Phase 3.
+- [ ] **In-App Notification Persistence**: Currently notifications are in-memory and lost on page refresh. Add a `Notification` model (user, type, title, body, read, createdAt). Load unread count on login. Mark as read on click. Paginate in the notification center.
+- [ ] **Notification Preferences**: Per-user settings: which events trigger email vs. in-app vs. both. Store in `GlobalUser.notificationPreferences`. Expose in the Settings page.
+- [ ] **Webhook-Based Alerts**: For fleet monitoring alerts (tenant offline, high CPU, deployment failed), send notifications to configured webhook URLs (Slack, Discord, Teams, PagerDuty).
+
+---
+
+## Ongoing: Technical Health & Maintenance
+
+> **Status**: Continuous
 > Keeping the engine running smoothly.
 
-- [ ] **Testing**: Increase Unit and E2E test coverage (Playwright/Jest).
-- [ ] **Documentation**: Maintain API docs (Swagger) and User Guides.
-- [ ] **Dependency Management**: Regular updates to React, Node, and Electron versions.
-- [ ] **Mobile Polish**: Continuous improvement of the React Native UX to match native standards.
+- [ ] **Dependency Management**: Quarterly audit of all npm dependencies. Update React, Node, Electron, and Expo versions. Monitor for security advisories.
+- [ ] **API Documentation**: Keep Swagger/OpenAPI specs in sync with code. Add request/response examples for all endpoints. Publish versioned docs.
+- [ ] **Database Index Review**: Quarterly review of MongoDB indexes. Add compound indexes for common query patterns. Remove unused indexes.
+- [ ] **Mobile Polish**: Continuous improvement of the React Native UX. Match native platform conventions (iOS/Android). Add deep linking and push notifications.
+- [ ] **Desktop App**: Bring Electron app to parity with web features. Add auto-update mechanism (electron-updater). Support offline mode with local data sync.
+- [ ] **Accessibility (a11y)**: Audit all frontend components for WCAG 2.1 AA compliance. Add ARIA labels, keyboard navigation, screen reader support, and focus management.
+- [ ] **Internationalization (i18n)**: Extract all user-facing strings into locale files. Add react-i18next. Support RTL layouts. Start with English and Arabic (or target market languages).
+- [ ] **Performance Budgets**: Set Lighthouse score targets (Performance > 90, Accessibility > 90). Monitor bundle size with `vite-plugin-bundle-analyzer`. Alert on regressions in CI.

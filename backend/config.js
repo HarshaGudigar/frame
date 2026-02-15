@@ -20,6 +20,12 @@ if (process.env.NODE_ENV !== 'test') {
         console.error('   Add it to backend/.env: HEARTBEAT_SECRET=your-secure-key-here');
         process.exit(1);
     }
+
+    if (!process.env.RESEND_API_KEY) {
+        console.error('❌ FATAL: RESEND_API_KEY is not set in environment variables.');
+        console.error('   Add it to backend/.env: RESEND_API_KEY=re_your-key-here');
+        process.exit(1);
+    }
 }
 
 // ─── Exports ─────────────────────────────────────────────────────────────────
@@ -45,9 +51,33 @@ module.exports = {
         .map((origin) => origin.trim())
         .filter(Boolean),
 
+    // Email (Resend)
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
+    APP_URL: process.env.APP_URL || 'http://localhost:5173',
+    EMAIL_FROM: process.env.EMAIL_FROM || 'Alyxnet Frame <noreply@yourdomain.com>',
+
     // Rate Limiting
     RATE_LIMIT_WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 15 * 60 * 1000, // 15 min
-    RATE_LIMIT_MAX_AUTH: parseInt(process.env.RATE_LIMIT_MAX_AUTH, 10) || 1000, // Increased for dev/testing
+    RATE_LIMIT_MAX_AUTH:
+        parseInt(process.env.RATE_LIMIT_MAX_AUTH, 10) ||
+        (process.env.NODE_ENV === 'production' ? 20 : 1000),
+
+    // Endpoint-specific rate limits
+    RATE_LIMIT_LOGIN_WINDOW_MS:
+        parseInt(process.env.RATE_LIMIT_LOGIN_WINDOW_MS, 10) || 15 * 60 * 1000,
+    RATE_LIMIT_LOGIN_MAX:
+        parseInt(process.env.RATE_LIMIT_LOGIN_MAX, 10) ||
+        (process.env.NODE_ENV === 'production' ? 10 : 1000),
+    RATE_LIMIT_REGISTER_WINDOW_MS:
+        parseInt(process.env.RATE_LIMIT_REGISTER_WINDOW_MS, 10) || 15 * 60 * 1000,
+    RATE_LIMIT_REGISTER_MAX:
+        parseInt(process.env.RATE_LIMIT_REGISTER_MAX, 10) ||
+        (process.env.NODE_ENV === 'production' ? 5 : 1000),
+    RATE_LIMIT_FORGOT_PW_WINDOW_MS:
+        parseInt(process.env.RATE_LIMIT_FORGOT_PW_WINDOW_MS, 10) || 15 * 60 * 1000,
+    RATE_LIMIT_FORGOT_PW_MAX:
+        parseInt(process.env.RATE_LIMIT_FORGOT_PW_MAX, 10) ||
+        (process.env.NODE_ENV === 'production' ? 5 : 1000),
 
     // Request Limits
     BODY_SIZE_LIMIT: process.env.BODY_SIZE_LIMIT || '10kb',

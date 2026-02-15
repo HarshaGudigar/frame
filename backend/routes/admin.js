@@ -4,12 +4,18 @@ const Tenant = require('../models/Tenant');
 const { successResponse, errorResponse } = require('../utils/responseWrapper');
 const { logAction } = require('../middleware/auditLogger');
 const socketService = require('../utils/socket');
-const { authMiddleware, requireRole } = require('../middleware/authMiddleware');
+const {
+    authMiddleware,
+    requireRole,
+    requireVerifiedEmail,
+} = require('../middleware/authMiddleware');
 const { HEARTBEAT_SECRET } = require('../config');
 const { validate } = require('../middleware/validate');
 const { z } = require('zod');
 const logger = require('../utils/logger');
 const GlobalUser = require('../models/GlobalUser');
+const VerificationToken = require('../models/VerificationToken');
+const emailService = require('../services/email');
 const Metric = require('../models/Metric');
 const {
     createTenantSchema,
@@ -140,6 +146,7 @@ router.post(
 router.get(
     '/tenants',
     authMiddleware,
+    requireVerifiedEmail,
     requireRole('admin', 'staff', 'owner'),
     asyncHandler(async (req, res) => {
         const tenants = await Tenant.find().sort({ lastSeen: -1 });
@@ -150,6 +157,7 @@ router.get(
 router.post(
     '/tenants',
     authMiddleware,
+    requireVerifiedEmail,
     requireRole('admin', 'owner'),
     validate({ body: createTenantSchema }),
     asyncHandler(async (req, res) => {
@@ -250,6 +258,7 @@ router.post(
 router.get(
     '/tenants/:id',
     authMiddleware,
+    requireVerifiedEmail,
     requireRole('admin', 'staff', 'owner'),
     validate({ params: mongoIdParam }),
     asyncHandler(async (req, res) => {
@@ -264,6 +273,7 @@ router.get(
 router.put(
     '/tenants/:id',
     authMiddleware,
+    requireVerifiedEmail,
     requireRole('admin', 'owner'),
     validate({ params: mongoIdParam, body: updateTenantSchema }),
     asyncHandler(async (req, res) => {
@@ -302,6 +312,7 @@ router.put(
 router.delete(
     '/tenants/:id',
     authMiddleware,
+    requireVerifiedEmail,
     requireRole('admin', 'owner'),
     validate({ params: mongoIdParam }),
     asyncHandler(async (req, res) => {
@@ -332,15 +343,24 @@ router.delete(
  *       200:
  *         description: List of users
  */
-router.get('/users', authMiddleware, requireRole('owner'), async (req, res) => {
-    try {
-        const users = await GlobalUser.find({}, 'firstName lastName email role isActive createdAt');
-        res.json({ success: true, count: users.length, data: users });
-    } catch (error) {
-        logger.error({ err: error }, 'Failed to fetch users');
-        errorResponse(res, 'Failed to fetch users', 500);
-    }
-});
+router.get(
+    '/users',
+    authMiddleware,
+    requireVerifiedEmail,
+    requireRole('owner'),
+    async (req, res) => {
+        try {
+            const users = await GlobalUser.find(
+                {},
+                'firstName lastName email role isActive createdAt',
+            );
+            res.json({ success: true, count: users.length, data: users });
+        } catch (error) {
+            logger.error({ err: error }, 'Failed to fetch users');
+            errorResponse(res, 'Failed to fetch users', 500);
+        }
+    },
+);
 
 /**
  * @swagger
@@ -367,6 +387,7 @@ router.get('/users', authMiddleware, requireRole('owner'), async (req, res) => {
 router.post(
     '/users/invite',
     authMiddleware,
+    requireVerifiedEmail,
     requireRole('owner', 'admin'),
     validate({
         body: z.object({
@@ -385,18 +406,34 @@ router.post(
                 return errorResponse(res, 'User already exists', 409);
             }
 
-            // In a real app, we'd generate a token and send an email.
-            // For now, we set a temporary password.
-            const tempPassword = 'Welcome123!';
-
+            // Create user without password — they'll set it via the invite link
             const newUser = await GlobalUser.create({
                 email,
                 firstName,
                 lastName,
                 role,
-                password: tempPassword,
-                isActive: true,
+                isActive: false,
+                isEmailVerified: false,
+                invitedBy: req.user._id,
             });
+
+            // Generate invite token (48-hour expiry)
+            const inviteToken = await VerificationToken.createToken(newUser._id, 'invite', 48);
+
+            // Send invite email (non-fatal — user is created regardless)
+            try {
+                const inviterName =
+                    `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() ||
+                    req.user.email;
+                await emailService.sendInviteEmail(
+                    email,
+                    firstName,
+                    inviterName,
+                    inviteToken.token,
+                );
+            } catch (emailErr) {
+                logger.error({ err: emailErr, email }, 'Failed to send invite email');
+            }
 
             logger.info({ adminId: req.user.id, newUserId: newUser.id }, 'User invited');
 
@@ -413,14 +450,13 @@ router.post(
 
             res.status(201).json({
                 success: true,
-                message: 'User invited successfully',
+                message: `Invitation email sent to ${email}`,
                 data: {
                     user: {
                         id: newUser._id,
                         email: newUser.email,
                         role: newUser.role,
                     },
-                    tempPassword, // Return this only in dev/MVP
                 },
             });
         } catch (error) {
@@ -448,6 +484,7 @@ router.post(
 router.delete(
     '/users/:id',
     authMiddleware,
+    requireVerifiedEmail,
     requireRole('owner'),
     validate({ params: mongoIdParam }),
     async (req, res) => {
@@ -506,6 +543,7 @@ router.delete(
 router.patch(
     '/users/:id/role',
     authMiddleware,
+    requireVerifiedEmail,
     requireRole('owner'),
     validate({ params: mongoIdParam, body: updateUserRoleSchema }),
     async (req, res) => {
@@ -562,6 +600,7 @@ router.patch(
 router.get(
     '/metrics/:id',
     authMiddleware,
+    requireVerifiedEmail,
     requireRole('admin', 'owner'),
     asyncHandler(async (req, res) => {
         const { id } = req.params; // slug or id
@@ -590,6 +629,7 @@ router.get(
 router.get(
     '/fleet/stats',
     authMiddleware,
+    requireVerifiedEmail,
     requireRole('admin', 'owner'),
     asyncHandler(async (req, res) => {
         const totalTenants = await Tenant.countDocuments();
@@ -626,6 +666,7 @@ router.get(
 router.get(
     '/audit-logs',
     authMiddleware,
+    requireVerifiedEmail,
     requireRole('owner'),
     asyncHandler(async (req, res) => {
         const { page = 1, limit = 20, action, userId, startDate, endDate } = req.query;

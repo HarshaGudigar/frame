@@ -60,4 +60,52 @@ const updateProfileSchema = z
         },
     );
 
-module.exports = { registerSchema, loginSchema, updateProfileSchema };
+const acceptInviteSchema = z
+    .object({
+        token: z.string({ required_error: 'Token is required' }).min(1, 'Token is required'),
+        password: z
+            .string({ required_error: 'Password is required' })
+            .min(6, 'Password must be at least 6 characters')
+            .max(128, 'Password must be at most 128 characters'),
+        confirmPassword: z.string({ required_error: 'Password confirmation is required' }),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+        message: 'Passwords do not match',
+        path: ['confirmPassword'],
+    });
+
+const verifyEmailSchema = z.object({
+    token: z.string({ required_error: 'Token is required' }).min(1, 'Token is required'),
+});
+
+const forgotPasswordSchema = z.object({
+    email: z
+        .string({ required_error: 'Email is required' })
+        .email('Invalid email format')
+        .trim()
+        .toLowerCase(),
+});
+
+const resetPasswordSchema = z
+    .object({
+        token: z.string({ required_error: 'Token is required' }).min(1, 'Token is required'),
+        password: z
+            .string({ required_error: 'Password is required' })
+            .min(6, 'Password must be at least 6 characters')
+            .max(128, 'Password must be at most 128 characters'),
+        confirmPassword: z.string({ required_error: 'Password confirmation is required' }),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+        message: 'Passwords do not match',
+        path: ['confirmPassword'],
+    });
+
+module.exports = {
+    registerSchema,
+    loginSchema,
+    updateProfileSchema,
+    acceptInviteSchema,
+    verifyEmailSchema,
+    forgotPasswordSchema,
+    resetPasswordSchema,
+};

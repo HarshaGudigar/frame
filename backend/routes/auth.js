@@ -4,11 +4,27 @@ const crypto = require('crypto');
 const router = express.Router();
 const GlobalUser = require('../models/GlobalUser');
 const RefreshToken = require('../models/RefreshToken');
+const VerificationToken = require('../models/VerificationToken');
 const { successResponse, errorResponse } = require('../utils/responseWrapper');
 const { JWT_SECRET, JWT_EXPIRY, REFRESH_TOKEN_EXPIRY } = require('../config');
 const { authMiddleware } = require('../middleware/authMiddleware');
 const { validate } = require('../middleware/validate');
-const { registerSchema, loginSchema, updateProfileSchema } = require('../schemas/auth');
+const {
+    registerSchema,
+    loginSchema,
+    updateProfileSchema,
+    acceptInviteSchema,
+    verifyEmailSchema,
+    forgotPasswordSchema,
+    resetPasswordSchema,
+} = require('../schemas/auth');
+const emailService = require('../services/email');
+const logger = require('../utils/logger');
+const {
+    loginLimiter,
+    registerLimiter,
+    forgotPasswordLimiter,
+} = require('../middleware/rateLimiters');
 
 // Helper: Generate Access & Refresh Token Pair
 const generateTokens = async (user, ipAddress) => {
@@ -40,9 +56,9 @@ const generateTokens = async (user, ipAddress) => {
  * /api/auth/register:
  *   post:
  *     summary: Register a new user
- *     description: Creates account and returns access + refresh tokens.
+ *     description: Creates account, sends verification email, and returns access + refresh tokens.
  */
-router.post('/register', validate({ body: registerSchema }), async (req, res) => {
+router.post('/register', registerLimiter, validate({ body: registerSchema }), async (req, res) => {
     const { email, password, firstName, lastName } = req.body;
     const ipAddress = req.ip;
 
@@ -52,8 +68,29 @@ router.post('/register', validate({ body: registerSchema }), async (req, res) =>
             return errorResponse(res, 'Email already registered', 409);
         }
 
-        const user = new GlobalUser({ email, password, firstName, lastName });
+        const user = new GlobalUser({
+            email,
+            password,
+            firstName,
+            lastName,
+            isEmailVerified: false,
+        });
         await user.save();
+
+        // Generate verification token and send email
+        try {
+            const verificationToken = await VerificationToken.createToken(
+                user._id,
+                'email_verification',
+                24,
+            );
+            await emailService.sendVerificationEmail(email, firstName, verificationToken.token);
+        } catch (emailErr) {
+            logger.error(
+                { err: emailErr, userId: user._id },
+                'Failed to send verification email during registration',
+            );
+        }
 
         const { accessToken, refreshToken } = await generateTokens(user, ipAddress);
 
@@ -62,7 +99,14 @@ router.post('/register', validate({ body: registerSchema }), async (req, res) =>
             {
                 accessToken,
                 refreshToken,
-                user: { _id: user._id, email: user.email, firstName, lastName, role: user.role },
+                user: {
+                    _id: user._id,
+                    email: user.email,
+                    firstName,
+                    lastName,
+                    role: user.role,
+                    isEmailVerified: false,
+                },
             },
             'User registered successfully',
             201,
@@ -79,7 +123,7 @@ router.post('/register', validate({ body: registerSchema }), async (req, res) =>
  *     summary: Login
  *     description: Authenticates user and returns access + refresh tokens.
  */
-router.post('/login', validate({ body: loginSchema }), async (req, res) => {
+router.post('/login', loginLimiter, validate({ body: loginSchema }), async (req, res) => {
     const { email, password } = req.body;
     const ipAddress = req.ip;
 
@@ -87,6 +131,10 @@ router.post('/login', validate({ body: loginSchema }), async (req, res) => {
         const user = await GlobalUser.findOne({ email }).select('+password');
 
         if (!user || !user.isActive) {
+            return errorResponse(res, 'Invalid credentials', 401);
+        }
+
+        if (!user.password) {
             return errorResponse(res, 'Invalid credentials', 401);
         }
 
@@ -107,12 +155,226 @@ router.post('/login', validate({ body: loginSchema }), async (req, res) => {
                     email: user.email,
                     firstName: user.firstName,
                     role: user.role,
+                    isEmailVerified: user.isEmailVerified,
                 },
             },
             'Login successful',
         );
     } catch (err) {
         return errorResponse(res, 'Login failed', 500, err);
+    }
+});
+
+/**
+ * @openapi
+ * /api/auth/accept-invite:
+ *   post:
+ *     summary: Accept an invitation
+ *     description: Sets password for invited user, activates account, and returns tokens.
+ */
+router.post('/accept-invite', validate({ body: acceptInviteSchema }), async (req, res) => {
+    const { token, password } = req.body;
+    const ipAddress = req.ip;
+
+    try {
+        const tokenDoc = await VerificationToken.findValidToken(token, 'invite');
+        if (!tokenDoc) {
+            return errorResponse(res, 'Invalid or expired invitation token', 400);
+        }
+
+        const user = await GlobalUser.findById(tokenDoc.user);
+        if (!user) {
+            return errorResponse(res, 'User not found', 404);
+        }
+
+        // Set password, activate, and mark email as verified
+        user.password = password;
+        user.isActive = true;
+        user.isEmailVerified = true;
+        await user.save();
+
+        // Consume the token
+        await tokenDoc.consume();
+
+        const { accessToken, refreshToken } = await generateTokens(user, ipAddress);
+
+        return successResponse(
+            res,
+            {
+                accessToken,
+                refreshToken,
+                user: {
+                    _id: user._id,
+                    email: user.email,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    role: user.role,
+                    isEmailVerified: true,
+                },
+            },
+            'Invitation accepted successfully',
+        );
+    } catch (err) {
+        return errorResponse(res, 'Failed to accept invitation', 500, err);
+    }
+});
+
+/**
+ * @openapi
+ * /api/auth/verify-email:
+ *   post:
+ *     summary: Verify email address
+ *     description: Validates verification token and marks user email as verified.
+ */
+router.post('/verify-email', validate({ body: verifyEmailSchema }), async (req, res) => {
+    const { token } = req.body;
+
+    try {
+        const tokenDoc = await VerificationToken.findValidToken(token, 'email_verification');
+        if (!tokenDoc) {
+            return errorResponse(res, 'Invalid or expired verification token', 400);
+        }
+
+        const user = await GlobalUser.findById(tokenDoc.user);
+        if (!user) {
+            return errorResponse(res, 'User not found', 404);
+        }
+
+        user.isEmailVerified = true;
+        await user.save();
+
+        await tokenDoc.consume();
+
+        return successResponse(res, null, 'Email verified successfully');
+    } catch (err) {
+        return errorResponse(res, 'Email verification failed', 500, err);
+    }
+});
+
+/**
+ * @openapi
+ * /api/auth/resend-verification:
+ *   post:
+ *     summary: Resend verification email
+ *     description: Generates a new verification token and sends email. Requires authentication.
+ */
+router.post('/resend-verification', authMiddleware, async (req, res) => {
+    try {
+        const user = req.user;
+
+        if (user.isEmailVerified) {
+            return errorResponse(res, 'Email is already verified', 400);
+        }
+
+        const verificationToken = await VerificationToken.createToken(
+            user._id,
+            'email_verification',
+            24,
+        );
+
+        try {
+            await emailService.sendVerificationEmail(
+                user.email,
+                user.firstName,
+                verificationToken.token,
+            );
+        } catch (emailErr) {
+            logger.error({ err: emailErr, userId: user._id }, 'Failed to send verification email');
+        }
+
+        return successResponse(res, null, 'Verification email sent');
+    } catch (err) {
+        return errorResponse(res, 'Failed to resend verification email', 500, err);
+    }
+});
+
+/**
+ * @openapi
+ * /api/auth/forgot-password:
+ *   post:
+ *     summary: Request password reset
+ *     description: Sends password reset email. Always returns success to prevent email enumeration.
+ */
+router.post(
+    '/forgot-password',
+    forgotPasswordLimiter,
+    validate({ body: forgotPasswordSchema }),
+    async (req, res) => {
+        const { email } = req.body;
+
+        try {
+            // Always return success to prevent email enumeration
+            const user = await GlobalUser.findOne({ email });
+
+            if (user && user.isActive) {
+                const resetToken = await VerificationToken.createToken(
+                    user._id,
+                    'password_reset',
+                    1,
+                ); // 1 hour expiry
+                try {
+                    await emailService.sendPasswordResetEmail(
+                        user.email,
+                        user.firstName,
+                        resetToken.token,
+                    );
+                } catch (emailErr) {
+                    logger.error(
+                        { err: emailErr, userId: user._id },
+                        'Failed to send password reset email',
+                    );
+                }
+            }
+
+            return successResponse(
+                res,
+                null,
+                'If an account with that email exists, a password reset link has been sent.',
+            );
+        } catch (err) {
+            return errorResponse(res, 'Failed to process password reset request', 500, err);
+        }
+    },
+);
+
+/**
+ * @openapi
+ * /api/auth/reset-password:
+ *   post:
+ *     summary: Reset password
+ *     description: Validates reset token, sets new password, and revokes all refresh tokens.
+ */
+router.post('/reset-password', validate({ body: resetPasswordSchema }), async (req, res) => {
+    const { token, password } = req.body;
+
+    try {
+        const tokenDoc = await VerificationToken.findValidToken(token, 'password_reset');
+        if (!tokenDoc) {
+            return errorResponse(res, 'Invalid or expired reset token', 400);
+        }
+
+        const user = await GlobalUser.findById(tokenDoc.user);
+        if (!user) {
+            return errorResponse(res, 'User not found', 404);
+        }
+
+        // Set new password
+        user.password = password;
+        await user.save();
+
+        // Consume the reset token
+        await tokenDoc.consume();
+
+        // Revoke all existing refresh tokens for security
+        await RefreshToken.updateMany({ user: user._id, revoked: null }, { revoked: new Date() });
+
+        return successResponse(
+            res,
+            null,
+            'Password reset successfully. Please log in with your new password.',
+        );
+    } catch (err) {
+        return errorResponse(res, 'Password reset failed', 500, err);
     }
 });
 
@@ -149,9 +411,6 @@ router.post('/refresh-token', async (req, res) => {
 
         // Reuse Detection: If token is already revoked, it might be a theft attempt.
         if (tokenDoc.revoked) {
-            // Security: Revoke the token that replaced this one (and so on) to stop the chain
-            // For MVP, we'll just log it. A strict implementation would proactively revoke all tokens for this user.
-            // logger.warn({ userId: tokenDoc.user, ip: ipAddress }, 'Reuse of revoked refresh token detected!');
             return errorResponse(res, 'Invalid refresh token', 401);
         }
 
@@ -167,7 +426,7 @@ router.post('/refresh-token', async (req, res) => {
 
         // Revoke current
         tokenDoc.revoked = new Date();
-        tokenDoc.replacedByToken = 'ROTATED'; // We will set this to new token logic if strictly needed, but simple revoked is enough for now
+        tokenDoc.replacedByToken = 'ROTATED';
 
         // Generate new pair
         const { accessToken, refreshToken: newRefreshToken } = await generateTokens(

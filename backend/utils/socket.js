@@ -1,4 +1,7 @@
 const { Server } = require('socket.io');
+const jwt = require('jsonwebtoken');
+const GlobalUser = require('../models/GlobalUser');
+const { JWT_SECRET } = require('../config');
 const logger = require('./logger');
 
 let io;
@@ -6,7 +9,7 @@ let io;
 /**
  * Socket Service — Alyxnet Frame
  *
- * Central management for WebSocket connections.
+ * Central management for WebSocket connections with JWT authentication.
  */
 module.exports = {
     init: (httpServer) => {
@@ -20,11 +23,54 @@ module.exports = {
             },
         });
 
+        // JWT Authentication Middleware
+        io.use(async (socket, next) => {
+            const token = socket.handshake.auth?.token;
+
+            if (!token) {
+                return next(new Error('Authentication required'));
+            }
+
+            try {
+                const decoded = jwt.verify(token, JWT_SECRET);
+                const user = await GlobalUser.findById(decoded.userId || decoded.id);
+
+                if (!user || !user.isActive) {
+                    return next(new Error('User not found or inactive'));
+                }
+
+                socket.user = {
+                    _id: user._id,
+                    email: user.email,
+                    role: user.role,
+                    firstName: user.firstName,
+                };
+
+                next();
+            } catch (err) {
+                return next(new Error('Invalid or expired token'));
+            }
+        });
+
         io.on('connection', (socket) => {
-            logger.info({ socketId: socket.id }, 'New client connected');
+            logger.info(
+                { socketId: socket.id, userId: socket.user._id },
+                'Authenticated client connected',
+            );
+
+            // Auto-join user-specific room
+            socket.join(`user:${socket.user._id}`);
+
+            // Join admin room if owner or admin
+            if (socket.user.role === 'owner' || socket.user.role === 'admin') {
+                socket.join('admin');
+            }
 
             socket.on('disconnect', () => {
-                logger.info({ socketId: socket.id }, 'Client disconnected');
+                logger.info(
+                    { socketId: socket.id, userId: socket.user._id },
+                    'Client disconnected',
+                );
             });
         });
 

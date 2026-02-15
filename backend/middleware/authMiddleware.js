@@ -77,4 +77,25 @@ const requireRole = (...allowedRoles) => {
     };
 };
 
-module.exports = { authMiddleware, requireRole };
+/**
+ * Verified Email Guard
+ * Requires the authenticated user to have a verified email address.
+ * Must be used after authMiddleware.
+ */
+const requireVerifiedEmail = (req, res, next) => {
+    if (!req.user) {
+        return errorResponse(res, 'Authentication required', 401);
+    }
+
+    if (!req.user.isEmailVerified) {
+        return errorResponse(
+            res,
+            'Email verification required. Please verify your email address.',
+            403,
+        );
+    }
+
+    next();
+};
+
+module.exports = { authMiddleware, requireRole, requireVerifiedEmail };

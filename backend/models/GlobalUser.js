@@ -16,7 +16,7 @@ const globalUserSchema = new mongoose.Schema(
         },
         password: {
             type: String,
-            required: true,
+            required: false,
             select: false, // Don't include password in queries by default
         },
         role: {
@@ -44,6 +44,15 @@ const globalUserSchema = new mongoose.Schema(
             type: Boolean,
             default: true,
         },
+        isEmailVerified: {
+            type: Boolean,
+            default: false,
+        },
+        invitedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'GlobalUser',
+            default: null,
+        },
     },
     {
         timestamps: true,
@@ -52,7 +61,7 @@ const globalUserSchema = new mongoose.Schema(
 
 // Hash password before saving
 globalUserSchema.pre('save', async function () {
-    if (!this.isModified('password')) return;
+    if (!this.isModified('password') || !this.password) return;
     const salt = await bcrypt.genSalt(12);
     this.password = await bcrypt.hash(this.password, salt);
 });

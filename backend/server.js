@@ -20,6 +20,10 @@ if (require.main === module) {
     // Initialize SocketService
     socketService.init(server);
 
+    // Start token cleanup cron job
+    const { startTokenCleanup } = require('./jobs/tokenCleanup');
+    startTokenCleanup();
+
     // Database
     mongoose
         .connect(config.MONGODB_URI)

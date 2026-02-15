@@ -17,13 +17,14 @@ export const useSocket = () => useContext(SocketContext);
 export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [socket, setSocket] = useState<Socket | null>(null);
     const [isConnected, setIsConnected] = useState(false);
-    const { user } = useAuth();
+    const { user, token } = useAuth();
 
     useEffect(() => {
-        if (!user) {
+        if (!user || !token) {
             if (socket) {
                 socket.disconnect();
                 setSocket(null);
+                setIsConnected(false);
             }
             return;
         }
@@ -31,6 +32,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const socketInstance = io(import.meta.env.VITE_API_URL || 'http://localhost:3000', {
             withCredentials: true,
             transports: ['websocket'],
+            auth: { token },
         });
 
         socketInstance.on('connect', () => {
@@ -43,12 +45,17 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             setIsConnected(false);
         });
 
+        socketInstance.on('connect_error', (err) => {
+            console.error('Socket connection error:', err.message);
+            setIsConnected(false);
+        });
+
         setSocket(socketInstance);
 
         return () => {
             socketInstance.disconnect();
         };
-    }, [user]);
+    }, [user, token]);
 
     return (
         <SocketContext.Provider value={{ socket, isConnected }}>{children}</SocketContext.Provider>

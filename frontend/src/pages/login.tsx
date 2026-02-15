@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { Server, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -98,7 +99,17 @@ export function LoginPage() {
                         </div>
 
                         <div className="space-y-1.5">
-                            <Label htmlFor="password">Password</Label>
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="password">Password</Label>
+                                {!isRegister && (
+                                    <Link
+                                        to="/forgot-password"
+                                        className="text-xs text-primary hover:underline"
+                                    >
+                                        Forgot password?
+                                    </Link>
+                                )}
+                            </div>
                             <Input
                                 id="password"
                                 type="password"

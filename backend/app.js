@@ -24,6 +24,20 @@ function createApp() {
     const app = express();
 
     // ─── Security Middleware ─────────────────────────────────────────────────
+    //
+    // CSRF Protection Note:
+    // This application stores JWTs in localStorage and sends them via the
+    // Authorization: Bearer header. Because browsers do not automatically attach
+    // localStorage values to cross-origin requests, this pattern is inherently
+    // CSRF-safe — an attacker's page cannot forge a request that includes the
+    // Bearer token. The tradeoff is XSS exposure: if an attacker injects script,
+    // they can read localStorage. This risk is mitigated by Helmet's CSP headers
+    // and strict input sanitization.
+    //
+    // If this application ever migrates to httpOnly cookie-based auth, add:
+    //   1. SameSite=Strict on the auth cookie
+    //   2. A CSRF token (double-submit cookie or synchronizer token pattern)
+    //
     app.use(helmet());
 
     // CORS — only allow whitelisted origins

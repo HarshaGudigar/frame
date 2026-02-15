@@ -19,7 +19,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Plus, Copy, Check } from 'lucide-react';
+import { Plus, Check } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface InviteUserModalProps {
@@ -30,8 +30,7 @@ export function InviteUserModal({ onUserInvited }: InviteUserModalProps) {
     const { api } = useAuth();
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [tempPassword, setTempPassword] = useState<string | null>(null);
-    const [copied, setCopied] = useState(false);
+    const [sentEmail, setSentEmail] = useState<string | null>(null);
     const [formData, setFormData] = useState({
         email: '',
         firstName: '',
@@ -42,17 +41,14 @@ export function InviteUserModal({ onUserInvited }: InviteUserModalProps) {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-        setTempPassword(null);
+        setSentEmail(null);
 
         try {
             const res = await api.post('/admin/users/invite', formData);
-            if (res.data.success && res.data.data.tempPassword) {
-                setTempPassword(res.data.data.tempPassword);
+            if (res.data.success) {
+                setSentEmail(formData.email);
                 onUserInvited();
                 setFormData({ email: '', firstName: '', lastName: '', role: 'user' });
-            } else {
-                setOpen(false);
-                onUserInvited();
             }
         } catch (error) {
             console.error(error);
@@ -62,19 +58,10 @@ export function InviteUserModal({ onUserInvited }: InviteUserModalProps) {
         }
     };
 
-    const copyToClipboard = () => {
-        if (tempPassword) {
-            navigator.clipboard.writeText(tempPassword);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        }
-    };
-
     const handleClose = (isOpen: boolean) => {
         setOpen(isOpen);
         if (!isOpen) {
-            setTempPassword(null); // Clear password on close
-            setCopied(false);
+            setSentEmail(null);
         }
     };
 
@@ -89,13 +76,13 @@ export function InviteUserModal({ onUserInvited }: InviteUserModalProps) {
                 <DialogHeader>
                     <DialogTitle>Invite User</DialogTitle>
                     <DialogDescription>
-                        {tempPassword
-                            ? 'User invited successfully! Please copy the temporary password below.'
+                        {sentEmail
+                            ? 'Invitation sent successfully!'
                             : 'Send an invitation to a new team member.'}
                     </DialogDescription>
                 </DialogHeader>
 
-                {tempPassword ? (
+                {sentEmail ? (
                     <div className="py-4 space-y-4">
                         <Alert className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
                             <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
@@ -103,35 +90,10 @@ export function InviteUserModal({ onUserInvited }: InviteUserModalProps) {
                                 Invitation Sent
                             </AlertTitle>
                             <AlertDescription className="text-green-700 dark:text-green-400 mt-2">
-                                The user has been created. Share this temporary password with them:
+                                Invitation email sent to <strong>{sentEmail}</strong>. They'll
+                                receive a link to set their password and activate their account.
                             </AlertDescription>
                         </Alert>
-
-                        <div className="flex items-center space-x-2">
-                            <div className="grid flex-1 gap-2">
-                                <Label htmlFor="link" className="sr-only">
-                                    Link
-                                </Label>
-                                <Input
-                                    id="link"
-                                    defaultValue={tempPassword}
-                                    readOnly
-                                    className="font-mono text-center tracking-wider bg-muted"
-                                />
-                            </div>
-                            <Button
-                                size="sm"
-                                className="px-3"
-                                onClick={copyToClipboard}
-                                variant={copied ? 'outline' : 'default'}
-                            >
-                                {copied ? (
-                                    <Check className="h-4 w-4" />
-                                ) : (
-                                    <Copy className="h-4 w-4" />
-                                )}
-                            </Button>
-                        </div>
                     </div>
                 ) : (
                     <form onSubmit={handleSubmit}>
@@ -205,7 +167,7 @@ export function InviteUserModal({ onUserInvited }: InviteUserModalProps) {
                         </DialogFooter>
                     </form>
                 )}
-                {tempPassword && (
+                {sentEmail && (
                     <DialogFooter>
                         <Button variant="secondary" onClick={() => handleClose(false)}>
                             Done
