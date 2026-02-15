@@ -23,7 +23,7 @@
 
 ## Phase 1.5: Platform Hardening (Critical Gaps)
 
-> **Status**: In Progress
+> **Status**: 42% Complete
 > Gaps discovered during code audit that must be resolved before onboarding real customers. These are not features — they are foundational reliability and security requirements that Phase 1 deferred.
 
 ### 1. Authentication & Security Hardening
@@ -40,16 +40,16 @@
 ### 2. Data Layer Reliability
 
 - [ ] **MongoDB Backup Strategy**: Add a cron-based `mongodump` script that runs nightly inside the Docker container and uploads compressed backups to S3 (or Lightsail Object Storage). Include a `restore.sh` script for disaster recovery.
-- [ ] **Metrics TTL Activation**: Uncomment and enable the 30-day TTL index on the `Metric` model (`backend/models/Metric.js`) to prevent unbounded collection growth.
+- [x] **Metrics TTL Activation**: Uncomment and enable the 30-day TTL index on the `Metric` model (`backend/models/Metric.js`) to prevent unbounded collection growth.
 - [ ] **Tenant Database Provisioning**: The `Tenant.dbUri` field exists but is never used. Implement actual database provisioning logic: when a tenant is created in SILO mode, auto-create a dedicated MongoDB database (or use a naming convention like `frame_tenant_{slug}`). Wire `tenantDBCache.js` (currently unused) into the request lifecycle.
-- [ ] **Graceful Shutdown**: Add `SIGTERM`/`SIGINT` handlers in `server.js` that close the HTTP server, disconnect mongoose, and drain Socket.io connections before exiting. Critical for zero-downtime Docker restarts.
+- [x] **Graceful Shutdown**: Add `SIGTERM`/`SIGINT` handlers in `server.js` that close the HTTP server, disconnect mongoose, and drain Socket.io connections before exiting. Critical for zero-downtime Docker restarts.
 
 ### 3. Frontend Stability
 
 - [ ] **Global Error Handling**: Replace silent `catch {}` blocks in `dashboard.tsx`, `tenants.tsx`, `marketplace.tsx`, and `users.tsx` with consistent toast-based error notifications using the existing toast system.
 - [ ] **Loading States**: Add skeleton loaders (using the existing `Skeleton` component from shadcn/ui) to all data-fetching pages: Dashboard, Tenants, Users, Marketplace, Audit Logs.
 - [ ] **Empty States**: Add informative empty-state UI when lists are empty (e.g., "No tenants yet. Create your first tenant to get started.").
-- [ ] **Fix Auth Context Bug**: The `User` interface in `auth-context.tsx` defines `lastName` twice. Remove the duplicate. Also remove the unused `isLoading` state variable.
+- [x] **Fix Auth Context Bug**: The `User` interface in `auth-context.tsx` defines `lastName` twice. Remove the duplicate. Also remove the unused `isLoading` state variable.
 - [ ] **Debounce Audit Log Filters**: The userId filter input in `audit-logs.tsx` triggers an API call on every keystroke. Add a 300ms debounce.
 - [ ] **Date Picker for Audit Logs**: Replace raw text inputs for date range filtering with a proper date picker component.
 - [ ] **Reconnection Strategy for Socket.io**: Add exponential backoff reconnection logic in `socket-provider.tsx`. Show a connection status indicator in the UI when disconnected.
@@ -255,6 +255,18 @@
 - [ ] **In-App Notification Persistence**: Currently notifications are in-memory and lost on page refresh. Add a `Notification` model (user, type, title, body, read, createdAt). Load unread count on login. Mark as read on click. Paginate in the notification center.
 - [ ] **Notification Preferences**: Per-user settings: which events trigger email vs. in-app vs. both. Store in `GlobalUser.notificationPreferences`. Expose in the Settings page.
 - [ ] **Webhook-Based Alerts**: For fleet monitoring alerts (tenant offline, high CPU, deployment failed), send notifications to configured webhook URLs (Slack, Discord, Teams, PagerDuty).
+
+---
+
+## Current Platform Statistics
+
+| Metric                     | Value      |
+| :------------------------- | :--------- |
+| **Total Registered Users** | 0          |
+| **Active Tenants**         | 0          |
+| **Collected Metrics**      | 0          |
+| **System Uptime**          | ~0h        |
+| **Last Audit**             | 2026-02-15 |
 
 ---
 

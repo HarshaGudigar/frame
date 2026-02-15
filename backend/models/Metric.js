@@ -16,7 +16,6 @@ const metricSchema = new mongoose.Schema(
         timestamp: {
             type: Date,
             default: Date.now,
-            index: true,
         },
     },
     {
@@ -25,6 +24,6 @@ const metricSchema = new mongoose.Schema(
 );
 
 // Optional: Add a TTL index to automatically delete metrics older than 30 days
-// metricSchema.index({ timestamp: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
+metricSchema.index({ timestamp: 1 }, { expireAfterSeconds: 30 * 24 * 60 * 60 });
 
 module.exports = mongoose.model('Metric', metricSchema);

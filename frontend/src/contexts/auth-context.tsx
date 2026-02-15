@@ -9,7 +9,7 @@ export interface User {
     email: string;
     firstName: string;
     lastName: string;
-    lastName: string;
+
     role: Role;
     isActive?: boolean;
     isEmailVerified?: boolean;
@@ -24,7 +24,6 @@ interface AuthContextType {
     api: AxiosInstance;
     login: (token: string, refreshToken: string, user: User) => void;
     logout: () => void;
-    isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -49,7 +48,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return null;
         }
     });
-    const [isLoading, setIsLoading] = useState(false);
 
     // Refs to hold latest values for interceptors
     const tokenRef = React.useRef(token);
@@ -169,7 +167,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, token, api, login, logout, isLoading }}>
+        <AuthContext.Provider value={{ user, token, api, login, logout }}>
             {children}
         </AuthContext.Provider>
     );

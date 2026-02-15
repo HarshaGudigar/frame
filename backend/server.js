@@ -33,7 +33,7 @@ if (require.main === module) {
         );
 
     // Start Server
-    server.listen(config.PORT, () => {
+    const httpServer = server.listen(config.PORT, () => {
         logger.info(
             `[${config.RUNTIME_MODE}] Server running on port ${config.PORT} (with WebSockets)`,
         );
@@ -46,4 +46,37 @@ if (require.main === module) {
             `[${config.RUNTIME_MODE}] API docs at http://localhost:${config.PORT}/api/docs`,
         );
     });
+
+    const gracefulShutdown = () => {
+        logger.info('Received kill signal, shutting down gracefully');
+
+        httpServer.close(() => {
+            logger.info('Closed out remaining HTTP connections');
+
+            // Close Socket.io connections
+            try {
+                const io = socketService.getIO();
+                if (io) {
+                    io.close(() => {
+                        logger.info('Socket.io connections closed');
+                    });
+                }
+            } catch (e) {
+                // Ignore if io not initialized
+            }
+
+            mongoose.connection.close(false, () => {
+                logger.info('MongoDB connection closed');
+                process.exit(0);
+            });
+        });
+
+        setTimeout(() => {
+            logger.error('Could not close connections in time, forcefully shutting down');
+            process.exit(1);
+        }, 10000);
+    };
+
+    process.on('SIGTERM', gracefulShutdown);
+    process.on('SIGINT', gracefulShutdown);
 }
