@@ -1,6 +1,26 @@
-# Alyxnet Frame - MERN Monorepo
-
 A full-stack monorepo featuring a Dashboard (Vite + React + shadcn/ui), Desktop App (Electron), Mobile App (React Native/Expo), and a Backend (Express + MongoDB).
+
+---
+
+## 📊 Project Status: Phase 1.5 (42% Complete)
+
+The project is currently in the **Platform Hardening** phase, focusing on security, reliability, and deployment optimization.
+
+- **Phase 1 (Foundation)**: 100% Complete ✅
+- **Phase 1.5 (Hardening)**: 42% Complete 🚀
+- **Next Up**: Phase 2 (Business Engine) 🏗️
+
+### Current Platform Statistics
+
+| Metric                     | Value      |
+| :------------------------- | :--------- |
+| **Total Registered Users** | 0          |
+| **Active Tenants**         | 0          |
+| **Collected Metrics**      | 0          |
+| **System Uptime**          | ~0h        |
+| **Last Audit**             | 2026-02-15 |
+
+---
 
 ## Project Structure
 
@@ -17,6 +37,7 @@ A full-stack monorepo featuring a Dashboard (Vite + React + shadcn/ui), Desktop 
 ## Getting Started
 
 ### 1. Simultaneous Run (Recommended)
+
 You can start the Backend and Frontend together from the root directory:
 
 ```bash
@@ -24,7 +45,7 @@ npm install
 npm run dev
 ```
 
-*This starts the Backend (5000) and Frontend dev server (5173).*
+_This starts the Backend (5000) and Frontend dev server (5173)._
 
 ---
 
@@ -33,6 +54,7 @@ npm run dev
 If you need to run specific parts:
 
 **Backend**
+
 ```bash
 cd backend
 npm install
@@ -40,6 +62,7 @@ node server.js
 ```
 
 **Frontend (Development)**
+
 ```bash
 cd frontend
 npm install
@@ -47,6 +70,7 @@ npm run dev
 ```
 
 **Desktop (Electron Development)**
+
 ```bash
 # First, start the frontend dev server, then:
 cd desktop
@@ -55,6 +79,7 @@ npm start
 ```
 
 **Desktop (Electron Production)**
+
 ```bash
 # Build the frontend first
 cd frontend
@@ -66,6 +91,7 @@ NODE_ENV=production npm start
 ```
 
 **Mobile (Expo)**
+
 ```bash
 cd mobile
 npm install
@@ -79,6 +105,7 @@ npx expo start
 The application is configured for automated deployment to **AWS Lightsail** using a monolithic Docker container.
 
 #### **Local Docker Run**
+
 ```bash
 # Build and run locally
 docker compose up -d --build
@@ -89,12 +116,14 @@ docker compose up -d --build
 The deployment is automated via **GitHub Actions**.
 
 **1. Infrastructure**
+
 - **Platform**: AWS Lightsail (Ubuntu 22.04 LTS).
 - **Public IP**: `13.232.95.78`
 - **Orchestration**: Docker Compose with MongoDB volume persistence.
 
 **2. CI/CD Pipeline**
 Pushing to the `main` branch triggers the [.github/workflows/deploy.yml](.github/workflows/deploy.yml) workflow:
+
 - Connects to the VM via SSH.
 - Installs Docker automatically (if missing).
 - Pulls the latest code.
@@ -102,6 +131,7 @@ Pushing to the `main` branch triggers the [.github/workflows/deploy.yml](.github
 
 **3. Required GitHub Secrets**
 To maintain the pipeline, ensure the following secrets are set in your repository:
+
 - `LIGHTSAIL_HOST`: `13.232.95.78`
 - `LIGHTSAIL_USERNAME`: `ubuntu`
 - `LIGHTSAIL_SSH_KEY`: Your private SSH key (`.pem` content).
@@ -109,9 +139,9 @@ To maintain the pipeline, ensure the following secrets are set in your repositor
 ## Environment Variables
 
 - **Backend**: Uses `.env` for `PORT` and `MONGODB_URI`.
-- **Frontend**: 
-  - **Development**: Uses `.env.development` (Connects to `localhost:5000`).
-  - **Production**: Uses `.env.production` (Connects to `http://13.232.95.78:5000`).
+- **Frontend**:
+    - **Development**: Uses `.env.development` (Connects to `localhost:5000`).
+    - **Production**: Uses `.env.production` (Connects to `http://13.232.95.78:5000`).
 - **Docker**: Automatically connects to the internal `mongod` instance and persists data in the `mongodb_data` volume.
 
 ## Contributing
