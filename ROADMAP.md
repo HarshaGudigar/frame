@@ -23,7 +23,7 @@
 
 ## Phase 1.5: Platform Hardening (Critical Gaps)
 
-> **Status**: 42% Complete
+> **Status**: 67% Complete
 > Gaps discovered during code audit that must be resolved before onboarding real customers. These are not features — they are foundational reliability and security requirements that Phase 1 deferred.
 
 ### 1. Authentication & Security Hardening
@@ -46,13 +46,13 @@
 
 ### 3. Frontend Stability
 
-- [ ] **Global Error Handling**: Replace silent `catch {}` blocks in `dashboard.tsx`, `tenants.tsx`, `marketplace.tsx`, and `users.tsx` with consistent toast-based error notifications using the existing toast system.
-- [ ] **Loading States**: Add skeleton loaders (using the existing `Skeleton` component from shadcn/ui) to all data-fetching pages: Dashboard, Tenants, Users, Marketplace, Audit Logs.
-- [ ] **Empty States**: Add informative empty-state UI when lists are empty (e.g., "No tenants yet. Create your first tenant to get started.").
+- [x] **Global Error Handling**: Replaced silent `catch {}` blocks and `alert()` calls in `dashboard.tsx`, `tenants.tsx`, `marketplace.tsx`, and `users.tsx` with consistent destructive toast notifications using the existing `useToast` hook.
+- [x] **Loading States**: Added skeleton loaders (using the existing `Skeleton` component from shadcn/ui) to Dashboard, Tenants, Users, and Marketplace pages. Skeletons only render on initial load (`loading && data.length === 0`) to avoid flicker on refreshes. Audit Logs already had skeletons.
+- [x] **Empty States**: Added empty-state messages to Dashboard ("No fleet instances found.") and Users ("No users found."). Tenants, Marketplace, and Audit Logs already had empty states.
 - [x] **Fix Auth Context Bug**: The `User` interface in `auth-context.tsx` defines `lastName` twice. Remove the duplicate. Also remove the unused `isLoading` state variable.
-- [ ] **Debounce Audit Log Filters**: The userId filter input in `audit-logs.tsx` triggers an API call on every keystroke. Add a 300ms debounce.
-- [ ] **Date Picker for Audit Logs**: Replace raw text inputs for date range filtering with a proper date picker component.
-- [ ] **Reconnection Strategy for Socket.io**: Add exponential backoff reconnection logic in `socket-provider.tsx`. Show a connection status indicator in the UI when disconnected.
+- [x] **Debounce Audit Log Filters**: Created a generic `useDebounce` hook (`src/hooks/use-debounce.ts`) and applied it to audit log filters with a 400ms delay. API calls now fire only after the user stops typing.
+- [x] **Date Picker for Audit Logs**: Added native date input fields (Start Date and End Date) to the audit log filter grid using the existing `Input` component with `type="date"`. State and API params were already wired.
+- [x] **Reconnection Strategy for Socket.io**: Added explicit reconnection config (`reconnectionAttempts: 10`, `reconnectionDelay: 1000`, `reconnectionDelayMax: 30000`) to `socket-provider.tsx`. Toast notifications on disconnect, reconnect, and reconnect failure. Added a connection status indicator (green/red dot) with tooltip in the layout header.
 
 ### 4. DevOps & Deployment Hardening
 

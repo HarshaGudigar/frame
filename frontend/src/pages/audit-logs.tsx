@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
+import { useDebounce } from '@/hooks/use-debounce';
 import {
     Table,
     TableBody,
@@ -60,12 +61,14 @@ export function AuditLogsPage() {
         endDate: '',
     });
 
+    const debouncedFilters = useDebounce(filters, 400);
+
     // Details Dialog
     const [selectedLog, setSelectedLog] = useState<AuditEntry | null>(null);
 
     useEffect(() => {
         fetchLogs();
-    }, [page, filters]); // Refetch when page or filters change
+    }, [page, debouncedFilters]); // Refetch when page or debounced filters change
 
     const fetchLogs = async () => {
         setLoading(true);
@@ -196,10 +199,26 @@ export function AuditLogsPage() {
                                 <Input
                                     placeholder="Search by User ID..."
                                     value={filters.userId}
-                                    onChange={(e) => handleFilterChange('userId', e.target.value)} // Note: Ideally should debounce this request or use a button to trigger search
+                                    onChange={(e) => handleFilterChange('userId', e.target.value)}
                                     className="pl-8"
                                 />
                             </div>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Start Date</label>
+                            <Input
+                                type="date"
+                                value={filters.startDate}
+                                onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">End Date</label>
+                            <Input
+                                type="date"
+                                value={filters.endDate}
+                                onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                            />
                         </div>
                     </div>
                 </CardContent>

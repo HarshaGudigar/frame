@@ -14,6 +14,8 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -24,6 +26,7 @@ import { MoreHorizontal, Trash2, ShieldCheck } from 'lucide-react';
 
 export default function Users() {
     const { api } = useAuth();
+    const { toast } = useToast();
     const [users, setUsers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [editUser, setEditUser] = useState<User | null>(null);
@@ -38,7 +41,7 @@ export default function Users() {
                 setUsers(res.data.data);
             }
         } catch (error) {
-            console.error('Failed to fetch users', error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to load users.' });
         } finally {
             setIsLoading(false);
         }
@@ -53,9 +56,12 @@ export default function Users() {
             try {
                 await api.delete(`/admin/users/${id}`);
                 fetchUsers(); // Refresh list
-            } catch (error) {
-                console.error('Failed to delete user', error);
-                alert('Failed to delete user');
+            } catch (error: any) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Delete Failed',
+                    description: error.response?.data?.message || 'Failed to delete user.',
+                });
             }
         }
     };
@@ -86,6 +92,17 @@ export default function Users() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
+                        {isLoading &&
+                            users.length === 0 &&
+                            Array.from({ length: 4 }).map((_, i) => (
+                                <TableRow key={`skeleton-${i}`}>
+                                    {Array.from({ length: 5 }).map((_, j) => (
+                                        <TableCell key={j}>
+                                            <Skeleton className="h-4 w-full" />
+                                        </TableCell>
+                                    ))}
+                                </TableRow>
+                            ))}
                         {users.map((user) => (
                             <TableRow key={user._id || user.id}>
                                 <TableCell className="font-medium">
@@ -151,6 +168,16 @@ export default function Users() {
                                 </TableCell>
                             </TableRow>
                         ))}
+                        {!users.length && !isLoading && (
+                            <TableRow>
+                                <TableCell
+                                    colSpan={5}
+                                    className="text-center text-muted-foreground py-8"
+                                >
+                                    No users found.
+                                </TableCell>
+                            </TableRow>
+                        )}
                     </TableBody>
                 </Table>
             </div>

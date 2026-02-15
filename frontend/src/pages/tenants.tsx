@@ -14,6 +14,8 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 import {
     Dialog,
     DialogContent,
@@ -24,10 +26,16 @@ import {
 
 export function TenantsPage() {
     const { api } = useAuth();
+    const { toast } = useToast();
     const [tenants, setTenants] = useState<any[]>([]);
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
-    const [form, setForm] = useState({ name: '', slug: '', vmIpAddress: '', subscribedModules: '' });
+    const [form, setForm] = useState({
+        name: '',
+        slug: '',
+        vmIpAddress: '',
+        subscribedModules: '',
+    });
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
@@ -36,11 +44,20 @@ export function TenantsPage() {
             setLoading(true);
             const res = await api.get('/admin/tenants');
             setTenants(res.data.data);
-        } catch { }
-        finally { setLoading(false); }
+        } catch {
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'Failed to load tenants.',
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
-    useEffect(() => { fetchTenants(); }, []);
+    useEffect(() => {
+        fetchTenants();
+    }, []);
 
     const resetForm = () => {
         setForm({ name: '', slug: '', vmIpAddress: '', subscribedModules: '' });
@@ -67,7 +84,10 @@ export function TenantsPage() {
             name: form.name,
             slug: form.slug,
             vmIpAddress: form.vmIpAddress,
-            subscribedModules: form.subscribedModules.split(',').map(s => s.trim()).filter(Boolean),
+            subscribedModules: form.subscribedModules
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean),
         };
 
         try {
@@ -89,7 +109,11 @@ export function TenantsPage() {
             await api.delete(`/admin/tenants/${id}`);
             fetchTenants();
         } catch (err: any) {
-            alert(err.response?.data?.message || 'Delete failed');
+            toast({
+                variant: 'destructive',
+                title: 'Delete Failed',
+                description: err.response?.data?.message || 'Failed to delete tenant.',
+            });
         }
     };
 
@@ -98,16 +122,29 @@ export function TenantsPage() {
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold tracking-tight">Tenant Management</h1>
-                    <p className="text-sm text-muted-foreground">Create and manage customer instances</p>
+                    <p className="text-sm text-muted-foreground">
+                        Create and manage customer instances
+                    </p>
                 </div>
-                <Button onClick={() => { resetForm(); setShowForm(true); }} size="sm">
+                <Button
+                    onClick={() => {
+                        resetForm();
+                        setShowForm(true);
+                    }}
+                    size="sm"
+                >
                     <Plus className="size-4 mr-2" />
                     New Tenant
                 </Button>
             </div>
 
             {/* Create/Edit Dialog */}
-            <Dialog open={showForm} onOpenChange={(open) => { if (!open) resetForm(); }}>
+            <Dialog
+                open={showForm}
+                onOpenChange={(open) => {
+                    if (!open) resetForm();
+                }}
+            >
                 <DialogContent className="sm:max-w-lg">
                     <DialogHeader>
                         <DialogTitle>{editingId ? 'Edit Tenant' : 'Create Tenant'}</DialogTitle>
@@ -121,7 +158,9 @@ export function TenantsPage() {
                                     required
                                     value={form.name}
                                     placeholder="My Clinic"
-                                    onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
+                                    onChange={(e) =>
+                                        setForm((f) => ({ ...f, name: e.target.value }))
+                                    }
                                 />
                             </div>
                             <div className="space-y-1.5">
@@ -132,7 +171,9 @@ export function TenantsPage() {
                                     value={form.slug}
                                     placeholder="my-clinic"
                                     disabled={!!editingId}
-                                    onChange={(e) => setForm(f => ({ ...f, slug: e.target.value }))}
+                                    onChange={(e) =>
+                                        setForm((f) => ({ ...f, slug: e.target.value }))
+                                    }
                                 />
                             </div>
                         </div>
@@ -143,7 +184,9 @@ export function TenantsPage() {
                                     id="ip"
                                     value={form.vmIpAddress}
                                     placeholder="1.2.3.4"
-                                    onChange={(e) => setForm(f => ({ ...f, vmIpAddress: e.target.value }))}
+                                    onChange={(e) =>
+                                        setForm((f) => ({ ...f, vmIpAddress: e.target.value }))
+                                    }
                                 />
                             </div>
                             <div className="space-y-1.5">
@@ -152,7 +195,12 @@ export function TenantsPage() {
                                     id="modules"
                                     value={form.subscribedModules}
                                     placeholder="hospital, pharmacy"
-                                    onChange={(e) => setForm(f => ({ ...f, subscribedModules: e.target.value }))}
+                                    onChange={(e) =>
+                                        setForm((f) => ({
+                                            ...f,
+                                            subscribedModules: e.target.value,
+                                        }))
+                                    }
                                 />
                             </div>
                         </div>
@@ -165,7 +213,9 @@ export function TenantsPage() {
                         )}
 
                         <DialogFooter>
-                            <Button type="button" variant="outline" onClick={resetForm}>Cancel</Button>
+                            <Button type="button" variant="outline" onClick={resetForm}>
+                                Cancel
+                            </Button>
                             <Button type="submit">{editingId ? 'Update' : 'Create'}</Button>
                         </DialogFooter>
                     </form>
@@ -187,40 +237,73 @@ export function TenantsPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {tenants.map(t => (
+                            {loading &&
+                                tenants.length === 0 &&
+                                Array.from({ length: 3 }).map((_, i) => (
+                                    <TableRow key={`skeleton-${i}`}>
+                                        {Array.from({ length: 6 }).map((_, j) => (
+                                            <TableCell key={j}>
+                                                <Skeleton className="h-4 w-full" />
+                                            </TableCell>
+                                        ))}
+                                    </TableRow>
+                                ))}
+                            {tenants.map((t) => (
                                 <TableRow key={t._id}>
                                     <TableCell className="font-medium">{t.name}</TableCell>
                                     <TableCell>
-                                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded">{t.slug}</code>
+                                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                                            {t.slug}
+                                        </code>
                                     </TableCell>
                                     <TableCell>
                                         <Badge
-                                            variant={t.status === 'online' ? 'default' : 'secondary'}
+                                            variant={
+                                                t.status === 'online' ? 'default' : 'secondary'
+                                            }
                                             className={
                                                 t.status === 'online'
                                                     ? 'bg-green-500/15 text-green-500 hover:bg-green-500/25'
                                                     : t.status === 'error'
-                                                        ? 'bg-destructive/15 text-destructive hover:bg-destructive/25'
-                                                        : ''
+                                                      ? 'bg-destructive/15 text-destructive hover:bg-destructive/25'
+                                                      : ''
                                             }
                                         >
                                             {t.status || 'offline'}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell className="text-muted-foreground">{t.vmIpAddress || '—'}</TableCell>
+                                    <TableCell className="text-muted-foreground">
+                                        {t.vmIpAddress || '—'}
+                                    </TableCell>
                                     <TableCell>
                                         <div className="flex flex-wrap gap-1">
                                             {t.subscribedModules?.map((m: string) => (
-                                                <Badge key={m} variant="outline" className="text-xs">{m}</Badge>
+                                                <Badge
+                                                    key={m}
+                                                    variant="outline"
+                                                    className="text-xs"
+                                                >
+                                                    {m}
+                                                </Badge>
                                             ))}
                                         </div>
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end gap-1">
-                                            <Button variant="ghost" size="icon" className="size-8" onClick={() => handleEdit(t)}>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="size-8"
+                                                onClick={() => handleEdit(t)}
+                                            >
                                                 <Pencil className="size-3.5" />
                                             </Button>
-                                            <Button variant="ghost" size="icon" className="size-8 text-destructive hover:text-destructive" onClick={() => handleDelete(t._id, t.name)}>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="size-8 text-destructive hover:text-destructive"
+                                                onClick={() => handleDelete(t._id, t.name)}
+                                            >
                                                 <Trash2 className="size-3.5" />
                                             </Button>
                                         </div>
@@ -229,7 +312,10 @@ export function TenantsPage() {
                             ))}
                             {!tenants.length && !loading && (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                                    <TableCell
+                                        colSpan={6}
+                                        className="text-center text-muted-foreground py-8"
+                                    >
                                         No tenants yet. Create your first one!
                                     </TableCell>
                                 </TableRow>
