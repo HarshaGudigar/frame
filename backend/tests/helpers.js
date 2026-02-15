@@ -3,7 +3,7 @@
  */
 const mongoose = require('mongoose');
 const { MongoMemoryServer } = require('mongodb-memory-server');
-const { createApp } = require('../server');
+const { createApp } = require('../app');
 
 let mongod;
 
