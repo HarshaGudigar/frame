@@ -13,6 +13,7 @@ export interface User {
     role: Role;
     isActive?: boolean;
     isEmailVerified?: boolean;
+    isTwoFactorEnabled?: boolean;
     tenants?: any[];
 }
 

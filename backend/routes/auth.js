@@ -1,6 +1,8 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
+const { generateSecret, verifySync, generateURI } = require('otplib');
+const QRCode = require('qrcode');
 const router = express.Router();
 const GlobalUser = require('../models/GlobalUser');
 const RefreshToken = require('../models/RefreshToken');
@@ -17,6 +19,9 @@ const {
     verifyEmailSchema,
     forgotPasswordSchema,
     resetPasswordSchema,
+    twoFactorVerifyLoginSchema,
+    twoFactorSetupVerifySchema,
+    twoFactorDisableSchema,
 } = require('../schemas/auth');
 const emailService = require('../services/email');
 const logger = require('../utils/logger');
@@ -24,6 +29,7 @@ const {
     loginLimiter,
     registerLimiter,
     forgotPasswordLimiter,
+    twoFactorLimiter,
 } = require('../middleware/rateLimiters');
 
 // Helper: Generate Access & Refresh Token Pair
@@ -106,6 +112,7 @@ router.post('/register', registerLimiter, validate({ body: registerSchema }), as
                     lastName,
                     role: user.role,
                     isEmailVerified: false,
+                    isTwoFactorEnabled: false,
                 },
             },
             'User registered successfully',
@@ -143,6 +150,20 @@ router.post('/login', loginLimiter, validate({ body: loginSchema }), async (req,
             return errorResponse(res, 'Invalid credentials', 401);
         }
 
+        // Check if 2FA is enabled
+        if (user.isTwoFactorEnabled) {
+            const twoFactorToken = jwt.sign(
+                { userId: user._id, purpose: '2fa_pending' },
+                JWT_SECRET,
+                { expiresIn: '5m' },
+            );
+            return successResponse(
+                res,
+                { requiresTwoFactor: true, twoFactorToken },
+                'Two-factor authentication required',
+            );
+        }
+
         const { accessToken, refreshToken } = await generateTokens(user, ipAddress);
 
         return successResponse(
@@ -156,6 +177,7 @@ router.post('/login', loginLimiter, validate({ body: loginSchema }), async (req,
                     firstName: user.firstName,
                     role: user.role,
                     isEmailVerified: user.isEmailVerified,
+                    isTwoFactorEnabled: user.isTwoFactorEnabled,
                 },
             },
             'Login successful',
@@ -210,6 +232,7 @@ router.post('/accept-invite', validate({ body: acceptInviteSchema }), async (req
                     lastName: user.lastName,
                     role: user.role,
                     isEmailVerified: true,
+                    isTwoFactorEnabled: user.isTwoFactorEnabled,
                 },
             },
             'Invitation accepted successfully',
@@ -528,6 +551,198 @@ router.post('/logout', async (req, res) => {
         return successResponse(res, null, 'Logged out successfully');
     } catch (err) {
         return errorResponse(res, 'Logout failed', 500, err);
+    }
+});
+
+// ─── Two-Factor Authentication Endpoints ────────────────────────────────────
+
+/**
+ * POST /auth/2fa/verify-login
+ * Completes login for users with 2FA enabled.
+ */
+router.post(
+    '/2fa/verify-login',
+    twoFactorLimiter,
+    validate({ body: twoFactorVerifyLoginSchema }),
+    async (req, res) => {
+        const { twoFactorToken, code } = req.body;
+        const ipAddress = req.ip;
+
+        try {
+            let decoded;
+            try {
+                decoded = jwt.verify(twoFactorToken, JWT_SECRET);
+            } catch {
+                return errorResponse(res, 'Invalid or expired two-factor token', 401);
+            }
+
+            if (decoded.purpose !== '2fa_pending') {
+                return errorResponse(res, 'Invalid two-factor token', 401);
+            }
+
+            const user = await GlobalUser.findById(decoded.userId).select('+twoFactorSecret');
+            if (!user || !user.isActive) {
+                return errorResponse(res, 'User not found', 404);
+            }
+
+            if (!user.twoFactorSecret) {
+                return errorResponse(res, 'Two-factor authentication not configured', 400);
+            }
+
+            const isValid = verifySync({ token: code, secret: user.twoFactorSecret }).valid;
+            if (!isValid) {
+                return errorResponse(res, 'Invalid two-factor code', 401);
+            }
+
+            const { accessToken, refreshToken } = await generateTokens(user, ipAddress);
+
+            return successResponse(
+                res,
+                {
+                    accessToken,
+                    refreshToken,
+                    user: {
+                        _id: user._id,
+                        email: user.email,
+                        firstName: user.firstName,
+                        role: user.role,
+                        isEmailVerified: user.isEmailVerified,
+                        isTwoFactorEnabled: user.isTwoFactorEnabled,
+                    },
+                },
+                'Login successful',
+            );
+        } catch (err) {
+            return errorResponse(res, 'Two-factor verification failed', 500, err);
+        }
+    },
+);
+
+/**
+ * POST /auth/2fa/setup
+ * Generates TOTP secret and QR code for 2FA setup.
+ */
+router.post('/2fa/setup', authMiddleware, async (req, res) => {
+    try {
+        const user = await GlobalUser.findById(req.user.id);
+        if (!user) {
+            return errorResponse(res, 'User not found', 404);
+        }
+
+        if (user.isTwoFactorEnabled) {
+            return errorResponse(res, 'Two-factor authentication is already enabled', 400);
+        }
+
+        const secret = generateSecret();
+
+        // Save secret but don't enable 2FA yet
+        user.twoFactorSecret = secret;
+        await user.save();
+
+        const otpauthUrl = generateURI({ issuer: 'Alyxnet Frame', label: user.email, secret });
+        const qrCode = await QRCode.toDataURL(otpauthUrl);
+
+        return successResponse(res, { qrCode, secret }, 'Two-factor setup initiated');
+    } catch (err) {
+        return errorResponse(res, 'Two-factor setup failed', 500, err);
+    }
+});
+
+/**
+ * POST /auth/2fa/setup/verify
+ * Confirms 2FA setup by verifying the first TOTP code.
+ */
+router.post(
+    '/2fa/setup/verify',
+    authMiddleware,
+    validate({ body: twoFactorSetupVerifySchema }),
+    async (req, res) => {
+        const { code } = req.body;
+
+        try {
+            const user = await GlobalUser.findById(req.user.id).select('+twoFactorSecret');
+            if (!user) {
+                return errorResponse(res, 'User not found', 404);
+            }
+
+            if (user.isTwoFactorEnabled) {
+                return errorResponse(res, 'Two-factor authentication is already enabled', 400);
+            }
+
+            if (!user.twoFactorSecret) {
+                return errorResponse(res, 'Two-factor setup not initiated', 400);
+            }
+
+            const isValid = verifySync({ token: code, secret: user.twoFactorSecret }).valid;
+            if (!isValid) {
+                return errorResponse(res, 'Invalid verification code', 400);
+            }
+
+            user.isTwoFactorEnabled = true;
+            await user.save();
+
+            return successResponse(res, null, 'Two-factor authentication enabled');
+        } catch (err) {
+            return errorResponse(res, 'Two-factor verification failed', 500, err);
+        }
+    },
+);
+
+/**
+ * POST /auth/2fa/disable
+ * Disables 2FA after verifying a current TOTP code.
+ */
+router.post(
+    '/2fa/disable',
+    authMiddleware,
+    validate({ body: twoFactorDisableSchema }),
+    async (req, res) => {
+        const { code } = req.body;
+
+        try {
+            const user = await GlobalUser.findById(req.user.id).select('+twoFactorSecret');
+            if (!user) {
+                return errorResponse(res, 'User not found', 404);
+            }
+
+            if (!user.isTwoFactorEnabled || !user.twoFactorSecret) {
+                return errorResponse(res, 'Two-factor authentication is not enabled', 400);
+            }
+
+            const isValid = verifySync({ token: code, secret: user.twoFactorSecret }).valid;
+            if (!isValid) {
+                return errorResponse(res, 'Invalid verification code', 401);
+            }
+
+            user.isTwoFactorEnabled = false;
+            user.twoFactorSecret = undefined;
+            await user.save();
+
+            return successResponse(res, null, 'Two-factor authentication disabled');
+        } catch (err) {
+            return errorResponse(res, 'Failed to disable two-factor authentication', 500, err);
+        }
+    },
+);
+
+/**
+ * GET /auth/2fa/status
+ * Returns the current 2FA status for the authenticated user.
+ */
+router.get('/2fa/status', authMiddleware, async (req, res) => {
+    try {
+        const user = await GlobalUser.findById(req.user.id);
+        if (!user) {
+            return errorResponse(res, 'User not found', 404);
+        }
+
+        return successResponse(
+            res,
+            { isTwoFactorEnabled: user.isTwoFactorEnabled },
+            'Two-factor status retrieved',
+        );
+    } catch (err) {
+        return errorResponse(res, 'Failed to retrieve two-factor status', 500, err);
     }
 });
 

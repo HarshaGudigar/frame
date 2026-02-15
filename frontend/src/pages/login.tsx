@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { Server, AlertCircle } from 'lucide-react';
+import { Server, AlertCircle, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -17,6 +17,11 @@ export function LoginPage() {
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
 
+    // 2FA state
+    const [twoFactorPending, setTwoFactorPending] = useState(false);
+    const [twoFactorToken, setTwoFactorToken] = useState('');
+    const [totpCode, setTotpCode] = useState('');
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
@@ -24,6 +29,14 @@ export function LoginPage() {
         try {
             const endpoint = isRegister ? 'register' : 'login';
             const res = await axios.post(`${API_BASE}/auth/${endpoint}`, form);
+
+            // Check if 2FA is required
+            if (res.data.data.requiresTwoFactor) {
+                setTwoFactorToken(res.data.data.twoFactorToken);
+                setTwoFactorPending(true);
+                return;
+            }
+
             login(res.data.data.accessToken, res.data.data.refreshToken, res.data.data.user);
         } catch (err: any) {
             console.error('Login error:', err);
@@ -43,6 +56,33 @@ export function LoginPage() {
         }
     };
 
+    const handleTwoFactorSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError(null);
+        setLoading(true);
+        try {
+            const res = await axios.post(`${API_BASE}/auth/2fa/verify-login`, {
+                twoFactorToken,
+                code: totpCode,
+            });
+            login(res.data.data.accessToken, res.data.data.refreshToken, res.data.data.user);
+        } catch (err: any) {
+            console.error('2FA verification error:', err);
+            const msg =
+                err.response?.data?.message || err.message || 'Two-factor verification failed';
+            setError(msg);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const resetTwoFactor = () => {
+        setTwoFactorPending(false);
+        setTwoFactorToken('');
+        setTotpCode('');
+        setError(null);
+    };
+
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/50">
             <Card className="w-full max-w-md shadow-2xl border-border/50">
@@ -54,96 +94,155 @@ export function LoginPage() {
                     <p className="text-sm text-muted-foreground">Control Plane Dashboard</p>
                 </CardHeader>
                 <CardContent>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <h3 className="text-lg font-semibold">
-                            {isRegister ? 'Create Account' : 'Welcome Back'}
-                        </h3>
+                    {twoFactorPending ? (
+                        <form onSubmit={handleTwoFactorSubmit} className="space-y-4">
+                            <h3 className="text-lg font-semibold">Two-Factor Authentication</h3>
+                            <p className="text-sm text-muted-foreground">
+                                Enter the 6-digit code from your authenticator app.
+                            </p>
 
-                        {isRegister && (
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="space-y-1.5">
-                                    <Label htmlFor="firstName">First Name</Label>
-                                    <Input
-                                        id="firstName"
-                                        placeholder="John"
-                                        value={form.firstName}
-                                        onChange={(e) =>
-                                            setForm((f) => ({ ...f, firstName: e.target.value }))
-                                        }
-                                    />
+                            <div className="space-y-1.5">
+                                <Label htmlFor="totpCode">Verification Code</Label>
+                                <Input
+                                    id="totpCode"
+                                    inputMode="numeric"
+                                    maxLength={6}
+                                    placeholder="000000"
+                                    required
+                                    autoFocus
+                                    value={totpCode}
+                                    onChange={(e) => setTotpCode(e.target.value.replace(/\D/g, ''))}
+                                    className="text-center text-2xl tracking-[0.5em] font-mono"
+                                />
+                            </div>
+
+                            {error && (
+                                <div className="flex items-center gap-2 text-sm text-destructive">
+                                    <AlertCircle className="size-4" />
+                                    {error}
                                 </div>
-                                <div className="space-y-1.5">
-                                    <Label htmlFor="lastName">Last Name</Label>
-                                    <Input
-                                        id="lastName"
-                                        placeholder="Doe"
-                                        value={form.lastName}
-                                        onChange={(e) =>
-                                            setForm((f) => ({ ...f, lastName: e.target.value }))
-                                        }
-                                    />
+                            )}
+
+                            <Button
+                                type="submit"
+                                className="w-full"
+                                disabled={loading || totpCode.length !== 6}
+                            >
+                                {loading ? 'Verifying...' : 'Verify & Sign In'}
+                            </Button>
+
+                            <button
+                                type="button"
+                                className="w-full flex items-center justify-center gap-1 text-sm text-primary hover:underline bg-transparent border-none cursor-pointer"
+                                onClick={resetTwoFactor}
+                            >
+                                <ArrowLeft className="size-3" />
+                                Back to Sign In
+                            </button>
+                        </form>
+                    ) : (
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <h3 className="text-lg font-semibold">
+                                {isRegister ? 'Create Account' : 'Welcome Back'}
+                            </h3>
+
+                            {isRegister && (
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="firstName">First Name</Label>
+                                        <Input
+                                            id="firstName"
+                                            placeholder="John"
+                                            value={form.firstName}
+                                            onChange={(e) =>
+                                                setForm((f) => ({
+                                                    ...f,
+                                                    firstName: e.target.value,
+                                                }))
+                                            }
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="lastName">Last Name</Label>
+                                        <Input
+                                            id="lastName"
+                                            placeholder="Doe"
+                                            value={form.lastName}
+                                            onChange={(e) =>
+                                                setForm((f) => ({ ...f, lastName: e.target.value }))
+                                            }
+                                        />
+                                    </div>
                                 </div>
+                            )}
+
+                            <div className="space-y-1.5">
+                                <Label htmlFor="email">Email</Label>
+                                <Input
+                                    id="email"
+                                    type="email"
+                                    placeholder="you@example.com"
+                                    required
+                                    value={form.email}
+                                    onChange={(e) =>
+                                        setForm((f) => ({ ...f, email: e.target.value }))
+                                    }
+                                />
                             </div>
-                        )}
 
-                        <div className="space-y-1.5">
-                            <Label htmlFor="email">Email</Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                placeholder="you@example.com"
-                                required
-                                value={form.email}
-                                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                            />
-                        </div>
-
-                        <div className="space-y-1.5">
-                            <div className="flex items-center justify-between">
-                                <Label htmlFor="password">Password</Label>
-                                {!isRegister && (
-                                    <Link
-                                        to="/forgot-password"
-                                        className="text-xs text-primary hover:underline"
-                                    >
-                                        Forgot password?
-                                    </Link>
-                                )}
+                            <div className="space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="password">Password</Label>
+                                    {!isRegister && (
+                                        <Link
+                                            to="/forgot-password"
+                                            className="text-xs text-primary hover:underline"
+                                        >
+                                            Forgot password?
+                                        </Link>
+                                    )}
+                                </div>
+                                <Input
+                                    id="password"
+                                    type="password"
+                                    placeholder="Min 6 characters"
+                                    required
+                                    value={form.password}
+                                    onChange={(e) =>
+                                        setForm((f) => ({ ...f, password: e.target.value }))
+                                    }
+                                />
                             </div>
-                            <Input
-                                id="password"
-                                type="password"
-                                placeholder="Min 6 characters"
-                                required
-                                value={form.password}
-                                onChange={(e) =>
-                                    setForm((f) => ({ ...f, password: e.target.value }))
-                                }
-                            />
-                        </div>
 
-                        {error && (
-                            <div className="flex items-center gap-2 text-sm text-destructive">
-                                <AlertCircle className="size-4" />
-                                {error}
-                            </div>
-                        )}
+                            {error && (
+                                <div className="flex items-center gap-2 text-sm text-destructive">
+                                    <AlertCircle className="size-4" />
+                                    {error}
+                                </div>
+                            )}
 
-                        <Button type="submit" className="w-full" disabled={loading}>
-                            {loading ? 'Please wait...' : isRegister ? 'Create Account' : 'Sign In'}
-                        </Button>
+                            <Button type="submit" className="w-full" disabled={loading}>
+                                {loading
+                                    ? 'Please wait...'
+                                    : isRegister
+                                      ? 'Create Account'
+                                      : 'Sign In'}
+                            </Button>
 
-                        <button
-                            type="button"
-                            className="w-full text-sm text-primary hover:underline bg-transparent border-none cursor-pointer"
-                            onClick={() => {
-                                setIsRegister(!isRegister);
-                                setError(null);
-                            }}
-                        >
-                            {isRegister ? '← Back to Sign In' : "Don't have an account? Register"}
-                        </button>
-                    </form>
+                            <button
+                                type="button"
+                                className="w-full text-sm text-primary hover:underline bg-transparent border-none cursor-pointer"
+                                onClick={() => {
+                                    setIsRegister(!isRegister);
+                                    setError(null);
+                                }}
+                            >
+                                {isRegister
+                                    ? '← Back to Sign In'
+                                    : "Don't have an account? Register"}
+                            </button>
+                        </form>
+                    )}
                 </CardContent>
             </Card>
         </div>

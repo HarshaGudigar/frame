@@ -100,6 +100,24 @@ const resetPasswordSchema = z
         path: ['confirmPassword'],
     });
 
+const sixDigitCode = z
+    .string({ required_error: 'Code is required' })
+    .length(6, 'Code must be exactly 6 digits')
+    .regex(/^\d{6}$/, 'Code must be exactly 6 digits');
+
+const twoFactorVerifyLoginSchema = z.object({
+    twoFactorToken: z.string({ required_error: 'Two-factor token is required' }).min(1),
+    code: sixDigitCode,
+});
+
+const twoFactorSetupVerifySchema = z.object({
+    code: sixDigitCode,
+});
+
+const twoFactorDisableSchema = z.object({
+    code: sixDigitCode,
+});
+
 module.exports = {
     registerSchema,
     loginSchema,
@@ -108,4 +126,7 @@ module.exports = {
     verifyEmailSchema,
     forgotPasswordSchema,
     resetPasswordSchema,
+    twoFactorVerifyLoginSchema,
+    twoFactorSetupVerifySchema,
+    twoFactorDisableSchema,
 };

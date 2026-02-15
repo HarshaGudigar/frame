@@ -23,7 +23,7 @@
 
 ## Phase 1.5: Platform Hardening (Critical Gaps)
 
-> **Status**: 67% Complete
+> **Status**: 71% Complete
 > Gaps discovered during code audit that must be resolved before onboarding real customers. These are not features — they are foundational reliability and security requirements that Phase 1 deferred.
 
 ### 1. Authentication & Security Hardening
@@ -31,7 +31,7 @@
 - [x] **Email-Based User Invites**: Replaced hardcoded `Welcome123!` with a secure invite flow using `VerificationToken` model and Resend email service. Invited users receive a one-time link to set their own password.
 - [x] **Email Verification on Registration**: New users are marked unverified on registration. Verification email sent via Resend. Frontend gate blocks access to protected routes until verified. Resend verification endpoint available.
 - [x] **Password Reset Flow**: Added `POST /api/auth/forgot-password` and `POST /api/auth/reset-password` with Resend email integration. Anti-enumeration (always returns success). Revokes all refresh tokens on reset.
-- [ ] **Two-Factor Authentication (TOTP)**: Add optional TOTP-based 2FA using `otplib`. Store encrypted TOTP secret per user. Require 2FA code on login when enabled. Add setup/disable endpoints under `/api/auth/2fa/*`.
+- [x] **Two-Factor Authentication (TOTP)**: Add optional TOTP-based 2FA using `otplib`. Store encrypted TOTP secret per user. Require 2FA code on login when enabled. Add setup/disable endpoints under `/api/auth/2fa/*`.
 - [x] **Socket.io Authentication**: Added JWT verification middleware on socket connection. Rejects unauthenticated sockets. Associates sessions with user IDs via `user:{id}` rooms. Admin/owner auto-join `admin` room.
 - [x] **Refresh Token Cleanup Job**: Added `node-cron` job running daily at 03:00. Purges revoked refresh tokens (>30 days), expired refresh tokens, and stale verification tokens (>7 days).
 - [x] **Rate Limit Tightening**: Production default set to `20 req/15min`. Added dedicated rate limiters for `/login` (10), `/register` (5), and `/forgot-password` (5) with dev overrides.

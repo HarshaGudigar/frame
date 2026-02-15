@@ -53,6 +53,14 @@ const globalUserSchema = new mongoose.Schema(
             ref: 'GlobalUser',
             default: null,
         },
+        twoFactorSecret: {
+            type: String,
+            select: false,
+        },
+        isTwoFactorEnabled: {
+            type: Boolean,
+            default: false,
+        },
     },
     {
         timestamps: true,

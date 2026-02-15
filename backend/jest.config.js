@@ -8,4 +8,12 @@ module.exports = {
     // Set test environment variables BEFORE any module loads
     globals: {},
     setupFiles: ['./tests/env.js'],
+    // Transform ESM dependencies (otplib uses @scure/base, @noble/hashes which are ESM-only)
+    transformIgnorePatterns: ['/node_modules/(?!(@scure|@otplib|otplib|@noble)/)'],
+    transform: {
+        '^.+\\.[jt]s$': [
+            'babel-jest',
+            { presets: [['@babel/preset-env', { targets: { node: 'current' } }]] },
+        ],
+    },
 };

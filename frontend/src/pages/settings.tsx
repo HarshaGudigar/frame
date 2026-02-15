@@ -1,4 +1,5 @@
 import { ProfileForm } from '@/components/settings/profile-form';
+import { TwoFactorSettings } from '@/components/settings/two-factor-settings';
 
 export function SettingsPage() {
     return (
@@ -11,6 +12,7 @@ export function SettingsPage() {
             </div>
 
             <ProfileForm />
+            <TwoFactorSettings />
         </div>
     );
 }
