@@ -14,6 +14,11 @@ const { validate } = require('../middleware/validate');
 const { z } = require('zod');
 const logger = require('../utils/logger');
 const GlobalUser = require('../models/GlobalUser');
+const {
+    provisionTenantDatabase,
+    closeTenantConnection,
+    dropTenantDatabase,
+} = require('../utils/tenantDBCache');
 const VerificationToken = require('../models/VerificationToken');
 const emailService = require('../services/email');
 const Metric = require('../models/Metric');
@@ -179,6 +184,17 @@ router.post(
             createdBy: req.user.id,
         });
 
+        // Provision a dedicated database for the tenant
+        try {
+            const dbUri = await provisionTenantDatabase(slug);
+            tenant.dbUri = dbUri;
+            await tenant.save();
+        } catch (provisionErr) {
+            logger.error({ err: provisionErr, slug }, 'Failed to provision tenant database');
+            tenant.deploymentStatus = 'failed';
+            await tenant.save();
+        }
+
         // Audit Log
         await logAction(req, 'TENANT_CREATED', tenant.id, {
             name: tenant.name,
@@ -316,10 +332,25 @@ router.delete(
     requireRole('admin', 'owner'),
     validate({ params: mongoIdParam }),
     asyncHandler(async (req, res) => {
-        const tenant = await Tenant.findByIdAndDelete(req.params.id);
+        const tenant = await Tenant.findById(req.params.id);
         if (!tenant) {
             return errorResponse(res, 'Tenant not found', 404);
         }
+
+        // Clean up tenant database and cached connection
+        if (tenant.dbUri) {
+            try {
+                await closeTenantConnection(tenant.slug);
+                await dropTenantDatabase(tenant.dbUri);
+            } catch (cleanupErr) {
+                logger.error(
+                    { err: cleanupErr, slug: tenant.slug },
+                    'Failed to clean up tenant database',
+                );
+            }
+        }
+
+        await Tenant.findByIdAndDelete(req.params.id);
 
         // Audit Log
         await logAction(req, 'TENANT_DELETED', tenant.id, {

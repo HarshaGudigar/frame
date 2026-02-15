@@ -23,7 +23,7 @@
 
 ## Phase 1.5: Platform Hardening (Critical Gaps)
 
-> **Status**: 75% Complete
+> **Status**: 100% Complete
 > Gaps discovered during code audit that must be resolved before onboarding real customers. These are not features — they are foundational reliability and security requirements that Phase 1 deferred.
 
 ### 1. Authentication & Security Hardening
@@ -41,7 +41,7 @@
 
 - [x] **MongoDB Backup Strategy**: Added a cron-based `mongodump` job that runs nightly (configurable via `BACKUP_CRON`). Supports three upload providers: `local` (Docker volume), `s3` (AWS S3/Lightsail Object Storage), and `gdrive` (Google Drive via service account). Includes automatic retention cleanup and a `restore.sh` script for disaster recovery.
 - [x] **Metrics TTL Activation**: Uncomment and enable the 30-day TTL index on the `Metric` model (`backend/models/Metric.js`) to prevent unbounded collection growth.
-- [ ] **Tenant Database Provisioning**: The `Tenant.dbUri` field exists but is never used. Implement actual database provisioning logic: when a tenant is created in SILO mode, auto-create a dedicated MongoDB database (or use a naming convention like `frame_tenant_{slug}`). Wire `tenantDBCache.js` (currently unused) into the request lifecycle.
+- [x] **Tenant Database Provisioning**: When a tenant is created on the Hub, auto-creates a `frame_tenant_{slug}` database on the same MongoDB instance. Stores the URI in `Tenant.dbUri`. `tenantDBCache.js` wired into Hub middleware for tenant DB connections. Cleanup on tenant deletion drops the provisioned database.
 - [x] **Graceful Shutdown**: Add `SIGTERM`/`SIGINT` handlers in `server.js` that close the HTTP server, disconnect mongoose, and drain Socket.io connections before exiting. Critical for zero-downtime Docker restarts.
 
 ### 3. Frontend Stability
@@ -56,11 +56,11 @@
 
 ### 4. DevOps & Deployment Hardening
 
-- [ ] **Docker Compose Separation**: Split the monolithic Dockerfile into three services in `docker-compose.yml`: `mongo` (official image), `backend` (Node.js), `frontend` (Nginx serving static build). This enables independent scaling, proper health checks, and standard MongoDB backup tooling.
-- [ ] **Health Check in Docker**: Add `HEALTHCHECK` instruction to the Dockerfile that hits `GET /api/health` and verifies the database connection is alive.
-- [ ] **Deployment Rollback**: Add a rollback mechanism to `deploy.yml`. Before pulling new code, tag the current running image as `frame-app:rollback`. If the new container fails health checks within 60 seconds, auto-revert to the rollback image.
-- [ ] **Environment Variable Validation**: Add `.env.example` files for both `backend/` and `frontend/` documenting every required and optional variable with descriptions.
-- [ ] **Separate Build and Test Stages**: In `test.yml`, add a build step that produces the Docker image and runs integration tests against it, catching Dockerfile regressions.
+- [x] **Docker Compose Separation**: Split into three services via `docker-compose.split.yml`: `mongo` (official `mongo:6.0`), `backend` (`Dockerfile.backend` with Node.js), `frontend` (`Dockerfile.frontend` with multi-stage Nginx build). Includes `nginx.conf` for SPA fallback and API/WebSocket proxying. Original monolithic setup preserved as legacy fallback.
+- [x] **Health Check in Docker**: Added `HEALTHCHECK` instruction to all Dockerfiles (monolithic, backend, frontend) hitting `GET /api/health`. Added matching `healthcheck` block to `docker-compose.yml`. Split Dockerfiles include health checks by default.
+- [x] **Deployment Rollback**: `deploy.yml` now snapshots the current image as `frame-app:rollback` before rebuilding. Polls `docker inspect` health status every 5s for 60s. On failure, rolls back to the previous image automatically.
+- [x] **Environment Variable Validation**: Added `backend/.env.example` and `frontend/.env.example` documenting every variable with `[REQUIRED]`/`[Optional]`/`[Conditional]` labels, grouped by section (Server, Auth, Fleet, Email, CORS, Rate Limiting, Logging, Backup, Multi-Tenancy).
+- [x] **Separate Build and Test Stages**: Added `build-docker` job to `test.yml` that runs after unit tests. Builds the monolithic image, starts a container, polls health endpoint, runs integration tests (health, frontend, API), and builds split images as a compile check. Updated `actions/checkout` and `actions/setup-node` to v4.
 
 ---
 

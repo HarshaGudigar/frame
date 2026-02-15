@@ -27,19 +27,51 @@ jobs:
                     echo "host=${{ secrets.LIGHTSAIL_HOST }}" >> $GITHUB_OUTPUT
                   fi
 
-            - name: Deploy via SSH
+            - name: Deploy via SSH with rollback
               uses: appleboy/ssh-action@v1.0.3
               with:
                   host: ${{ steps.set-host.outputs.host }}
                   username: ${{ secrets.LIGHTSAIL_USERNAME }}
                   key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
                   script: |
+                      set -e
+
                       # Navigate to project or clone it
                       cd ~/frame || git clone https://github.com/${{ github.repository }} ~/frame
                       cd ~/frame
+
+                      # Snapshot current running image as rollback
+                      sudo docker tag frame-app:latest frame-app:rollback 2>/dev/null || true
+
+                      # Pull latest code and rebuild
                       git pull origin main
-                      # Prune corrupted Docker build cache
                       sudo docker builder prune -af
-                      sudo docker rm -f frame-app || true
                       sudo docker compose down
                       sudo docker compose up -d --build
+
+                      # Wait for health check (poll every 5s, max 12 attempts = 60s)
+                      echo "Waiting for container to become healthy..."
+                      HEALTHY=false
+                      for i in $(seq 1 12); do
+                          STATUS=$(sudo docker inspect --format='{{.State.Health.Status}}' frame-app 2>/dev/null || echo "unknown")
+                          echo "  Attempt $i/12: status=$STATUS"
+                          if [ "$STATUS" = "healthy" ]; then
+                              HEALTHY=true
+                              break
+                          fi
+                          sleep 5
+                      done
+
+                      if [ "$HEALTHY" = "true" ]; then
+                          echo "Deployment successful — container is healthy."
+                          # Clean up rollback image on success
+                          sudo docker rmi frame-app:rollback 2>/dev/null || true
+                      else
+                          echo "Deployment FAILED — container did not become healthy within 60s."
+                          echo "Rolling back to previous image..."
+                          sudo docker compose down
+                          sudo docker tag frame-app:rollback frame-app:latest 2>/dev/null || true
+                          sudo docker compose up -d
+                          sudo docker rmi frame-app:rollback 2>/dev/null || true
+                          exit 1
+                      fi

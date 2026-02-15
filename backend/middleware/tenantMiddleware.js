@@ -1,5 +1,6 @@
 const Tenant = require('../models/Tenant');
 const { errorResponse } = require('../utils/responseWrapper');
+const { getTenantConnection } = require('../utils/tenantDBCache');
 
 /**
  * Determines the runtime mode of this server instance.
@@ -10,7 +11,7 @@ const RUNTIME_MODE = process.env.APP_TENANT_ID ? 'silo' : 'hub';
 
 /**
  * Tenant Middleware
- * 
+ *
  * In SILO mode: Trusts the APP_TENANT_ID env var. Does NOT query the Control Plane DB.
  *               The local MongoDB IS the tenant's DB. No dynamic switching needed.
  *
@@ -40,7 +41,7 @@ async function handleSiloMode(req, res, next) {
     // e.g., APP_SUBSCRIBED_MODULES="hospital,billing"
     const subscribedModules = (process.env.APP_SUBSCRIBED_MODULES || '')
         .split(',')
-        .map(m => m.trim().toLowerCase())
+        .map((m) => m.trim().toLowerCase())
         .filter(Boolean);
 
     // Attach tenant context from ENV — no DB query needed
@@ -52,8 +53,16 @@ async function handleSiloMode(req, res, next) {
 
     // Module access check
     const requestedModule = req.headers['x-module-id'];
-    if (requestedModule && subscribedModules.length > 0 && !subscribedModules.includes(requestedModule.toLowerCase())) {
-        return errorResponse(res, `Module "${requestedModule}" is not active on this instance.`, 403);
+    if (
+        requestedModule &&
+        subscribedModules.length > 0 &&
+        !subscribedModules.includes(requestedModule.toLowerCase())
+    ) {
+        return errorResponse(
+            res,
+            `Module "${requestedModule}" is not active on this instance.`,
+            403,
+        );
     }
 
     // In silo mode, req.db is the default mongoose connection (no dynamic switching)
@@ -86,12 +95,26 @@ async function handleHubMode(req, res, next) {
     // Module access check
     const requestedModule = req.headers['x-module-id'];
     if (requestedModule && !tenant.subscribedModules.includes(requestedModule.toLowerCase())) {
-        return errorResponse(res, `Not authorized for module: ${requestedModule}. Please purchase it from the Marketplace.`, 403);
+        return errorResponse(
+            res,
+            `Not authorized for module: ${requestedModule}. Please purchase it from the Marketplace.`,
+            403,
+        );
     }
 
     req.tenant = tenant;
-    // In Hub mode, req.db stays as the default Control Plane connection
-    // The Hub doesn't connect to customer databases; it manages metadata only.
+
+    // If the tenant has a provisioned database, connect to it
+    if (tenant.dbUri) {
+        try {
+            req.db = await getTenantConnection(tenant.slug, tenant.dbUri);
+        } catch (dbErr) {
+            // Fallback to hub connection if tenant DB is unreachable
+            const mongoose = require('mongoose');
+            req.db = mongoose.connection;
+        }
+    }
+
     next();
 }
 
