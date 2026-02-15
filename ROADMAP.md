@@ -41,7 +41,7 @@
 
 - [x] **MongoDB Backup Strategy**: Added a cron-based `mongodump` job that runs nightly (configurable via `BACKUP_CRON`). Supports three upload providers: `local` (Docker volume), `s3` (AWS S3/Lightsail Object Storage), and `gdrive` (Google Drive via service account). Includes automatic retention cleanup and a `restore.sh` script for disaster recovery.
 - [x] **Metrics TTL Activation**: Uncomment and enable the 30-day TTL index on the `Metric` model (`backend/models/Metric.js`) to prevent unbounded collection growth.
-- [x] **Tenant Database Provisioning**: When a tenant is created on the Hub, auto-creates a `frame_tenant_{slug}` database on the same MongoDB instance. Stores the URI in `Tenant.dbUri`. `tenantDBCache.js` wired into Hub middleware for tenant DB connections. Cleanup on tenant deletion drops the provisioned database.
+- [x] **Tenant Database Provisioning**: Implemented dedicated database provisioning for tenants in SILO mode. When a tenant is created, the system auto-derives a `frame_tenant_{slug}` URI and ensures the database is reachable. Connections are cached and pooled via `tenantDBCache.js`.
 - [x] **Graceful Shutdown**: Add `SIGTERM`/`SIGINT` handlers in `server.js` that close the HTTP server, disconnect mongoose, and drain Socket.io connections before exiting. Critical for zero-downtime Docker restarts.
 
 ### 3. Frontend Stability

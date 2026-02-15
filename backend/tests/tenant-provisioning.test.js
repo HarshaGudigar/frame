@@ -7,6 +7,11 @@ let mongod;
 beforeAll(async () => {
     mongod = await MongoMemoryServer.create();
     const uri = mongod.getUri();
+
+    // Ensure config uses the test URI for derivation
+    const config = require('../config');
+    config.MONGODB_URI = uri;
+
     await mongoose.connect(uri);
 });
 

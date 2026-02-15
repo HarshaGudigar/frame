@@ -17,6 +17,10 @@ async function setupTestApp() {
     mongod = await MongoMemoryServer.create();
     const uri = mongod.getUri();
 
+    // Inject URI into config so utilities like tenantDBCache use the correct base
+    const config = require('../config');
+    config.MONGODB_URI = uri;
+
     await mongoose.connect(uri);
 
     const { app } = createApp();

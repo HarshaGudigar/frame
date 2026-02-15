@@ -39,21 +39,52 @@ const getTenantConnection = async (tenantId, dbUri) => {
 const deriveTenantDbUri = (hubUri, slug) => {
     const dbName = `frame_tenant_${slug}`;
 
-    // For SRV URIs, URL class cannot parse mongodb+srv:// directly in all environments.
-    // Replace the database name portion after the host and before query params.
-    const srvMatch = hubUri.match(/^(mongodb\+srv:\/\/[^/]+)\/?([^?]*)?(\?.*)?$/);
-    if (srvMatch) {
-        const base = srvMatch[1];
-        const query = srvMatch[3] || '';
-        return `${base}/${dbName}${query}`;
+    // Handle "memory" or other non-URI strings used in tests
+    if (!hubUri || !hubUri.includes('://')) {
+        logger.warn(
+            { hubUri },
+            'Invalid hubUri provided to deriveTenantDbUri, using localhost fallback',
+        );
+        return `mongodb://127.0.0.1:27017/${dbName}`;
     }
 
-    // Standard mongodb:// — use URL class
-    const stdMatch = hubUri.match(/^(mongodb:\/\/[^/]+)\/?([^?]*)?(\?.*)?$/);
+    // For SRV URIs
+    const srvMatch = hubUri.match(/^(mongodb\+srv:\/\/[^/?#]+)([/?#].*)?$/);
+    if (srvMatch) {
+        const base = srvMatch[1];
+        const rest = srvMatch[2] || '';
+        // If rest starts with /, replace the part before next special char
+        if (rest.startsWith('/')) {
+            const queryIndex = rest.indexOf('?');
+            const hashIndex = rest.indexOf('#');
+            let endIndex = rest.length;
+            if (queryIndex !== -1 && hashIndex !== -1) endIndex = Math.min(queryIndex, hashIndex);
+            else if (queryIndex !== -1) endIndex = queryIndex;
+            else if (hashIndex !== -1) endIndex = hashIndex;
+
+            const queryParams = rest.substring(endIndex);
+            return `${base}/${dbName}${queryParams}`;
+        }
+        return `${base}/${dbName}${rest}`;
+    }
+
+    // Standard mongodb://
+    const stdMatch = hubUri.match(/^(mongodb:\/\/[^/?#]+)([/?#].*)?$/);
     if (stdMatch) {
         const base = stdMatch[1];
-        const query = stdMatch[3] || '';
-        return `${base}/${dbName}${query}`;
+        const rest = stdMatch[2] || '';
+        if (rest.startsWith('/')) {
+            const queryIndex = rest.indexOf('?');
+            const hashIndex = rest.indexOf('#');
+            let endIndex = rest.length;
+            if (queryIndex !== -1 && hashIndex !== -1) endIndex = Math.min(queryIndex, hashIndex);
+            else if (queryIndex !== -1) endIndex = queryIndex;
+            else if (hashIndex !== -1) endIndex = hashIndex;
+
+            const queryParams = rest.substring(endIndex);
+            return `${base}/${dbName}${queryParams}`;
+        }
+        return `${base}/${dbName}${rest}`;
     }
 
     // Fallback: just append the database name
