@@ -1,44 +1,45 @@
 name: Deploy to Lightsail
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
-    inputs:
-      target_host:
-        description: 'Target VM IP'
-        required: false
-        default: ''
+    push:
+        branches:
+            - main
+    workflow_dispatch:
+        inputs:
+            target_host:
+                description: 'Target VM IP'
+                required: false
+                default: ''
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    deploy:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v4
 
-      - name: Determine Target Host
-        id: set-host
-        run: |
-          if [ "${{ github.event.inputs.target_host }}" != "" ]; then
-            echo "host=${{ github.event.inputs.target_host }}" >> $GITHUB_OUTPUT
-          else
-            echo "host=${{ secrets.LIGHTSAIL_HOST }}" >> $GITHUB_OUTPUT
-          fi
+            - name: Determine Target Host
+              id: set-host
+              run: |
+                  if [ "${{ github.event.inputs.target_host }}" != "" ]; then
+                    echo "host=${{ github.event.inputs.target_host }}" >> $GITHUB_OUTPUT
+                  else
+                    echo "host=${{ secrets.LIGHTSAIL_HOST }}" >> $GITHUB_OUTPUT
+                  fi
 
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ steps.set-host.outputs.host }}
-          username: ${{ secrets.LIGHTSAIL_USERNAME }}
-          key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
-          script: |
-            # Navigate to project or clone it
-            cd ~/frame || git clone https://github.com/${{ github.repository }} ~/frame
-            cd ~/frame
-            git pull origin main
-            # Prune corrupted Docker build cache
-            sudo docker builder prune -af
-            sudo docker compose down
-            sudo docker compose up -d --build
+            - name: Deploy via SSH
+              uses: appleboy/ssh-action@v1.0.3
+              with:
+                  host: ${{ steps.set-host.outputs.host }}
+                  username: ${{ secrets.LIGHTSAIL_USERNAME }}
+                  key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+                  script: |
+                      # Navigate to project or clone it
+                      cd ~/frame || git clone https://github.com/${{ github.repository }} ~/frame
+                      cd ~/frame
+                      git pull origin main
+                      # Prune corrupted Docker build cache
+                      sudo docker builder prune -af
+                      sudo docker rm -f frame-app || true
+                      sudo docker compose down
+                      sudo docker compose up -d --build
