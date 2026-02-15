@@ -10,8 +10,8 @@ RUN apt-get update && apt-get install -y mongodb-org
 # Create app directory
 WORKDIR /app
 
-# Create directory for MongoDB data
-RUN mkdir -p /data/db
+# Create directory for MongoDB data and backups
+RUN mkdir -p /data/db /backups
 
 # Copy root package files
 COPY package*.json ./

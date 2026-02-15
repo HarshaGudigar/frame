@@ -23,7 +23,7 @@
 
 ## Phase 1.5: Platform Hardening (Critical Gaps)
 
-> **Status**: 71% Complete
+> **Status**: 75% Complete
 > Gaps discovered during code audit that must be resolved before onboarding real customers. These are not features — they are foundational reliability and security requirements that Phase 1 deferred.
 
 ### 1. Authentication & Security Hardening
@@ -39,7 +39,7 @@
 
 ### 2. Data Layer Reliability
 
-- [ ] **MongoDB Backup Strategy**: Add a cron-based `mongodump` script that runs nightly inside the Docker container and uploads compressed backups to S3 (or Lightsail Object Storage). Include a `restore.sh` script for disaster recovery.
+- [x] **MongoDB Backup Strategy**: Added a cron-based `mongodump` job that runs nightly (configurable via `BACKUP_CRON`). Supports three upload providers: `local` (Docker volume), `s3` (AWS S3/Lightsail Object Storage), and `gdrive` (Google Drive via service account). Includes automatic retention cleanup and a `restore.sh` script for disaster recovery.
 - [x] **Metrics TTL Activation**: Uncomment and enable the 30-day TTL index on the `Metric` model (`backend/models/Metric.js`) to prevent unbounded collection growth.
 - [ ] **Tenant Database Provisioning**: The `Tenant.dbUri` field exists but is never used. Implement actual database provisioning logic: when a tenant is created in SILO mode, auto-create a dedicated MongoDB database (or use a naming convention like `frame_tenant_{slug}`). Wire `tenantDBCache.js` (currently unused) into the request lifecycle.
 - [x] **Graceful Shutdown**: Add `SIGTERM`/`SIGINT` handlers in `server.js` that close the HTTP server, disconnect mongoose, and drain Socket.io connections before exiting. Critical for zero-downtime Docker restarts.

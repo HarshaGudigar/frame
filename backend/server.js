@@ -24,6 +24,10 @@ if (require.main === module) {
     const { startTokenCleanup } = require('./jobs/tokenCleanup');
     startTokenCleanup();
 
+    // Start backup cron job
+    const { startBackupJob } = require('./jobs/backup');
+    startBackupJob();
+
     // Database
     mongoose
         .connect(config.MONGODB_URI)

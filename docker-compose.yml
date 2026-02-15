@@ -1,14 +1,16 @@
 services:
-  app:
-    build: .
-    image: frame-app:latest
-    container_name: frame-app
-    ports:
-      - "3000:3000"
-      - "5000:5000"
-    volumes:
-      - mongodb_data:/data/db
-    restart: always
+    app:
+        build: .
+        image: frame-app:latest
+        container_name: frame-app
+        ports:
+            - '3000:3000'
+            - '5000:5000'
+        volumes:
+            - mongodb_data:/data/db
+            - backup_data:/backups
+        restart: always
 
 volumes:
-  mongodb_data:
+    mongodb_data:
+    backup_data:

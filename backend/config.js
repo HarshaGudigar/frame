@@ -85,6 +85,23 @@ module.exports = {
     // Logging
     LOG_LEVEL: process.env.LOG_LEVEL || 'info',
 
+    // Backup
+    BACKUP_ENABLED: process.env.BACKUP_ENABLED === 'true',
+    BACKUP_PROVIDER: process.env.BACKUP_PROVIDER || 'local', // 'local' | 's3' | 'gdrive'
+    BACKUP_CRON: process.env.BACKUP_CRON || '0 2 * * *', // Default 02:00 UTC
+    BACKUP_RETENTION_DAYS: parseInt(process.env.BACKUP_RETENTION_DAYS, 10) || 7,
+    BACKUP_DIR: process.env.BACKUP_DIR || '/backups',
+
+    // Backup — S3
+    BACKUP_S3_BUCKET: process.env.BACKUP_S3_BUCKET || '',
+    BACKUP_S3_REGION: process.env.BACKUP_S3_REGION || 'us-east-1',
+    BACKUP_S3_PREFIX: process.env.BACKUP_S3_PREFIX || 'backups/',
+
+    // Backup — Google Drive
+    BACKUP_GDRIVE_FOLDER_ID: process.env.BACKUP_GDRIVE_FOLDER_ID || '',
+    BACKUP_GDRIVE_SERVICE_ACCOUNT_EMAIL: process.env.BACKUP_GDRIVE_SERVICE_ACCOUNT_EMAIL || '',
+    BACKUP_GDRIVE_PRIVATE_KEY: process.env.BACKUP_GDRIVE_PRIVATE_KEY || '',
+
     // Runtime Mode
     RUNTIME_MODE: process.env.APP_TENANT_ID ? 'SILO' : 'HUB',
 };
