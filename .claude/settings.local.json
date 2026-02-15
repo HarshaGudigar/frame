@@ -5,7 +5,10 @@
             "Bash(npm test)",
             "Bash(npx tsc:*)",
             "Bash(npx vite build)",
-            "Bash(node -e:*)"
+            "Bash(node -e:*)",
+            "Bash(ls:*)",
+            "Bash(grep:*)",
+            "Bash(git config:*)"
         ]
     }
 }

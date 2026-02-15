@@ -23,8 +23,9 @@ npm run start
 
 ### Configuration
 
-Create a `.env` file in this directory based on `.env.example`:
+Create a `.env` file in this directory with the following variables:
 
+- `PORT`: Server port (default: `5000`).
 - `MONGODB_URI`: Connection string for MongoDB.
 - `JWT_SECRET`: Secret for signing access tokens.
 - `RESEND_API_KEY`: API key for email services.

@@ -5,9 +5,9 @@ The frontend is a modern, responsive administrative dashboard built with **Vite*
 ## Core Technologies
 
 - **Framework**: React 19
-- **Build Tool**: Vite 6
+- **Build Tool**: Vite 7
 - **Styling**: Tailwind CSS v4 + shadcn/ui
-- **State Management**: React Context (Auth, Theme, Socket)
+- **State Management**: React Context (Auth, Socket)
 - **API Client**: Axios with automatic JWT rotation
 - **Real-time**: Socket.io-client
 
