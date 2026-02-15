@@ -9,7 +9,12 @@
             "Bash(ls:*)",
             "Bash(grep:*)",
             "Bash(git config:*)",
-            "Bash(npx jest:*)"
+            "Bash(npx jest:*)",
+            "Bash(docker exec:*)",
+            "Bash(chmod:*)",
+            "Bash(git reset:*)",
+            "Bash(git commit:*)",
+            "Bash(git add:*)"
         ]
     }
 }
