@@ -32,9 +32,14 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             return;
         }
 
-        const socketInstance = io(import.meta.env.VITE_API_URL || 'http://localhost:3000', {
+        // Strip '/api' suffix if present to ensure socket.io connects to the root
+        const socketUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(
+            /\/api$/,
+            '',
+        );
+        const socketInstance = io(socketUrl, {
             withCredentials: true,
-            transports: ['websocket'],
+            transports: ['websocket', 'polling'], // Fallback to polling if websocket fails
             auth: { token },
             reconnectionAttempts: 10,
             reconnectionDelay: 1000,
