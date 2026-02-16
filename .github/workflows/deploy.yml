@@ -50,14 +50,15 @@ jobs:
                       sudo docker compose down --remove-orphans
                       sudo docker compose up -d --build --remove-orphans
 
-                      # Wait for health check (poll every 5s, max 12 attempts = 60s)
+                      # Wait for health check (poll every 5s, max 24 attempts = 120s)
                       echo "Waiting for services to become healthy..."
                       HEALTHY=false
-                      for i in $(seq 1 12); do
+                      for i in $(seq 1 24); do
                           B_STATUS=$(sudo docker inspect --format='{{.State.Health.Status}}' frame-backend 2>/dev/null || echo "unknown")
                           F_STATUS=$(sudo docker inspect --format='{{.State.Health.Status}}' frame-frontend 2>/dev/null || echo "unknown")
                           
-                          echo "  Attempt $i/12: backend=$B_STATUS, frontend=$F_STATUS"
+                          echo "  Attempt $i/24: backend=$B_STATUS, frontend=$F_STATUS"
+                          sudo docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Health}}"
                           
                           if [ "$B_STATUS" = "healthy" ] && [ "$F_STATUS" = "healthy" ]; then
                               HEALTHY=true
@@ -71,7 +72,13 @@ jobs:
                           # Clean up rollback images on success
                           sudo docker rmi frame-backend:rollback frame-frontend:rollback 2>/dev/null || true
                       else
-                          echo "Deployment FAILED — services did not become healthy within 60s."
+                          echo "Deployment FAILED — services did not become healthy within 120s."
+                          echo "--- CONTAINER STATUS ---"
+                          sudo docker ps -a
+                          echo "--- BACKEND LOGS ---"
+                          sudo docker compose logs backend
+                          echo "--- FRONTEND LOGS ---"
+                          sudo docker compose logs frontend
                           echo "Rolling back..."
                           sudo docker compose down
                           sudo docker tag frame-backend:rollback frame-backend:latest 2>/dev/null || true
