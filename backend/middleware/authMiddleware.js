@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const { errorResponse } = require('../utils/responseWrapper');
 const { JWT_SECRET } = require('../config');
 const GlobalUser = require('../models/GlobalUser');
+const logger = require('../utils/logger');
 
 /**
  * Auth Middleware
@@ -33,15 +34,13 @@ const authMiddleware = async (req, res, next) => {
         // Tenant Context Role Override
         // If x-tenant-id header is present, we check if user belongs to that tenant
         // and override req.user.role with the tenant-specific role for this request context.
-        const tenantId = req.headers['x-tenant-id'];
-        if (tenantId && user.tenants) {
-            const tenantAccess = user.tenants.find((t) => t.tenant.toString() === tenantId);
+        // req.tenant is resolved by tenantMiddleware (slug → full Tenant doc) before this runs.
+        if (req.tenant?._id && user.tenants) {
+            const tenantAccess = user.tenants.find(
+                (t) => t.tenant.toString() === req.tenant._id.toString(),
+            );
 
             if (tenantAccess) {
-                // We add a temporary property for the effective role in this context
-                // Or we can just mutate role (but be careful if we save the user doc later)
-                // Let's use a separate property 'effectiveRole' or just 'role' if we don't save.
-                // Since Mongoose docs are objects, let's set a non-persisted property.
                 req.user.role = tenantAccess.role;
             }
         }
@@ -59,6 +58,10 @@ const authMiddleware = async (req, res, next) => {
 const requireRole = (...allowedRoles) => {
     return (req, res, next) => {
         if (!req.user || !req.user.role) {
+            logger.warn(
+                { hasUser: !!req.user, role: req.user?.role },
+                'Unauthorized: Missing user or role',
+            );
             return errorResponse(res, 'Unauthorized', 403);
         }
 
@@ -87,8 +90,7 @@ const requireVerifiedEmail = (req, res, next) => {
         return errorResponse(res, 'Authentication required', 401);
     }
 
-    // Bypass for development (allow skipping verification during manual testing)
-    // We enforce it in 'test' environment so automated tests can verify the logic.
+    // Bypass for development
     if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
         return next();
     }

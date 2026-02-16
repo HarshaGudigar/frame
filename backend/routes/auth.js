@@ -135,7 +135,9 @@ router.post('/login', loginLimiter, validate({ body: loginSchema }), async (req,
     const ipAddress = req.ip;
 
     try {
-        const user = await GlobalUser.findOne({ email }).select('+password');
+        const user = await GlobalUser.findOne({ email })
+            .select('+password')
+            .populate('tenants.tenant');
 
         if (!user || !user.isActive) {
             return errorResponse(res, 'Invalid credentials', 401);
@@ -178,6 +180,7 @@ router.post('/login', loginLimiter, validate({ body: loginSchema }), async (req,
                     role: user.role,
                     isEmailVerified: user.isEmailVerified,
                     isTwoFactorEnabled: user.isTwoFactorEnabled,
+                    tenants: user.tenants,
                 },
             },
             'Login successful',

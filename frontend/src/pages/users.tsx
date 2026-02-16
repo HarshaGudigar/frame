@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/auth-context';
 import { usePermission } from '../hooks/use-permission';
 import { InviteUserModal } from '@/components/users/invite-user-modal';
 import { EditRoleModal } from '@/components/users/edit-role-modal';
+import { ChangePasswordModal } from '@/components/users/change-password-modal';
 import {
     Table,
     TableBody,
@@ -22,7 +23,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Trash2, ShieldCheck } from 'lucide-react';
+import { MoreHorizontal, Trash2, ShieldCheck, KeyRound } from 'lucide-react';
 
 export default function Users() {
     const { api } = useAuth();
@@ -31,6 +32,7 @@ export default function Users() {
     const [isLoading, setIsLoading] = useState(true);
     const [editUser, setEditUser] = useState<User | null>(null);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
     const { hasRole } = usePermission();
 
     const fetchUsers = async () => {
@@ -153,6 +155,15 @@ export default function Users() {
                                                         Edit Role
                                                     </DropdownMenuItem>
                                                     <DropdownMenuItem
+                                                        onClick={() => {
+                                                            setEditUser(user);
+                                                            setIsPasswordModalOpen(true);
+                                                        }}
+                                                    >
+                                                        <KeyRound className="mr-2 h-4 w-4" />
+                                                        Change Password
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
                                                         className="text-red-600"
                                                         onClick={() =>
                                                             user._id && handleDelete(user._id)
@@ -187,6 +198,11 @@ export default function Users() {
                 open={isEditModalOpen}
                 onOpenChange={setIsEditModalOpen}
                 onRoleUpdated={fetchUsers}
+            />
+            <ChangePasswordModal
+                user={editUser}
+                open={isPasswordModalOpen}
+                onOpenChange={setIsPasswordModalOpen}
             />
         </div>
     );

@@ -26,6 +26,11 @@ const SettingsPage = lazy(() =>
 const AuditLogsPage = lazy(() =>
     import('@/pages/audit-logs').then((module) => ({ default: module.AuditLogsPage })),
 );
+const HotelDashboard = lazy(() =>
+    import('@/pages/solutions/hotel/Dashboard').then((module) => ({
+        default: module.HotelDashboard,
+    })),
+);
 
 // Auth pages (unauthenticated)
 const AcceptInvitePage = lazy(() =>
@@ -95,6 +100,7 @@ function AppRoutes() {
                     <Route path="/users" element={<UsersPage />} />
                     <Route path="/settings" element={<SettingsPage />} />
                     <Route path="/audit-logs" element={<AuditLogsPage />} />
+                    <Route path="/hotel" element={<HotelDashboard />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
             </Suspense>

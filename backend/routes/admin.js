@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const router = express.Router();
 const Tenant = require('../models/Tenant');
 const { successResponse, errorResponse } = require('../utils/responseWrapper');
@@ -28,6 +29,7 @@ const {
     heartbeatSchema,
     mongoIdParam,
     updateUserRoleSchema,
+    adminChangePasswordSchema,
 } = require('../schemas/admin');
 
 // Async route wrapper
@@ -152,9 +154,17 @@ router.get(
     '/tenants',
     authMiddleware,
     requireVerifiedEmail,
-    requireRole('admin', 'staff', 'owner'),
+    requireRole('admin', 'staff', 'owner', 'user'),
     asyncHandler(async (req, res) => {
-        const tenants = await Tenant.find().sort({ lastSeen: -1 });
+        let query = {};
+
+        // If not owner, filter tenants to only those assigned to the user
+        if (req.user.role !== 'owner') {
+            const assignedTenantIds = req.user.tenants.map((t) => t.tenant);
+            query._id = { $in: assignedTenantIds };
+        }
+
+        const tenants = await Tenant.find(query).sort({ lastSeen: -1 });
         return successResponse(res, tenants, 'Tenants retrieved');
     }),
 );
@@ -433,13 +443,22 @@ router.get(
     '/users',
     authMiddleware,
     requireVerifiedEmail,
-    requireRole('owner'),
+    requireRole('owner', 'admin'),
     async (req, res) => {
         try {
+            let query = {};
+
+            // If not owner, filter users to only those sharing a tenant with the requester
+            if (req.user.role !== 'owner') {
+                const tenantIds = req.user.tenants.map((t) => t.tenant);
+                query['tenants.tenant'] = { $in: tenantIds };
+            }
+
             const users = await GlobalUser.find(
-                {},
-                'firstName lastName email role isActive createdAt',
-            );
+                query,
+                'firstName lastName email role isActive createdAt tenants',
+            ).populate('tenants.tenant');
+
             res.json({ success: true, count: users.length, data: users });
         } catch (error) {
             logger.error({ err: error }, 'Failed to fetch users');
@@ -492,13 +511,41 @@ router.post(
                 return errorResponse(res, 'User already exists', 409);
             }
 
+            // Determine tenant context
+            let userTenants = [];
+            let globalRole = role;
+
+            if (req.user.role !== 'owner') {
+                // Silo/Tenant Admins can only invite 'user' or 'staff' to their own tenant
+                if (role === 'owner' || role === 'admin') {
+                    // Technically, a tenant admin MIGHT want to invite another admin for the SAME tenant.
+                    // But they definitely cannot create a Global Owner/Admin.
+                    // Let's assume the 'role' in body is the TENANT role.
+                    // And Global Role is always 'user'.
+                }
+
+                // For simplified Silo flow:
+                // Global Role = 'user'
+                // Tenant Role = req.body.role (e.g. 'user', 'staff', 'admin' of that tenant)
+                globalRole = 'user';
+
+                if (req.user.tenants && req.user.tenants.length > 0) {
+                    // Use the first tenant (Silo case)
+                    userTenants.push({
+                        tenant: req.user.tenants[0].tenant,
+                        role: role, // The role specified in invite is the tenant-level role
+                    });
+                }
+            }
+
             // Create user without password — they'll set it via the invite link
             const newUser = await GlobalUser.create({
                 email,
                 firstName,
                 lastName,
-                role,
-                isActive: false,
+                role: globalRole,
+                tenants: userTenants,
+                isActive: false, // User activates by accepting invite
                 isEmailVerified: false,
                 invitedBy: req.user._id,
             });
@@ -666,6 +713,92 @@ router.patch(
     },
 );
 
+/**
+ * @swagger
+ * /api/admin/users/{id}/password:
+ *   post:
+ *     summary: Change a user's password (Admin)
+ *     tags: [Admin]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [password, confirmPassword]
+ *             properties:
+ *               password: { type: string }
+ *               confirmPassword: { type: string }
+ *     responses:
+ *       200:
+ *         description: Password changed
+ */
+router.post(
+    '/users/:id/password',
+    authMiddleware,
+    requireVerifiedEmail,
+    requireRole('owner', 'admin'),
+    validate({ params: mongoIdParam, body: adminChangePasswordSchema }),
+    async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { password } = req.body;
+
+            // Administrative logic:
+            // 1. Owners can change anyone's password.
+            // 2. Tenant Admins can only change passwords of users in their own tenant.
+
+            const targetUser = await GlobalUser.findById(id);
+            if (!targetUser) {
+                return errorResponse(res, 'User not found', 404);
+            }
+
+            if (req.user.role !== 'owner') {
+                // Check if the admin and target user share at least one tenant
+                const adminTenantIds = req.user.tenants.map((t) => t.tenant.toString());
+                const targetTenantIds = targetUser.tenants.map((t) => t.tenant.toString());
+
+                const hasCommonTenant = adminTenantIds.some((id) => targetTenantIds.includes(id));
+
+                if (!hasCommonTenant) {
+                    return errorResponse(res, 'Access denied: User is not in your tenant', 403);
+                }
+            }
+
+            // Update password
+            targetUser.password = password;
+            await targetUser.save();
+
+            // Revoke all refresh tokens for security
+            const RefreshToken = require('../models/RefreshToken');
+            await RefreshToken.updateMany(
+                { user: targetUser._id, revoked: null },
+                { revoked: new Date() },
+            );
+
+            logger.info(
+                { adminId: req.user.id, targetUserId: id },
+                'User password changed by admin',
+            );
+
+            // Audit Log
+            await logAction(req, 'USER_PASSWORD_CHANGED_BY_ADMIN', id, {
+                targetEmail: targetUser.email,
+            });
+
+            res.json({ success: true, message: 'Password changed successfully' });
+        } catch (error) {
+            logger.error({ err: error }, 'Failed to change user password');
+            errorResponse(res, 'Failed to change user password', 500);
+        }
+    },
+);
+
 // ─── Analytics & Fleet Stats ───────────────────────────────────────────────
 
 /**
@@ -687,13 +820,33 @@ router.get(
     '/metrics/:id',
     authMiddleware,
     requireVerifiedEmail,
-    requireRole('admin', 'owner'),
+    requireRole('admin', 'owner', 'user'),
     asyncHandler(async (req, res) => {
         const { id } = req.params; // slug or id
 
-        // Find last 24 entries (approximately 24h if pinged hourly)
-        // In a real app, we'd filter by time range
-        const history = await Metric.find({ tenantId: id }).sort({ timestamp: -1 }).limit(24);
+        // Find the tenant first to get the formal ID if 'id' is a slug
+        const tenant = await Tenant.findOne({
+            $or: [{ slug: id }, { _id: mongoose.isValidObjectId(id) ? id : null }],
+        });
+
+        if (!tenant) {
+            return errorResponse(res, 'Tenant not found', 404);
+        }
+
+        // Security: If role is 'user', verify they belong to this tenant
+        if (req.user.role === 'user') {
+            const hasAccess = req.user.tenants.some(
+                (t) => t.tenant.toString() === tenant._id.toString(),
+            );
+            if (!hasAccess) {
+                return errorResponse(res, 'Access denied: Not a member of this tenant', 403);
+            }
+        }
+
+        // Find last 24 entries using the canonical slug/id
+        const history = await Metric.find({ tenantId: tenant.slug })
+            .sort({ timestamp: -1 })
+            .limit(24);
 
         res.json({
             success: true,

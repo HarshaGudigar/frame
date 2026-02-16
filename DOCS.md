@@ -712,6 +712,130 @@ Interactive API documentation is available at `/api/docs` (Swagger UI) when the 
 | DELETE | `/api/marketplace/products/:id` | Yes  | Soft-delete a product (admin) |
 | POST   | `/api/marketplace/purchase`     | Yes  | Purchase/provision a module   |
 
+### Hotel Module Endpoints (v2.0.0)
+
+All hotel routes are mounted under `/api/m/hotel/` and require the `x-tenant-id` header (Hub mode) or `APP_TENANT_ID` env (Silo mode). The tenant must have the `hotel` module subscribed.
+
+#### Rooms
+
+| Method | Endpoint             | Auth Required | Role Restriction | Description                     |
+| :----- | :------------------- | :------------ | :--------------- | :------------------------------ |
+| GET    | `/m/hotel/rooms`     | Yes           | —                | List all rooms                  |
+| GET    | `/m/hotel/rooms/:id` | Yes           | —                | Get single room                 |
+| POST   | `/m/hotel/rooms`     | Yes           | admin, owner     | Create a room                   |
+| PATCH  | `/m/hotel/rooms/:id` | Yes           | admin, owner     | Update room (fields, status)    |
+| DELETE | `/m/hotel/rooms/:id` | Yes           | admin, owner     | Delete room (blocked if booked) |
+
+#### Customers
+
+| Method | Endpoint                 | Auth Required | Role Restriction | Description         |
+| :----- | :----------------------- | :------------ | :--------------- | :------------------ |
+| GET    | `/m/hotel/customers`     | Yes           | —                | List all customers  |
+| GET    | `/m/hotel/customers/:id` | Yes           | —                | Get single customer |
+| POST   | `/m/hotel/customers`     | Yes           | —                | Register a customer |
+| PATCH  | `/m/hotel/customers/:id` | Yes           | —                | Update customer     |
+
+#### Bookings
+
+| Method | Endpoint                          | Auth Required | Role Restriction | Description                                                      |
+| :----- | :-------------------------------- | :------------ | :--------------- | :--------------------------------------------------------------- |
+| GET    | `/m/hotel/bookings`               | Yes           | —                | List all bookings (populated)                                    |
+| GET    | `/m/hotel/bookings/:id`           | Yes           | —                | Get single booking                                               |
+| POST   | `/m/hotel/bookings`               | Yes           | —                | Create booking (auto-calculates checkout, rent, check-in number) |
+| POST   | `/m/hotel/bookings/:id/check-in`  | Yes           | —                | Check in (Confirmed -> CheckedIn)                                |
+| POST   | `/m/hotel/bookings/:id/check-out` | Yes           | —                | Check out (CheckedIn -> CheckedOut)                              |
+| POST   | `/m/hotel/bookings/:id/cancel`    | Yes           | —                | Cancel booking                                                   |
+| POST   | `/m/hotel/bookings/:id/no-show`   | Yes           | —                | Mark as no-show (Confirmed only)                                 |
+
+**Create Booking Payload:**
+
+```json
+{
+    "customerId": "ObjectId (or provide customerData to create inline)",
+    "roomId": "ObjectId (required)",
+    "checkInDate": "ISO 8601 datetime (required)",
+    "numberOfDays": 2,
+    "serviceType": "24 Hours | 12 Hours | 12 PM",
+    "checkInType": "Walk In | Online Booking",
+    "maleCount": 1,
+    "femaleCount": 1,
+    "childCount": 0,
+    "agentId": "ObjectId (optional)",
+    "purposeOfVisit": "Business",
+    "advanceAmount": 500
+}
+```
+
+Auto-generated on creation: `checkOutDate`, `roomRent` (room.pricePerNight x numberOfDays), `checkInNumber` (CHK-YYYYMMDD-NNNN).
+
+#### Booking Services (sub-resource)
+
+| Method | Endpoint                                    | Auth Required | Role Restriction | Description                                         |
+| :----- | :------------------------------------------ | :------------ | :--------------- | :-------------------------------------------------- |
+| GET    | `/m/hotel/bookings/:bookingId/services`     | Yes           | —                | List services on a booking                          |
+| POST   | `/m/hotel/bookings/:bookingId/services`     | Yes           | —                | Add a service (price auto-filled from Service.rate) |
+| PATCH  | `/m/hotel/bookings/:bookingId/services/:id` | Yes           | —                | Update quantity (total recomputed)                  |
+| DELETE | `/m/hotel/bookings/:bookingId/services/:id` | Yes           | —                | Remove service from booking                         |
+
+#### Services
+
+| Method | Endpoint                | Auth Required | Role Restriction | Description        |
+| :----- | :---------------------- | :------------ | :--------------- | :----------------- |
+| GET    | `/m/hotel/services`     | Yes           | —                | List all services  |
+| GET    | `/m/hotel/services/:id` | Yes           | —                | Get single service |
+| POST   | `/m/hotel/services`     | Yes           | admin, owner     | Create a service   |
+| PATCH  | `/m/hotel/services/:id` | Yes           | admin, owner     | Update a service   |
+| DELETE | `/m/hotel/services/:id` | Yes           | admin, owner     | Delete a service   |
+
+#### Agents
+
+| Method | Endpoint              | Auth Required | Role Restriction | Description      |
+| :----- | :-------------------- | :------------ | :--------------- | :--------------- |
+| GET    | `/m/hotel/agents`     | Yes           | —                | List all agents  |
+| GET    | `/m/hotel/agents/:id` | Yes           | —                | Get single agent |
+| POST   | `/m/hotel/agents`     | Yes           | admin, owner     | Create an agent  |
+| PATCH  | `/m/hotel/agents/:id` | Yes           | admin, owner     | Update an agent  |
+| DELETE | `/m/hotel/agents/:id` | Yes           | admin, owner     | Delete an agent  |
+
+#### Settings (Configurable Picklists)
+
+| Method | Endpoint                  | Auth Required | Role Restriction | Description                        |
+| :----- | :------------------------ | :------------ | :--------------- | :--------------------------------- |
+| GET    | `/m/hotel/settings`       | Yes           | —                | List all settings types            |
+| GET    | `/m/hotel/settings/:type` | Yes           | —                | Get options for a settings type    |
+| POST   | `/m/hotel/settings`       | Yes           | admin, owner     | Create a new settings type         |
+| PATCH  | `/m/hotel/settings/:type` | Yes           | admin, owner     | Update options for a settings type |
+| DELETE | `/m/hotel/settings/:type` | Yes           | admin, owner     | Delete a settings type             |
+
+Default seeded types on provision: `roomType`, `idProofType`, `purposeOfVisit`.
+
+#### Business Info
+
+| Method | Endpoint                 | Auth Required | Role Restriction | Description                    |
+| :----- | :----------------------- | :------------ | :--------------- | :----------------------------- |
+| GET    | `/m/hotel/business-info` | Yes           | —                | Get business info (singleton)  |
+| PUT    | `/m/hotel/business-info` | Yes           | admin, owner     | Create or update business info |
+
+#### Transactions
+
+| Method | Endpoint                    | Auth Required | Role Restriction | Description                                          |
+| :----- | :-------------------------- | :------------ | :--------------- | :--------------------------------------------------- |
+| GET    | `/m/hotel/transactions`     | Yes           | —                | List transactions (query: `?type=Expense&from=&to=`) |
+| GET    | `/m/hotel/transactions/:id` | Yes           | —                | Get single transaction                               |
+| POST   | `/m/hotel/transactions`     | Yes           | —                | Create a transaction                                 |
+| PATCH  | `/m/hotel/transactions/:id` | Yes           | —                | Update a transaction                                 |
+| DELETE | `/m/hotel/transactions/:id` | Yes           | admin, owner     | Delete a transaction                                 |
+
+#### Transaction Categories
+
+| Method | Endpoint                              | Auth Required | Role Restriction | Description         |
+| :----- | :------------------------------------ | :------------ | :--------------- | :------------------ |
+| GET    | `/m/hotel/transaction-categories`     | Yes           | —                | List all categories |
+| GET    | `/m/hotel/transaction-categories/:id` | Yes           | —                | Get single category |
+| POST   | `/m/hotel/transaction-categories`     | Yes           | admin, owner     | Create a category   |
+| PATCH  | `/m/hotel/transaction-categories/:id` | Yes           | admin, owner     | Update a category   |
+| DELETE | `/m/hotel/transaction-categories/:id` | Yes           | admin, owner     | Delete a category   |
+
 ---
 
 ## Troubleshooting

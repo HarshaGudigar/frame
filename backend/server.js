@@ -94,10 +94,16 @@ if (require.main === module) {
                 // Ignore if io not initialized
             }
 
-            mongoose.connection.close(false, () => {
-                logger.info('MongoDB connection closed');
-                process.exit(0);
-            });
+            mongoose.connection
+                .close(false)
+                .then(() => {
+                    logger.info('MongoDB connection closed');
+                    process.exit(0);
+                })
+                .catch((err) => {
+                    logger.error({ err }, 'Error closing MongoDB connection');
+                    process.exit(1);
+                });
         });
 
         setTimeout(() => {

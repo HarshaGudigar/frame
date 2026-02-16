@@ -117,6 +117,10 @@ async function handleHubMode(req, res, next) {
             const mongoose = require('mongoose');
             req.db = mongoose.connection;
         }
+    } else {
+        // Fallback to hub connection if no dedicated DB
+        const mongoose = require('mongoose');
+        req.db = mongoose.connection;
     }
 
     next();

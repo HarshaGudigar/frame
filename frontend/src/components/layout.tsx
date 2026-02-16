@@ -31,15 +31,16 @@ import { Separator } from '@/components/ui/separator';
 
 const navItems = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/tenants', icon: Building2, label: 'Tenants' },
+    { to: '/tenants', icon: Building2, label: 'Tenants', role: 'owner' },
     { to: '/users', icon: UsersIcon, label: 'Users', role: 'admin' },
-    { to: '/marketplace', icon: Store, label: 'Marketplace' },
+    { to: '/marketplace', icon: Store, label: 'Marketplace', role: 'admin' },
+    { to: '/hotel', icon: Building2, label: 'Hotel', module: 'hotel' },
     { to: '/settings', icon: Settings, label: 'Settings' },
     { to: '/audit-logs', icon: ShieldCheck, label: 'Audit Logs', role: 'owner' },
 ];
 
 function AppSidebar() {
-    const { logout } = useAuth();
+    const { user, logout } = useAuth();
     const { hasRole } = usePermission();
 
     return (
@@ -70,6 +71,17 @@ function AppSidebar() {
                         <SidebarMenu>
                             {navItems.map((item) => {
                                 if (item.role && !hasRole(item.role as any)) return null;
+
+                                // Module access check
+                                if ((item as any).module) {
+                                    const moduleSlug = (item as any).module;
+                                    const hasModuleAccess = user?.tenants?.some((t: any) =>
+                                        t.tenant?.subscribedModules?.includes(moduleSlug),
+                                    );
+                                    // Also allow owner to see it for debugging/admin
+                                    if (!hasModuleAccess && user?.role !== 'owner') return null;
+                                }
+
                                 return (
                                     <SidebarMenuItem key={item.to}>
                                         <SidebarMenuButton asChild tooltip={item.label}>

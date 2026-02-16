@@ -63,7 +63,7 @@ describe('RBAC & User Management', () => {
                 .get('/api/admin/users')
                 .set('Authorization', `Bearer ${adminToken}`);
 
-            expect(res.statusCode).toBe(403);
+            expect(res.statusCode).toBe(200);
         });
 
         it('should deny access to staff', async () => {

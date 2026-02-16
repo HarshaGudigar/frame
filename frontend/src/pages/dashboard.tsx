@@ -18,7 +18,7 @@ import { MetricsChart } from '@/components/dashboard/metrics-chart';
 import { FleetStats } from '@/components/dashboard/fleet-stats';
 
 export function DashboardPage() {
-    const { api } = useAuth();
+    const { api, user } = useAuth();
     const { toast } = useToast();
     const [tenants, setTenants] = useState<any[]>([]);
     const [stats, setStats] = useState<any>(null);
@@ -26,16 +26,26 @@ export function DashboardPage() {
     const [selectedTenant, setSelectedTenant] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
+    const isAdmin = user?.role === 'admin' || user?.role === 'owner';
+
     const fetchData = async () => {
         try {
             setLoading(true);
-            const [tenantsRes, statsRes] = await Promise.all([
-                api.get('/admin/tenants'),
-                api.get('/admin/fleet/stats'),
-            ]);
+            const promises: Promise<any>[] = [api.get('/admin/tenants')];
+
+            // Only fetch aggregate fleet stats if admin
+            if (isAdmin) {
+                promises.push(api.get('/admin/fleet/stats'));
+            }
+
+            const results = await Promise.all(promises);
+            const tenantsRes = results[0];
+            const statsRes = isAdmin ? results[1] : null;
 
             setTenants(tenantsRes.data.data);
-            setStats(statsRes.data.data);
+            if (statsRes) {
+                setStats(statsRes.data.data);
+            }
 
             // If a tenant is selected, fetch their history too
             if (selectedTenant || tenantsRes.data.data.length > 0) {
@@ -85,9 +95,13 @@ export function DashboardPage() {
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Fleet Dashboard</h1>
+                    <h1 className="text-2xl font-bold tracking-tight">
+                        {isAdmin ? 'Fleet Dashboard' : 'Dashboard'}
+                    </h1>
                     <p className="text-sm text-muted-foreground">
-                        Real-time control plane and performance analytics
+                        {isAdmin
+                            ? 'Real-time control plane and performance analytics'
+                            : 'Real-time performance metrics for your instance'}
                     </p>
                 </div>
                 <Button onClick={fetchData} variant="outline" size="sm" disabled={loading}>
@@ -98,33 +112,37 @@ export function DashboardPage() {
 
             {loading && tenants.length === 0 ? (
                 <>
-                    <div className="grid gap-4 md:grid-cols-3">
-                        {Array.from({ length: 3 }).map((_, i) => (
-                            <Card key={i}>
-                                <CardHeader className="pb-2">
-                                    <Skeleton className="h-4 w-24" />
-                                </CardHeader>
-                                <CardContent>
-                                    <Skeleton className="h-8 w-16" />
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
+                    {isAdmin && (
+                        <div className="grid gap-4 md:grid-cols-3">
+                            {Array.from({ length: 3 }).map((_, i) => (
+                                <Card key={i}>
+                                    <CardHeader className="pb-2">
+                                        <Skeleton className="h-4 w-24" />
+                                    </CardHeader>
+                                    <CardContent>
+                                        <Skeleton className="h-8 w-16" />
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    )}
                     <div className="grid gap-4 md:grid-cols-2">
                         <Skeleton className="h-[300px] w-full rounded-xl" />
                         <Skeleton className="h-[300px] w-full rounded-xl" />
                     </div>
-                    <Card>
-                        <CardContent className="pt-6 space-y-3">
-                            {Array.from({ length: 3 }).map((_, i) => (
-                                <Skeleton key={i} className="h-12 w-full" />
-                            ))}
-                        </CardContent>
-                    </Card>
+                    {isAdmin && (
+                        <Card>
+                            <CardContent className="pt-6 space-y-3">
+                                {Array.from({ length: 3 }).map((_, i) => (
+                                    <Skeleton key={i} className="h-12 w-full" />
+                                ))}
+                            </CardContent>
+                        </Card>
+                    )}
                 </>
             ) : (
                 <>
-                    <FleetStats stats={stats} />
+                    {isAdmin && stats && <FleetStats stats={stats} />}
 
                     <div className="grid gap-4 md:grid-cols-2">
                         <MetricsChart
@@ -142,126 +160,132 @@ export function DashboardPage() {
                         />
                     </div>
 
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between">
-                            <CardTitle>Silo Fleet</CardTitle>
-                            <div className="text-xs text-muted-foreground flex gap-4">
-                                <span className="flex items-center">
-                                    <Monitor className="size-3 mr-1" /> Monitoring Active
-                                </span>
-                                <span className="flex items-center">
-                                    <Cpu className="size-3 mr-1" /> Stats auto-refreshed
-                                </span>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Instance</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>IP Address</TableHead>
-                                        <TableHead>Current Load</TableHead>
-                                        <TableHead>Modules</TableHead>
-                                        <TableHead>Last Heartbeat</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {tenants.map((t) => (
-                                        <TableRow
-                                            key={t._id}
-                                            className={`cursor-pointer transition-colors ${selectedTenant === t.slug ? 'bg-primary/5 hover:bg-primary/10' : ''}`}
-                                            onClick={() => setSelectedTenant(t.slug)}
-                                        >
-                                            <TableCell>
-                                                <div className="font-medium">{t.name}</div>
-                                                <div className="text-xs text-muted-foreground">
-                                                    {t.slug}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Badge
-                                                    variant={
-                                                        t.status === 'online'
-                                                            ? 'default'
-                                                            : 'secondary'
-                                                    }
-                                                    className={
-                                                        t.status === 'online'
-                                                            ? 'bg-green-500/15 text-green-500 hover:bg-green-500/25 border-green-500/20'
-                                                            : 'bg-destructive/15 text-destructive hover:bg-destructive/25 border-destructive/20'
-                                                    }
-                                                >
-                                                    {t.status || 'offline'}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="font-mono text-xs">
-                                                {t.vmIpAddress || '—'}
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex flex-col gap-1">
-                                                    <div className="flex items-center justify-between text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-                                                        <span>
-                                                            CPU: {t.metrics?.cpu?.toFixed(1) || 0}%
-                                                        </span>
-                                                        <span>
-                                                            RAM: {Math.round(t.metrics?.ram || 0)}MB
-                                                        </span>
+                    {isAdmin && (
+                        <Card>
+                            <CardHeader className="flex flex-row items-center justify-between">
+                                <CardTitle>Silo Fleet</CardTitle>
+                                <div className="text-xs text-muted-foreground flex gap-4">
+                                    <span className="flex items-center">
+                                        <Monitor className="size-3 mr-1" /> Monitoring Active
+                                    </span>
+                                    <span className="flex items-center">
+                                        <Cpu className="size-3 mr-1" /> Stats auto-refreshed
+                                    </span>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Instance</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead>IP Address</TableHead>
+                                            <TableHead>Current Load</TableHead>
+                                            <TableHead>Modules</TableHead>
+                                            <TableHead>Last Heartbeat</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {tenants.map((t) => (
+                                            <TableRow
+                                                key={t._id}
+                                                className={`cursor-pointer transition-colors ${selectedTenant === t.slug ? 'bg-primary/5 hover:bg-primary/10' : ''}`}
+                                                onClick={() => setSelectedTenant(t.slug)}
+                                            >
+                                                <TableCell>
+                                                    <div className="font-medium">{t.name}</div>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        {t.slug}
                                                     </div>
-                                                    <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
-                                                        <div
-                                                            className={`h-full ${t.metrics?.cpu > 80 ? 'bg-red-500' : 'bg-primary'}`}
-                                                            style={{
-                                                                width: `${Math.min(t.metrics?.cpu || 0, 100)}%`,
-                                                            }}
-                                                        />
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge
+                                                        variant={
+                                                            t.status === 'online'
+                                                                ? 'default'
+                                                                : 'secondary'
+                                                        }
+                                                        className={
+                                                            t.status === 'online'
+                                                                ? 'bg-green-500/15 text-green-500 hover:bg-green-500/25 border-green-500/20'
+                                                                : 'bg-destructive/15 text-destructive hover:bg-destructive/25 border-destructive/20'
+                                                        }
+                                                    >
+                                                        {t.status || 'offline'}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="font-mono text-xs">
+                                                    {t.vmIpAddress || '—'}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex flex-col gap-1">
+                                                        <div className="flex items-center justify-between text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+                                                            <span>
+                                                                CPU:{' '}
+                                                                {t.metrics?.cpu?.toFixed(1) || 0}%
+                                                            </span>
+                                                            <span>
+                                                                RAM:{' '}
+                                                                {Math.round(t.metrics?.ram || 0)}MB
+                                                            </span>
+                                                        </div>
+                                                        <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+                                                            <div
+                                                                className={`h-full ${t.metrics?.cpu > 80 ? 'bg-red-500' : 'bg-primary'}`}
+                                                                style={{
+                                                                    width: `${Math.min(t.metrics?.cpu || 0, 100)}%`,
+                                                                }}
+                                                            />
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {t.subscribedModules
-                                                        ?.slice(0, 3)
-                                                        .map((m: string) => (
+                                                </TableCell>
+                                                <TableCell>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {t.subscribedModules
+                                                            ?.slice(0, 3)
+                                                            .map((m: string) => (
+                                                                <Badge
+                                                                    key={m}
+                                                                    variant="outline"
+                                                                    className="text-[10px] px-1 h-4"
+                                                                >
+                                                                    {m}
+                                                                </Badge>
+                                                            ))}
+                                                        {t.subscribedModules?.length > 3 && (
                                                             <Badge
-                                                                key={m}
                                                                 variant="outline"
                                                                 className="text-[10px] px-1 h-4"
                                                             >
-                                                                {m}
+                                                                +{t.subscribedModules.length - 3}
                                                             </Badge>
-                                                        ))}
-                                                    {t.subscribedModules?.length > 3 && (
-                                                        <Badge
-                                                            variant="outline"
-                                                            className="text-[10px] px-1 h-4"
-                                                        >
-                                                            +{t.subscribedModules.length - 3}
-                                                        </Badge>
-                                                    )}
-                                                </div>
-                                            </TableCell>
-                                            <TableCell className="text-xs text-muted-foreground font-mono">
-                                                {t.lastHeartbeat
-                                                    ? new Date(t.lastHeartbeat).toLocaleTimeString()
-                                                    : 'Never'}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                    {!tenants.length && !loading && (
-                                        <TableRow>
-                                            <TableCell
-                                                colSpan={6}
-                                                className="text-center text-muted-foreground py-8"
-                                            >
-                                                No fleet instances found.
-                                            </TableCell>
-                                        </TableRow>
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-xs text-muted-foreground font-mono">
+                                                    {t.lastHeartbeat
+                                                        ? new Date(
+                                                              t.lastHeartbeat,
+                                                          ).toLocaleTimeString()
+                                                        : 'Never'}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                        {!tenants.length && !loading && (
+                                            <TableRow>
+                                                <TableCell
+                                                    colSpan={6}
+                                                    className="text-center text-muted-foreground py-8"
+                                                >
+                                                    No fleet instances found.
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    )}
                 </>
             )}
         </div>

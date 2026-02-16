@@ -36,8 +36,8 @@ export function MetricsChart({ data, title, dataKey, color, unit = '%' }: Metric
                 <CardTitle className="text-sm font-medium">{title}</CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="h-[200px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
+                <div className="h-[200px] w-full min-w-0">
+                    <ResponsiveContainer width="99%" height="100%" minWidth={0} debounce={100}>
                         <AreaChart data={chartData}>
                             <defs>
                                 <linearGradient

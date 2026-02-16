@@ -19,7 +19,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
     await clearCollections();
-    token = await registerAndGetToken(request, { role: 'admin' });
+    token = await registerAndGetToken(request, { role: 'owner' });
 });
 
 describe('POST /api/admin/tenants', () => {

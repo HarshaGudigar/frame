@@ -1,284 +1,38 @@
-FAIL tests/admin.test.js (5.387 s)
-  POST /api/admin/tenants
-    √ should create a tenant (446 ms)
-    √ should reject duplicate slug with 409 (300 ms)
-    √ should reject missing name (Zod) (267 ms)
-    √ should reject invalid slug format (266 ms)
-    √ should require auth (261 ms)
-  GET /api/admin/tenants
-    √ should list all tenants (325 ms)
-    √ should return empty array when no tenants (263 ms)
-  GET /api/admin/tenants/:id
-    √ should get a specific tenant (293 ms)
-    √ should return 404 for nonexistent ID (263 ms)
-    √ should reject invalid ID format (261 ms)
-  PUT /api/admin/tenants/:id
-    × should update a tenant (301 ms)
-  DELETE /api/admin/tenants/:id
-    √ should delete a tenant (322 ms)
 
-  ● PUT /api/admin/tenants/:id › should update a tenant
+> backend@1.0.0 test
+> jest --runInBand backend/tests/hotel.test.js --no-cache --verbose -t should create a booking
 
-    expect(received).toBe(expected) // Object.is equality
-
-    Expected: "Updated Name"
-    Received: "Original"
-
-    [0m [90m 162 |[39m
-     [90m 163 |[39m         expect(res[33m.[39mstatus)[33m.[39mtoBe([35m200[39m)[33m;[39m
-    [31m[1m>[22m[39m[90m 164 |[39m         expect(res[33m.[39mbody[33m.[39mdata[33m.[39mname)[33m.[39mtoBe([32m'Updated Name'[39m)[33m;[39m
-     [90m     |[39m                                    [31m[1m^[22m[39m
-     [90m 165 |[39m     })[33m;[39m
-     [90m 166 |[39m })[33m;[39m
-     [90m 167 |[39m[0m
-
-      at Object.toBe (tests/admin.test.js:164:36)
-
-FAIL tests/email-verification.test.js
-  Email Verification
-    POST /api/auth/register
-      √ should return isEmailVerified: false on registration (325 ms)
-      √ should create a verification token on registration (253 ms)
-    POST /api/auth/login
-      √ should return isEmailVerified in login response (484 ms)
-      √ should return isEmailVerified: true after verification (482 ms)
-    POST /api/auth/verify-email
-      √ should verify email with valid token (272 ms)
-      √ should reject invalid token (22 ms)
-      √ should reject already-used token (275 ms)
-      √ should reject expired token (262 ms)
-      √ should reject empty token (19 ms)
-    POST /api/auth/resend-verification
-      √ should resend verification email for unverified user (262 ms)
-      √ should reject if email is already verified (258 ms)
-      √ should require authentication (18 ms)
-  requireVerifiedEmail middleware
-    × should block unverified users from admin routes (261 ms)
-    √ should allow verified users to access admin routes (260 ms)
-
-  ● requireVerifiedEmail middleware › should block unverified users from admin routes
-
-    expect(received).toBe(expected) // Object.is equality
-
-    Expected: 403
-    Received: 200
-
-    [0m [90m 217 |[39m             [33m.[39m[36mset[39m([32m'Authorization'[39m[33m,[39m [32m`Bearer ${accessToken}`[39m)[33m;[39m
-     [90m 218 |[39m
-    [31m[1m>[22m[39m[90m 219 |[39m         expect(res[33m.[39mstatus)[33m.[39mtoBe([35m403[39m)[33m;[39m
-     [90m     |[39m                            [31m[1m^[22m[39m
-     [90m 220 |[39m         expect(res[33m.[39mbody[33m.[39mmessage)[33m.[39mtoMatch([35m/email verification required/i[39m)[33m;[39m
-     [90m 221 |[39m     })[33m;[39m
-     [90m 222 |[39m[0m
-
-      at Object.toBe (tests/email-verification.test.js:219:28)
-
-PASS tests/two-factor.test.js (14.173 s)
-  Two-Factor Authentication
-    GET /api/auth/2fa/status
-      √ should return isTwoFactorEnabled: false by default (330 ms)
-      √ should return isTwoFactorEnabled: true after setup (613 ms)
-      √ should require authentication (19 ms)
-    POST /api/auth/2fa/setup
-      √ should return QR code and secret (569 ms)
-      √ should save secret to user without enabling 2FA (573 ms)
-      √ should reject if 2FA is already enabled (594 ms)
-      √ should require authentication (20 ms)
-    POST /api/auth/2fa/setup/verify
-      √ should enable 2FA with valid code (582 ms)
-      √ should reject invalid code (581 ms)
-      √ should reject if 2FA is already enabled (597 ms)
-      √ should reject if setup was not initiated (268 ms)
-      √ should reject non-6-digit code (575 ms)
-    POST /api/auth/login (with 2FA)
-      √ should return requiresTwoFactor when 2FA is enabled (814 ms)
-      √ should return tokens normally when 2FA is not enabled (481 ms)
-      √ should include isTwoFactorEnabled in login response when 2FA is off (483 ms)
-    POST /api/auth/2fa/verify-login
-      √ should complete login with valid 2FA code (824 ms)
-      √ should reject invalid 2FA code (819 ms)
-      √ should reject expired two-factor token (643 ms)
-      √ should reject token with wrong purpose (589 ms)
-      √ should reject completely invalid token (19 ms)
-      √ should reject missing code (20 ms)
-    POST /api/auth/2fa/disable
-      √ should disable 2FA with valid code (601 ms)
-      √ should reject invalid code (592 ms)
-      √ should reject if 2FA is not enabled (263 ms)
-      √ should allow normal login after disabling 2FA (825 ms)
-      √ should require authentication (20 ms)
-    Full 2FA lifecycle
-      √ should support enable → login with 2FA → disable → login without 2FA (1066 ms)
-
-PASS tests/password-reset.test.js (7.861 s)
-  Password Reset Flow
-    POST /api/auth/forgot-password
-      √ should return success for existing email (anti-enumeration) (337 ms)
-      √ should return success for non-existing email (anti-enumeration) (261 ms)
-      √ should create a password_reset token for existing user (267 ms)
-      √ should not create a token for non-existing user (261 ms)
-      √ should invalidate previous reset tokens when requesting a new one (286 ms)
-      √ should reject invalid email format (258 ms)
-      √ should reject missing email (257 ms)
-    POST /api/auth/reset-password
-      √ should reset password with valid token (504 ms)
-      √ should allow login with new password after reset (738 ms)
-      √ should reject login with old password after reset (734 ms)
-      √ should revoke all existing refresh tokens (745 ms)
-      √ should consume the reset token (516 ms)
-      √ should reject already-used reset token (515 ms)
-      √ should reject invalid token (276 ms)
-      √ should reject expired token (279 ms)
-      √ should reject mismatched passwords (275 ms)
-      √ should reject password too short (274 ms)
-      √ should reject missing token (275 ms)
-
-PASS tests/invite.test.js (7.077 s)
-  Email-Based Invite Flow
-    POST /api/admin/users/invite
-      √ should create an inactive user without a password (382 ms)
-      √ should create an invite token (280 ms)
-      √ should set invitedBy to the inviting user (277 ms)
-      √ should not return a tempPassword in the response (274 ms)
-      √ should reject duplicate email (286 ms)
-    POST /api/auth/accept-invite
-      √ should accept invite with valid token and password (517 ms)
-      √ should activate the user account (518 ms)
-      √ should allow login with the new password (749 ms)
-      √ should consume the invite token (517 ms)
-      √ should reject already-used invite token (525 ms)
-      √ should reject invalid token (287 ms)
-      √ should reject mismatched passwords (286 ms)
-      √ should reject password too short (285 ms)
-      √ should reject expired invite token (288 ms)
-      √ should preserve the assigned role (513 ms)
-    Invited user cannot login before accepting
-      √ should reject login for user without password (282 ms)
-
-PASS tests/auth.test.js
-  POST /api/auth/register
-    √ should register a new user and return access + refresh tokens (322 ms)
-  POST /api/auth/login
-    √ should login and return access + refresh tokens (535 ms)
-  POST /api/auth/refresh-token
-    √ should refresh token pair with valid refresh token (274 ms)
-    √ should reject invalid refresh token (277 ms)
-    √ should reject reused (revoked) refresh token (275 ms)
-  POST /api/auth/logout
-    √ should revoke refresh token on logout (263 ms)
-    √ should not allow refresh after logout (271 ms)
-  PATCH /api/auth/profile
-    √ should update user profile details (263 ms)
-    √ should change password successfully (937 ms)
-    √ should reject password change with incorrect current password (480 ms)
-    √ should reject password change if new passwords do not match (259 ms)
-
-(node:22284) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
+(node:4584) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
 (Use `node --trace-warnings ...` to show where the warning was created)
-(node:22284) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
-(node:22284) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
-PASS tests/phase2_completion.test.js
-  Phase 2 Completion Verification
-    Marketplace Hardening & Search
-      √ should support search and category filtering in /products (596 ms)
-      √ should allow editing and soft-deleting products (530 ms)
-    Dependency Validation
-      √ should reject purchase if dependencies are missing (511 ms)
-    Tenant Lifecycle & Suspension
-      √ should block API access for suspended tenants (503 ms)
-      √ should export tenant data (Owner only) (505 ms)
-    Usage Tracking
-      √ should meter API calls via usageMiddleware (616 ms)
+FAIL tests/hotel.test.js
+  Hotel Module API
+    Rooms API
+      ○ skipped should create a room
+      ○ skipped should list rooms
+    Customers API
+      ○ skipped should create a customer
+    Bookings API
+      × should create a booking (545 ms)
 
-PASS tests/marketplace.test.js
-  GET /api/marketplace/products
-    √ should list products (empty initially) (371 ms)
-  POST /api/marketplace/products
-    √ should create a product (269 ms)
-    √ should reject duplicate slug with 409 (281 ms)
-    √ should reject missing required fields (Zod) (263 ms)
-    √ should require auth (258 ms)
-  POST /api/marketplace/purchase
-    √ should require auth (258 ms)
-    √ should require tenant context for role check (501 ms)
-    √ should reject empty body (Zod) (263 ms)
+  ● Hotel Module API › Bookings API › should create a booking
 
-(node:22284) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
-(node:22284) [MONGOOSE] Warning: mongoose: the `new` option for `findOneAndUpdate()` and `findOneAndReplace()` is deprecated. Use `returnDocument: 'after'` instead.
-PASS tests/rbac.test.js
-  RBAC & User Management
-    GET /api/admin/users
-      √ should allow owner to list users (13 ms)
-      √ should deny access to admin (Owner only route) (9 ms)
-      √ should deny access to staff (10 ms)
-    POST /api/admin/users/invite
-      √ should allow admin to invite new user (19 ms)
-      √ should deny staff from inviting users (11 ms)
-    DELETE /api/admin/users/:id
-      √ should allow owner to deactivate user (19 ms)
-      √ should prevent deleting yourself (11 ms)
-    PATCH /api/admin/users/:id/role
-      √ should allow owner to update a user role (19 ms)
-      √ should deny role update by admin (Owner only) (12 ms)
-      √ should prevent changing your own role (12 ms)
+    expect(received).toBe(expected) // Object.is equality
 
-PASS tests/audit.test.js
-  Audit Logging Integration
-    √ should create an audit log when inviting a user (356 ms)
-    √ should return paginated audit logs (328 ms)
-    √ should filter audit logs by action (271 ms)
+    Expected: "69931275301f7877b16cc6ec"
+    Received: undefined
 
-PASS tests/tenant-provisioning.test.js
-  deriveTenantDbUri
-    √ should replace the DB name in a standard mongodb:// URI (1 ms)
-    √ should replace the DB name in a URI with auth credentials
-    √ should preserve query parameters (1 ms)
-    √ should handle mongodb+srv:// URIs (1 ms)
-    √ should handle URIs with no database name
-    √ should handle URIs with no trailing slash and no DB name (1 ms)
-  Tenant Database Provisioning (integration)
-    √ should provision a tenant database and return a valid URI (28 ms)
-    √ should drop a provisioned tenant database without error (41 ms)
-  Tenant CRUD with provisioning
-    √ should populate dbUri when creating a tenant (32 ms)
-    √ dbUri should follow frame_tenant_{slug} naming convention (30 ms)
-    √ should delete a tenant with a provisioned dbUri (57 ms)
+    [0m [90m 140 |[39m             expect(res[33m.[39mstatus)[33m.[39mtoBe([35m201[39m)[33m;[39m
+     [90m 141 |[39m             expect(res[33m.[39mbody[33m.[39msuccess)[33m.[39mtoBe([36mtrue[39m)[33m;[39m
+    [31m[1m>[22m[39m[90m 142 |[39m             expect(res[33m.[39mbody[33m.[39mdata[33m.[39mroomId)[33m.[39mtoBe(roomId)[33m;[39m
+     [90m     |[39m                                          [31m[1m^[22m[39m
+     [90m 143 |[39m         })[33m;[39m
+     [90m 144 |[39m     })[33m;[39m
+     [90m 145 |[39m })[33m;[39m[0m
 
-PASS tests/provisioning.test.js
-  Provisioning Engine
-    √ should call onProvision hook and emit socket event on purchase (361 ms)
-    √ should not fail purchase if onProvision hook fails (279 ms)
+      at Object.toBe (tests/hotel.test.js:142:42)
 
-PASS tests/verification-token.test.js
-  VerificationToken Model
-    createToken()
-      √ should create a token with correct fields (40 ms)
-      √ should set expiry correctly (12 ms)
-      √ should invalidate prior tokens of the same type (32 ms)
-      √ should not invalidate tokens of different types (16 ms)
-      √ should store metadata (6 ms)
-    findValidToken()
-      √ should find a valid unexpired token (11 ms)
-      √ should not find an expired token (10 ms)
-      √ should not find a used token (12 ms)
-      √ should not find token with wrong type (8 ms)
-      √ should return null for non-existent token (4 ms)
-    consume()
-      √ should set usedAt to current date (10 ms)
-
-PASS tests/metrics.test.js
-  Analytics & Metrics
-    √ should create a metric record on heartbeat (22 ms)
-    √ should retrieve historical metrics (12 ms)
-    √ should retrieve fleet statistics (20 ms)
-
-PASS tests/health.test.js
-  Health Check
-    GET /api/health
-      √ should return 200 OK and health status (24 ms)
-
-Test Suites: 2 failed, 13 passed, 15 total
-Tests:       2 failed, 151 passed, 153 total
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 3 skipped, 4 total
 Snapshots:   0 total
-Time:        61.036 s, estimated 62 s
-Ran all test suites.
+Time:        3.369 s
+Ran all test suites matching backend/tests/hotel.test.js with tests matching "should create a booking".

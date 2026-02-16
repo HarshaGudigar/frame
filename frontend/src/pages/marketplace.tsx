@@ -378,14 +378,22 @@ export function MarketplacePage() {
                                 )}
                             </CardContent>
                             <CardFooter className="pt-0 pb-6">
-                                <Button
-                                    className="w-full"
-                                    variant="outline"
-                                    onClick={() => setAssigningTo(p)}
-                                >
-                                    <UserPlus className="size-4 mr-2" />
-                                    Assign to Tenant
-                                </Button>
+                                {tenants.length === 1 &&
+                                tenants[0].subscribedModules?.includes(p.slug) ? (
+                                    <Button className="w-full bg-green-600 hover:bg-green-700 cursor-default">
+                                        <RefreshCw className="size-4 mr-2" />
+                                        Active
+                                    </Button>
+                                ) : (
+                                    <Button
+                                        className="w-full"
+                                        variant="outline"
+                                        onClick={() => setAssigningTo(p)}
+                                    >
+                                        <UserPlus className="size-4 mr-2" />
+                                        Assign to Tenant
+                                    </Button>
+                                )}
                             </CardFooter>
                         </Card>
                     ))}

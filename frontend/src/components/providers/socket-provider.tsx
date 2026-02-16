@@ -39,7 +39,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         );
         const socketInstance = io(socketUrl, {
             withCredentials: true,
-            transports: ['websocket', 'polling'], // Fallback to polling if websocket fails
+            transports: ['polling', 'websocket'], // Start with polling for better reliability in dev
             auth: { token },
             reconnectionAttempts: 10,
             reconnectionDelay: 1000,
