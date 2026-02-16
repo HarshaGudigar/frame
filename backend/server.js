@@ -32,13 +32,29 @@ if (require.main === module) {
     const { startTrialCleanup } = require('./jobs/trialCleanup');
     startTrialCleanup();
 
-    // Database
-    mongoose
-        .connect(config.MONGODB_URI)
-        .then(() => logger.info(`[${config.RUNTIME_MODE}] MongoDB connected`))
-        .catch((err) =>
-            logger.error({ err }, `[${config.RUNTIME_MODE}] MongoDB connection failed`),
-        );
+    // Database — retry loop for Docker environments where MongoDB starts concurrently
+    const connectWithRetry = async (retries = 10, delay = 3000) => {
+        for (let attempt = 1; attempt <= retries; attempt++) {
+            try {
+                await mongoose.connect(config.MONGODB_URI);
+                logger.info(`[${config.RUNTIME_MODE}] MongoDB connected (attempt ${attempt})`);
+                return;
+            } catch (err) {
+                logger.warn(
+                    `[${config.RUNTIME_MODE}] MongoDB connection attempt ${attempt}/${retries} failed: ${err.message}`,
+                );
+                if (attempt === retries) {
+                    logger.error(
+                        { err },
+                        `[${config.RUNTIME_MODE}] MongoDB connection failed after ${retries} attempts`,
+                    );
+                    return;
+                }
+                await new Promise((resolve) => setTimeout(resolve, delay));
+            }
+        }
+    };
+    connectWithRetry();
 
     // Start Server
     const httpServer = server.listen(config.PORT, () => {
