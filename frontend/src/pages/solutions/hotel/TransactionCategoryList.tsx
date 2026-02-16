@@ -83,7 +83,14 @@ export function TransactionCategoryList({ hotelTenant }: { hotelTenant?: string 
     };
 
     const handleSubmit = async () => {
-        if (!hotelTenant) return;
+        if (!hotelTenant) {
+            toast({
+                variant: 'destructive',
+                title: 'No Tenant Context',
+                description: 'Please ensure you are viewing a valid hotel tenant instance.',
+            });
+            return;
+        }
         setSubmitting(true);
         try {
             const isEdit = !!editing;
@@ -116,7 +123,15 @@ export function TransactionCategoryList({ hotelTenant }: { hotelTenant?: string 
     };
 
     const handleDelete = async (cat: TransactionCategory) => {
-        if (!hotelTenant || !confirm(`Delete category "${cat.name}"?`)) return;
+        if (!hotelTenant) {
+            toast({
+                variant: 'destructive',
+                title: 'No Tenant Context',
+                description: 'Please ensure you are viewing a valid hotel tenant instance.',
+            });
+            return;
+        }
+        if (!confirm(`Delete category "${cat.name}"?`)) return;
         try {
             const res = await api.delete(`/m/hotel/transaction-categories/${cat._id}`, {
                 headers: { 'x-tenant-id': hotelTenant },
@@ -178,7 +193,7 @@ export function TransactionCategoryList({ hotelTenant }: { hotelTenant?: string 
                                         setFormData({ ...formData, type: val })
                                     }
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger id="type">
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -199,7 +214,19 @@ export function TransactionCategoryList({ hotelTenant }: { hotelTenant?: string 
             </div>
 
             {categories.length === 0 ? (
-                <div className="text-center py-10 text-muted-foreground">No categories yet.</div>
+                <div className="text-center py-10 text-muted-foreground">
+                    {!hotelTenant ? (
+                        <div className="space-y-2">
+                            <p className="font-semibold text-foreground">No Tenant Selected</p>
+                            <p className="text-sm">
+                                You are viewing the hotel module in global context. Please select or
+                                be assigned to a hotel tenant.
+                            </p>
+                        </div>
+                    ) : (
+                        'No categories yet.'
+                    )}
+                </div>
             ) : (
                 <div className="rounded-md border">
                     <Table>

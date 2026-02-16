@@ -69,7 +69,14 @@ export function BusinessInfoPage({ hotelTenant }: { hotelTenant?: string }) {
     }, [api, hotelTenant]);
 
     const handleSubmit = async () => {
-        if (!hotelTenant) return;
+        if (!hotelTenant) {
+            toast({
+                variant: 'destructive',
+                title: 'No Tenant Context',
+                description: 'Please ensure you are viewing a valid hotel tenant instance.',
+            });
+            return;
+        }
         setSubmitting(true);
         try {
             const payload: any = { ...formData };
@@ -134,6 +141,20 @@ export function BusinessInfoPage({ hotelTenant }: { hotelTenant?: string }) {
         return (
             <div className="flex items-center justify-center py-10">
                 <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+        );
+    }
+
+    if (!hotelTenant) {
+        return (
+            <div className="text-center py-10 text-muted-foreground">
+                <div className="space-y-2">
+                    <p className="font-semibold text-foreground">No Tenant Selected</p>
+                    <p className="text-sm">
+                        You are viewing the hotel module in global context. Please select or be
+                        assigned to a hotel tenant.
+                    </p>
+                </div>
             </div>
         );
     }

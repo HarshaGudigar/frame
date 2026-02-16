@@ -96,7 +96,14 @@ export function SettingsPage({ hotelTenant }: { hotelTenant?: string }) {
     };
 
     const handleSubmit = async () => {
-        if (!hotelTenant) return;
+        if (!hotelTenant) {
+            toast({
+                variant: 'destructive',
+                title: 'No Tenant Context',
+                description: 'Please ensure you are viewing a valid hotel tenant instance.',
+            });
+            return;
+        }
         setSubmitting(true);
         try {
             const isEdit = !!editingType;
@@ -153,7 +160,15 @@ export function SettingsPage({ hotelTenant }: { hotelTenant?: string }) {
     };
 
     const handleDelete = async (type: string) => {
-        if (!hotelTenant || !confirm(`Delete settings type "${type}"?`)) return;
+        if (!hotelTenant) {
+            toast({
+                variant: 'destructive',
+                title: 'No Tenant Context',
+                description: 'Please ensure you are viewing a valid hotel tenant instance.',
+            });
+            return;
+        }
+        if (!confirm(`Delete settings type "${type}"?`)) return;
         try {
             const res = await api.delete(`/m/hotel/settings/${type}`, {
                 headers: { 'x-tenant-id': hotelTenant },
@@ -273,7 +288,17 @@ export function SettingsPage({ hotelTenant }: { hotelTenant?: string }) {
 
             {settings.length === 0 ? (
                 <div className="text-center py-10 text-muted-foreground">
-                    No settings configured yet.
+                    {!hotelTenant ? (
+                        <div className="space-y-2">
+                            <p className="font-semibold text-foreground">No Tenant Selected</p>
+                            <p className="text-sm">
+                                You are viewing the hotel module in global context. Please select or
+                                be assigned to a hotel tenant.
+                            </p>
+                        </div>
+                    ) : (
+                        'No settings configured yet.'
+                    )}
                 </div>
             ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

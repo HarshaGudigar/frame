@@ -124,7 +124,14 @@ export function TransactionList({ hotelTenant }: { hotelTenant?: string }) {
     };
 
     const handleSubmit = async () => {
-        if (!hotelTenant) return;
+        if (!hotelTenant) {
+            toast({
+                variant: 'destructive',
+                title: 'No Tenant Context',
+                description: 'Please ensure you are viewing a valid hotel tenant instance.',
+            });
+            return;
+        }
         setSubmitting(true);
         try {
             const isEdit = !!editing;
@@ -168,7 +175,15 @@ export function TransactionList({ hotelTenant }: { hotelTenant?: string }) {
     };
 
     const handleDelete = async (tx: Transaction) => {
-        if (!hotelTenant || !confirm('Delete this transaction?')) return;
+        if (!hotelTenant) {
+            toast({
+                variant: 'destructive',
+                title: 'No Tenant Context',
+                description: 'Please ensure you are viewing a valid hotel tenant instance.',
+            });
+            return;
+        }
+        if (!confirm('Delete this transaction?')) return;
         try {
             const res = await api.delete(`/m/hotel/transactions/${tx._id}`, {
                 headers: { 'x-tenant-id': hotelTenant },
@@ -244,7 +259,7 @@ export function TransactionList({ hotelTenant }: { hotelTenant?: string }) {
                                             setFormData({ ...formData, type: val })
                                         }
                                     >
-                                        <SelectTrigger>
+                                        <SelectTrigger id="type">
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -276,7 +291,7 @@ export function TransactionList({ hotelTenant }: { hotelTenant?: string }) {
                                             })
                                         }
                                     >
-                                        <SelectTrigger>
+                                        <SelectTrigger id="accountType">
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -295,7 +310,7 @@ export function TransactionList({ hotelTenant }: { hotelTenant?: string }) {
                                             setFormData({ ...formData, categoryId: val })
                                         }
                                     >
-                                        <SelectTrigger>
+                                        <SelectTrigger id="categoryId">
                                             <SelectValue placeholder="Select category" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -376,7 +391,19 @@ export function TransactionList({ hotelTenant }: { hotelTenant?: string }) {
             </div>
 
             {transactions.length === 0 ? (
-                <div className="text-center py-10 text-muted-foreground">No transactions yet.</div>
+                <div className="text-center py-10 text-muted-foreground">
+                    {!hotelTenant ? (
+                        <div className="space-y-2">
+                            <p className="font-semibold text-foreground">No Tenant Selected</p>
+                            <p className="text-sm">
+                                You are viewing the hotel module in global context. Please select or
+                                be assigned to a hotel tenant.
+                            </p>
+                        </div>
+                    ) : (
+                        'No transactions yet.'
+                    )}
+                </div>
             ) : (
                 <div className="rounded-md border">
                     <Table>

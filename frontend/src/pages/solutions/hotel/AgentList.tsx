@@ -136,7 +136,14 @@ export function AgentList({ hotelTenant }: { hotelTenant?: string }) {
     };
 
     const handleSubmit = async () => {
-        if (!hotelTenant) return;
+        if (!hotelTenant) {
+            toast({
+                variant: 'destructive',
+                title: 'No Tenant Context',
+                description: 'Please ensure you are viewing a valid hotel tenant instance.',
+            });
+            return;
+        }
         setSubmitting(true);
         try {
             const isEdit = !!editingAgent;
@@ -192,8 +199,15 @@ export function AgentList({ hotelTenant }: { hotelTenant?: string }) {
     };
 
     const handleDelete = async (agent: Agent) => {
-        if (!hotelTenant || !confirm(`Delete agent "${agent.firstName} ${agent.lastName}"?`))
+        if (!hotelTenant) {
+            toast({
+                variant: 'destructive',
+                title: 'No Tenant Context',
+                description: 'Please ensure you are viewing a valid hotel tenant instance.',
+            });
             return;
+        }
+        if (!confirm(`Delete agent "${agent.firstName} ${agent.lastName}"?`)) return;
         try {
             const res = await api.delete(`/m/hotel/agents/${agent._id}`, {
                 headers: { 'x-tenant-id': hotelTenant },
@@ -355,7 +369,7 @@ export function AgentList({ hotelTenant }: { hotelTenant?: string }) {
                                             setFormData({ ...formData, businessType: val })
                                         }
                                     >
-                                        <SelectTrigger>
+                                        <SelectTrigger id="businessType">
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -444,7 +458,17 @@ export function AgentList({ hotelTenant }: { hotelTenant?: string }) {
 
             {agents.length === 0 ? (
                 <div className="text-center py-10 text-muted-foreground">
-                    No agents yet. Add one to get started.
+                    {!hotelTenant ? (
+                        <div className="space-y-2">
+                            <p className="font-semibold text-foreground">No Tenant Selected</p>
+                            <p className="text-sm">
+                                You are viewing the hotel module in global context. Please select or
+                                be assigned to a hotel tenant.
+                            </p>
+                        </div>
+                    ) : (
+                        'No agents yet. Add one to get started.'
+                    )}
                 </div>
             ) : (
                 <div className="rounded-md border">

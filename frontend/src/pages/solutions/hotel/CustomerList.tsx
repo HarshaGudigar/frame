@@ -125,7 +125,14 @@ export function CustomerList({ hotelTenant }: { hotelTenant?: string }) {
     };
 
     const handleSubmit = async () => {
-        if (!hotelTenant) return;
+        if (!hotelTenant) {
+            toast({
+                variant: 'destructive',
+                title: 'No Tenant Context',
+                description: 'Please ensure you are viewing a valid hotel tenant instance.',
+            });
+            return;
+        }
         setSubmitting(true);
         try {
             const isEdit = !!editingCustomer;
@@ -262,7 +269,7 @@ export function CustomerList({ hotelTenant }: { hotelTenant?: string }) {
                                             setFormData({ ...formData, gender: val })
                                         }
                                     >
-                                        <SelectTrigger>
+                                        <SelectTrigger id="gender">
                                             <SelectValue placeholder="Select" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -382,7 +389,17 @@ export function CustomerList({ hotelTenant }: { hotelTenant?: string }) {
 
             {customers.length === 0 ? (
                 <div className="text-center py-10 text-muted-foreground">
-                    No customers registered yet. Add one to get started.
+                    {!hotelTenant ? (
+                        <div className="space-y-2">
+                            <p className="font-semibold text-foreground">No Tenant Selected</p>
+                            <p className="text-sm">
+                                You are viewing the hotel module in global context. Please select or
+                                be assigned to a hotel tenant.
+                            </p>
+                        </div>
+                    ) : (
+                        'No customers registered yet. Add one to get started.'
+                    )}
                 </div>
             ) : (
                 <div className="rounded-md border">

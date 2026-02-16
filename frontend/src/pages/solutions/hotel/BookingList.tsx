@@ -158,7 +158,14 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
     };
 
     const handleCreate = async () => {
-        if (!hotelTenant) return;
+        if (!hotelTenant) {
+            toast({
+                variant: 'destructive',
+                title: 'No Tenant Context',
+                description: 'Please ensure you are viewing a valid hotel tenant instance.',
+            });
+            return;
+        }
         if (!formData.customerId || !formData.roomId || !formData.checkInDate) {
             toast({
                 variant: 'destructive',
@@ -227,7 +234,14 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
         bookingId: string,
         action: 'check-in' | 'check-out' | 'cancel' | 'no-show',
     ) => {
-        if (!hotelTenant) return;
+        if (!hotelTenant) {
+            toast({
+                variant: 'destructive',
+                title: 'No Tenant Context',
+                description: 'Please ensure you are viewing a valid hotel tenant instance.',
+            });
+            return;
+        }
         try {
             const res = await api.post(
                 `/m/hotel/bookings/${bookingId}/${action}`,
@@ -297,7 +311,7 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
                                             setFormData({ ...formData, customerId: val })
                                         }
                                     >
-                                        <SelectTrigger>
+                                        <SelectTrigger id="customerId">
                                             <SelectValue placeholder="Select a customer" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -317,7 +331,7 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
                                             setFormData({ ...formData, roomId: val })
                                         }
                                     >
-                                        <SelectTrigger>
+                                        <SelectTrigger id="roomId">
                                             <SelectValue placeholder="Select a room" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -367,7 +381,7 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
                                             setFormData({ ...formData, serviceType: val })
                                         }
                                     >
-                                        <SelectTrigger>
+                                        <SelectTrigger id="serviceType">
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -387,7 +401,7 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
                                             setFormData({ ...formData, checkInType: val })
                                         }
                                     >
-                                        <SelectTrigger>
+                                        <SelectTrigger id="checkInType">
                                             <SelectValue />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -406,7 +420,7 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
                                             setFormData({ ...formData, agentId: val })
                                         }
                                     >
-                                        <SelectTrigger>
+                                        <SelectTrigger id="agentId">
                                             <SelectValue placeholder="None" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -508,7 +522,17 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
 
             {bookings.length === 0 ? (
                 <div className="text-center py-10 text-muted-foreground">
-                    No bookings yet. Create one to get started.
+                    {!hotelTenant ? (
+                        <div className="space-y-2">
+                            <p className="font-semibold text-foreground">No Tenant Selected</p>
+                            <p className="text-sm">
+                                You are viewing the hotel module in global context. Please select or
+                                be assigned to a hotel tenant.
+                            </p>
+                        </div>
+                    ) : (
+                        'No bookings yet. Create one to get started.'
+                    )}
                 </div>
             ) : (
                 <div className="rounded-md border">
