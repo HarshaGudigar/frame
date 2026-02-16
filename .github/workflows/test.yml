@@ -60,32 +60,33 @@ jobs:
         steps:
             - uses: actions/checkout@v4
 
-            - name: Build monolithic Docker image
-              run: docker build -t frame-app:ci .
-
-            - name: Start container
+            - name: Build and Start Services
               run: |
-                  docker run -d --name frame-ci \
-                      -e JWT_SECRET=ci-test \
-                      -e HEARTBEAT_SECRET=ci-test \
-                      -e RESEND_API_KEY=re_ci_test \
-                      -e NODE_ENV=production \
-                      -p 3000:3000 -p 5000:5000 \
-                      frame-app:ci
+                  # Create a dummy .env for backend to pass health check if needed
+                  echo "JWT_SECRET=ci-test" >> backend/.env
+                  echo "HEARTBEAT_SECRET=ci-test" >> backend/.env
+                  echo "RESEND_API_KEY=re_ci_test" >> backend/.env
 
-            - name: Wait for health endpoint
+                  docker compose up -d --build
+
+            - name: Wait for services to be ready
               run: |
-                  echo "Waiting for container to be ready..."
+                  echo "Waiting for services to be ready..."
                   for i in $(seq 1 24); do
-                      if curl -sf http://localhost:5000/api/health > /dev/null 2>&1; then
-                          echo "Health endpoint is up (attempt $i)"
+                      B_STATUS=$(docker inspect --format='{{.State.Health.Status}}' frame-backend 2>/dev/null || echo "unknown")
+                      F_STATUS=$(docker inspect --format='{{.State.Health.Status}}' frame-frontend 2>/dev/null || echo "unknown")
+                      M_STATUS=$(docker inspect --format='{{.State.Health.Status}}' frame-mongo 2>/dev/null || echo "unknown")
+                      
+                      echo "  Attempt $i: Backend=$B_STATUS, Frontend=$F_STATUS, Mongo=$M_STATUS"
+                      
+                      if [ "$B_STATUS" = "healthy" ] && [ "$F_STATUS" = "healthy" ]; then
+                          echo "Core services are healthy!"
                           exit 0
                       fi
-                      echo "  Attempt $i/24 — not ready yet"
                       sleep 5
                   done
-                  echo "Container failed to become healthy within 120s"
-                  docker logs frame-ci
+                  echo "Services failed to become healthy"
+                  docker compose logs
                   exit 1
 
             - name: Integration tests
@@ -100,13 +101,6 @@ jobs:
 
                   echo "All integration tests passed."
 
-            - name: Build split images (compile check)
-              run: |
-                  docker build -f Dockerfile.backend -t frame-backend:ci .
-                  docker build -f Dockerfile.frontend -t frame-frontend:ci .
-
             - name: Cleanup
               if: always()
-              run: |
-                  docker stop frame-ci 2>/dev/null || true
-                  docker rm frame-ci 2>/dev/null || true
+              run: docker compose down -v
