@@ -40,27 +40,22 @@ jobs:
                       cd ~/frame || git clone https://github.com/${{ github.repository }} ~/frame
                       cd ~/frame
 
-                      # Snapshot current running images as rollback
-                      sudo docker tag frame-backend:latest frame-backend:rollback 2>/dev/null || true
-                      sudo docker tag frame-frontend:latest frame-frontend:rollback 2>/dev/null || true
+                      # Snapshot current running image as rollback
+                      sudo docker tag frame-app:latest frame-app:rollback 2>/dev/null || true
 
                       # Pull latest code and rebuild
                       git pull origin main
                       sudo docker builder prune -af
-                      sudo docker compose down --remove-orphans
-                      sudo docker compose up -d --build --remove-orphans
+                      sudo docker compose down
+                      sudo docker compose up -d --build
 
-                      # Wait for health check (poll every 5s, max 24 attempts = 120s)
-                      echo "Waiting for services to become healthy..."
+                      # Wait for health check (poll every 5s, max 12 attempts = 60s)
+                      echo "Waiting for container to become healthy..."
                       HEALTHY=false
-                      for i in $(seq 1 24); do
-                          B_STATUS=$(sudo docker inspect --format='{{.State.Health.Status}}' frame-backend 2>/dev/null || echo "unknown")
-                          F_STATUS=$(sudo docker inspect --format='{{.State.Health.Status}}' frame-frontend 2>/dev/null || echo "unknown")
-                          
-                          echo "  Attempt $i/24: backend=$B_STATUS, frontend=$F_STATUS"
-                          sudo docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Health}}"
-                          
-                          if [ "$B_STATUS" = "healthy" ] && [ "$F_STATUS" = "healthy" ]; then
+                      for i in $(seq 1 12); do
+                          STATUS=$(sudo docker inspect --format='{{.State.Health.Status}}' frame-app 2>/dev/null || echo "unknown")
+                          echo "  Attempt $i/12: status=$STATUS"
+                          if [ "$STATUS" = "healthy" ]; then
                               HEALTHY=true
                               break
                           fi
@@ -68,22 +63,14 @@ jobs:
                       done
 
                       if [ "$HEALTHY" = "true" ]; then
-                          echo "Deployment successful — services are healthy."
-                          # Clean up rollback images on success
-                          sudo docker rmi frame-backend:rollback frame-frontend:rollback 2>/dev/null || true
+                          echo "Deployment successful — container is healthy."
+                          sudo docker rmi frame-app:rollback 2>/dev/null || true
                       else
-                          echo "Deployment FAILED — services did not become healthy within 120s."
-                          echo "--- CONTAINER STATUS ---"
-                          sudo docker ps -a
-                          echo "--- BACKEND LOGS ---"
-                          sudo docker compose logs backend
-                          echo "--- FRONTEND LOGS ---"
-                          sudo docker compose logs frontend
-                          echo "Rolling back..."
+                          echo "Deployment FAILED — container did not become healthy within 60s."
+                          echo "Rolling back to previous image..."
                           sudo docker compose down
-                          sudo docker tag frame-backend:rollback frame-backend:latest 2>/dev/null || true
-                          sudo docker tag frame-frontend:rollback frame-frontend:latest 2>/dev/null || true
+                          sudo docker tag frame-app:rollback frame-app:latest 2>/dev/null || true
                           sudo docker compose up -d
-                          sudo docker rmi frame-backend:rollback frame-frontend:rollback 2>/dev/null || true
+                          sudo docker rmi frame-app:rollback 2>/dev/null || true
                           exit 1
                       fi
