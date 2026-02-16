@@ -12,10 +12,11 @@
 
 const GlobalUser = require('../models/GlobalUser');
 const logger = require('../utils/logger');
+const config = require('../config');
 
 const DEFAULT_ADMIN = {
-    email: 'admin@frame.local',
-    password: 'Admin@123',
+    email: config.DEFAULT_ADMIN_EMAIL,
+    password: config.DEFAULT_ADMIN_PASSWORD,
     firstName: 'Admin',
     lastName: 'Frame',
     role: 'owner',
@@ -43,7 +44,11 @@ async function seedDefaultAdmin() {
         logger.info('──────────────────────────────────────────────');
         logger.info('🔑 Default admin account created:');
         logger.info(`   Email:    ${DEFAULT_ADMIN.email}`);
-        logger.info('   Password: Admin@123');
+        if (config.DEFAULT_ADMIN_PASSWORD === 'Admin@123') {
+            logger.info('   Password: Admin@123');
+        } else {
+            logger.info('   Password: [SEE ENVIRONMENT VARIABLES]');
+        }
         logger.info('   ⚠️  Change this password after first login!');
         logger.info('──────────────────────────────────────────────');
     } catch (err) {
