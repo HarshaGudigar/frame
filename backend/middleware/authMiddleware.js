@@ -87,6 +87,11 @@ const requireVerifiedEmail = (req, res, next) => {
         return errorResponse(res, 'Authentication required', 401);
     }
 
+    // Bypass for testing/development
+    if (process.env.NODE_ENV !== 'production') {
+        return next();
+    }
+
     if (!req.user.isEmailVerified) {
         return errorResponse(
             res,

@@ -293,17 +293,24 @@ router.put(
     requireRole('admin', 'owner'),
     validate({ params: mongoIdParam, body: updateTenantSchema }),
     asyncHandler(async (req, res) => {
-        const { name, vmIpAddress, subscribedModules, isActive } = req.body;
+        const {
+            name,
+            vmIpAddress,
+            subscribedModules,
+            isActive,
+            status,
+            branding,
+            onboardingProgress,
+        } = req.body;
 
         const tenant = await Tenant.findById(req.params.id);
         if (!tenant) {
             return errorResponse(res, 'Tenant not found', 404);
         }
 
-        if (name !== undefined) tenant.name = name;
-        if (vmIpAddress !== undefined) tenant.vmIpAddress = vmIpAddress;
-        if (subscribedModules !== undefined) tenant.subscribedModules = subscribedModules;
-        if (isActive !== undefined) tenant.isActive = isActive;
+        if (status !== undefined) tenant.status = status;
+        if (branding !== undefined) tenant.branding = { ...tenant.branding, ...branding };
+        if (onboardingProgress !== undefined) tenant.onboardingProgress = onboardingProgress;
 
         await tenant.save();
 
@@ -313,11 +320,12 @@ router.put(
         });
 
         // Real-time notification for status change
-        if (isActive !== undefined) {
+        if (isActive !== undefined || status !== undefined) {
             socketService.emitEvent('tenant:status_change', {
                 id: tenant.id,
                 name: tenant.name,
-                isActive,
+                isActive: tenant.isActive,
+                status: tenant.status,
             });
         }
 
@@ -359,6 +367,49 @@ router.delete(
         });
 
         return successResponse(res, { id: req.params.id }, 'Tenant deleted');
+    }),
+);
+
+/**
+ * @openapi
+ * /api/admin/tenants/{id}/export:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Export tenant data
+ *     description: Generates a JSON dump of all tenant data (metadata, subscriptions, usage).
+ *     security:
+ *       - bearerAuth: []
+ */
+router.get(
+    '/tenants/:id/export',
+    authMiddleware,
+    requireRole('owner'),
+    validate({ params: mongoIdParam }),
+    asyncHandler(async (req, res) => {
+        const Subscription = require('../models/Subscription');
+        const UsageMeter = require('../models/UsageMeter');
+
+        const tenant = await Tenant.findById(req.params.id);
+        if (!tenant) return errorResponse(res, 'Tenant not found', 404);
+
+        const [subscriptions, usage] = await Promise.all([
+            Subscription.find({ tenant: tenant._id }),
+            UsageMeter.find({ tenant: tenant._id }),
+        ]);
+
+        const exportData = {
+            tenant,
+            subscriptions,
+            usage,
+            exportedAt: new Date(),
+        };
+
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader(
+            'Content-Disposition',
+            `attachment; filename=tenant-export-${tenant.slug}.json`,
+        );
+        return res.json(exportData);
     }),
 );
 
@@ -644,6 +695,27 @@ router.get(
             success: true,
             data: history.reverse(), // Sort chronologically for charts
         });
+    }),
+);
+
+/**
+ * @openapi
+ * /api/admin/usage/{tenantId}:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Get usage data
+ *     description: Get hourly API call counts for a tenant.
+ */
+router.get(
+    '/usage/:id',
+    authMiddleware,
+    requireRole('admin', 'owner'),
+    asyncHandler(async (req, res) => {
+        const UsageMeter = require('../models/UsageMeter');
+        const usage = await UsageMeter.find({ tenant: req.params.id })
+            .sort({ timestamp: -1 })
+            .limit(100);
+        return successResponse(res, usage, 'Usage data retrieved');
     }),
 );
 

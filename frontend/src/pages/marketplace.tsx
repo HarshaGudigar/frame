@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { Plus, Store, Package, AlertCircle } from 'lucide-react';
+import { Plus, Store, Package, AlertCircle, UserPlus, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -37,17 +37,31 @@ export function MarketplacePage() {
         features: '',
     });
     const [error, setError] = useState<string | null>(null);
+    const [search, setSearch] = useState('');
+    const [category, setCategory] = useState('all');
+    const [tenants, setTenants] = useState<any[]>([]);
+    const [assigningTo, setAssigningTo] = useState<any>(null);
+    const [selectedTenant, setSelectedTenant] = useState('');
+    const [assignLoading, setAssignLoading] = useState(false);
 
     const fetchProducts = async () => {
         try {
             setLoading(true);
-            const res = await api.get('/marketplace/products');
-            setProducts(res.data.data || []);
+            const params = new URLSearchParams();
+            if (search) params.append('search', search);
+            if (category && category !== 'all') params.append('category', category);
+
+            const [prodRes, tenantRes] = await Promise.all([
+                api.get(`/marketplace/products?${params.toString()}`),
+                api.get('/admin/tenants'),
+            ]);
+            setProducts(prodRes.data.data || []);
+            setTenants(tenantRes.data.data || []);
         } catch {
             toast({
                 variant: 'destructive',
                 title: 'Error',
-                description: 'Failed to load products.',
+                description: 'Failed to load marketplace content.',
             });
         } finally {
             setLoading(false);
@@ -55,8 +69,9 @@ export function MarketplacePage() {
     };
 
     useEffect(() => {
-        fetchProducts();
-    }, []);
+        const timer = setTimeout(fetchProducts, 300);
+        return () => clearTimeout(timer);
+    }, [search, category]);
 
     const formatPrice = (price: any) => {
         if (!price || !price.amount) return 'Free';
@@ -96,6 +111,31 @@ export function MarketplacePage() {
         }
     };
 
+    const handleAssign = async () => {
+        if (!selectedTenant || !assigningTo) return;
+        setAssignLoading(true);
+        try {
+            await api.post('/marketplace/purchase', {
+                tenantId: selectedTenant,
+                productId: assigningTo._id,
+            });
+            toast({
+                title: 'Success',
+                description: `${assigningTo.name} assigned to tenant successfully!`,
+            });
+            setAssigningTo(null);
+            setSelectedTenant('');
+        } catch (err: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Assignment Failed',
+                description: err.response?.data?.message || 'Failed to assign module',
+            });
+        } finally {
+            setAssignLoading(false);
+        }
+    };
+
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
@@ -109,6 +149,30 @@ export function MarketplacePage() {
                     <Plus className="size-4 mr-2" />
                     Add Product
                 </Button>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1">
+                    <Input
+                        placeholder="Search modules..."
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+                </div>
+                <div className="w-full sm:w-[200px]">
+                    <Select value={category} onValueChange={setCategory}>
+                        <SelectTrigger>
+                            <SelectValue placeholder="All Categories" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All Categories</SelectItem>
+                            <SelectItem value="Sales">Sales</SelectItem>
+                            <SelectItem value="Marketing">Marketing</SelectItem>
+                            <SelectItem value="Infrastructure">Infrastructure</SelectItem>
+                            <SelectItem value="General">General</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
 
             {/* Add Product Dialog */}
@@ -228,7 +292,44 @@ export function MarketplacePage() {
                 </DialogContent>
             </Dialog>
 
-            {/* Product Grid */}
+            {/* Assign to Tenant Dialog */}
+            <Dialog open={!!assigningTo} onOpenChange={() => setAssigningTo(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Assign {assigningTo?.name}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                        <div className="space-y-2">
+                            <Label>Select Tenant</Label>
+                            <Select value={selectedTenant} onValueChange={setSelectedTenant}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Choose a tenant..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {tenants.map((t) => (
+                                        <SelectItem key={t._id} value={t._id}>
+                                            {t.name} ({t.slug})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setAssigningTo(null)}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleAssign} disabled={assignLoading || !selectedTenant}>
+                            {assignLoading ? (
+                                <RefreshCw className="size-4 animate-spin mr-2" />
+                            ) : (
+                                <UserPlus className="size-4 mr-2" />
+                            )}
+                            Provision Now
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
             {loading && products.length === 0 ? (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {Array.from({ length: 3 }).map((_, i) => (
@@ -276,6 +377,16 @@ export function MarketplacePage() {
                                     </ul>
                                 )}
                             </CardContent>
+                            <CardFooter className="pt-0 pb-6">
+                                <Button
+                                    className="w-full"
+                                    variant="outline"
+                                    onClick={() => setAssigningTo(p)}
+                                >
+                                    <UserPlus className="size-4 mr-2" />
+                                    Assign to Tenant
+                                </Button>
+                            </CardFooter>
                         </Card>
                     ))}
                 </div>

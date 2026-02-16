@@ -24,6 +24,16 @@ const updateTenantSchema = z.object({
     vmIpAddress: z.string().optional(),
     subscribedModules: z.array(z.string()).optional(),
     isActive: z.boolean().optional(),
+    status: z.enum(['online', 'offline', 'error', 'suspended']).optional(),
+    branding: z
+        .object({
+            logo: z.string().optional(),
+            primaryColor: z.string().optional(),
+            faviconUrl: z.string().optional(),
+            loginDomain: z.string().optional(),
+        })
+        .optional(),
+    onboardingProgress: z.number().min(0).max(100).optional(),
 });
 
 const heartbeatSchema = z.object({

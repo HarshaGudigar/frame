@@ -92,6 +92,10 @@ async function handleHubMode(req, res, next) {
         return errorResponse(res, 'Tenant not found or inactive', 404);
     }
 
+    if (tenant.status === 'suspended') {
+        return errorResponse(res, 'Tenant access is suspended. Contact support.', 403);
+    }
+
     // Module access check
     const requestedModule = req.headers['x-module-id'];
     if (requestedModule && !tenant.subscribedModules.includes(requestedModule.toLowerCase())) {

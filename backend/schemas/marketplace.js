@@ -29,4 +29,6 @@ const purchaseSchema = z.object({
         .regex(/^[a-f\d]{24}$/i, 'Invalid product ID format'),
 });
 
-module.exports = { createProductSchema, purchaseSchema };
+const updateProductSchema = createProductSchema.partial();
+
+module.exports = { createProductSchema, purchaseSchema, updateProductSchema };

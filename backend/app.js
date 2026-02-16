@@ -80,6 +80,10 @@ function createApp() {
     const tenantMiddleware = require('./middleware/tenantMiddleware');
     app.use(tenantMiddleware);
 
+    // ─── Usage Metering ──────────────────────────────────────────────────────
+    const usageMiddleware = require('./middleware/usageMiddleware');
+    app.use(usageMiddleware);
+
     // ─── Module Discovery ────────────────────────────────────────────────────
     const modules = discoverModules(logger);
 

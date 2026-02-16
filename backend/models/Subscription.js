@@ -28,6 +28,13 @@ const subscriptionSchema = new mongoose.Schema(
             enum: ['active', 'expired', 'canceled', 'trialing'],
             default: 'active',
         },
+        moduleVersion: {
+            type: String,
+            default: '1.0.0',
+        },
+        trialExpiry: {
+            type: Date,
+        },
         paymentId: String, // Stripe Subscription ID or similar
     },
     {

@@ -28,6 +28,10 @@ if (require.main === module) {
     const { startBackupJob } = require('./jobs/backup');
     startBackupJob();
 
+    // Start trial cleanup cron job
+    const { startTrialCleanup } = require('./jobs/trialCleanup');
+    startTrialCleanup();
+
     // Database
     mongoose
         .connect(config.MONGODB_URI)

@@ -1,12 +1,12 @@
 /**
  * Module Template — Copy this folder to create a new module.
- * 
+ *
  * Required exports:
  *   - name: Display name of the module
  *   - slug: URL-safe identifier (must match folder name)
  *   - version: Semantic version string
  *   - routes: Express Router with module endpoints
- * 
+ *
  * Optional exports:
  *   - description: Short description
  *   - swaggerSpec: OpenAPI spec object for per-module docs
@@ -22,4 +22,13 @@ module.exports = {
     description: 'A template module to copy when creating new modules.',
     routes,
     // swaggerSpec: require('./swagger'),
+
+    /**
+     * onProvision(tenant, logger)
+     * Called when a tenant purchases this module.
+     * Use this to seed database collections or perform setup.
+     */
+    onProvision: async (tenant, logger) => {
+        logger.info({ tenant: tenant.slug }, 'Initializing template module for tenant');
+    },
 };
