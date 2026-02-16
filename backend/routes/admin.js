@@ -308,6 +308,10 @@ router.put(
             return errorResponse(res, 'Tenant not found', 404);
         }
 
+        if (name !== undefined) tenant.name = name;
+        if (vmIpAddress !== undefined) tenant.vmIpAddress = vmIpAddress;
+        if (subscribedModules !== undefined) tenant.subscribedModules = subscribedModules;
+        if (isActive !== undefined) tenant.isActive = isActive;
         if (status !== undefined) tenant.status = status;
         if (branding !== undefined) tenant.branding = { ...tenant.branding, ...branding };
         if (onboardingProgress !== undefined) tenant.onboardingProgress = onboardingProgress;

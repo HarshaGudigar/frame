@@ -17,9 +17,9 @@ services:
                     '-e',
                     "const http=require('http');const r=http.get('http://localhost:5000/api/health',res=>{process.exit(res.statusCode===200?0:1)});r.on('error',()=>process.exit(1));r.end()",
                 ]
-            interval: 30s
+            interval: 10s
             timeout: 5s
-            start_period: 30s
+            start_period: 15s
             retries: 3
         restart: always
 
