@@ -47,8 +47,8 @@ jobs:
                       # Pull latest code and rebuild
                       git pull origin main
                       sudo docker builder prune -af
-                      sudo docker compose down
-                      sudo docker compose up -d --build
+                      sudo docker compose down --remove-orphans
+                      sudo docker compose up -d --build --remove-orphans
 
                       # Wait for health check (poll every 5s, max 12 attempts = 60s)
                       echo "Waiting for services to become healthy..."

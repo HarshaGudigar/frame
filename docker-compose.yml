@@ -5,15 +5,7 @@ services:
         volumes:
             - mongodb_data:/data/db
         healthcheck:
-            test:
-                [
-                    'CMD',
-                    'mongosh',
-                    '--quiet',
-                    '127.0.0.1:27017/mern-app',
-                    '--eval',
-                    'db.adminCommand("ping")',
-                ]
+            test: ['CMD', 'mongosh', '--quiet', '--eval', 'db.adminCommand("ping")']
             interval: 10s
             timeout: 5s
             start_period: 20s
@@ -28,6 +20,12 @@ services:
         depends_on:
             mongo:
                 condition: service_healthy
+        healthcheck:
+            test: ['CMD', 'curl', '-f', 'http://localhost:5000/api/health']
+            interval: 10s
+            timeout: 5s
+            start_period: 30s
+            retries: 3
         env_file:
             - backend/.env
         environment:
