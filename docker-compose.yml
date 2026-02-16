@@ -1,26 +1,45 @@
 services:
-    app:
-        build: .
-        image: frame-app:latest
-        container_name: frame-app
-        ports:
-            - '3000:3000'
-            - '5000:5000'
+    mongo:
+        image: mongo:6.0
+        container_name: frame-mongo
         volumes:
             - mongodb_data:/data/db
-            - backup_data:/backups
         healthcheck:
-            test:
-                [
-                    'CMD',
-                    'node',
-                    '-e',
-                    "const http=require('http');const r=http.get('http://localhost:5000/api/health',res=>{process.exit(res.statusCode===200?0:1)});r.on('error',()=>process.exit(1));r.end()",
-                ]
-            interval: 30s
+            test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"]
+            interval: 10s
             timeout: 5s
-            start_period: 30s
-            retries: 3
+            start_period: 10s
+            retries: 5
+        restart: always
+
+    backend:
+        build:
+            context: .
+            dockerfile: Dockerfile.backend
+        container_name: frame-backend
+        depends_on:
+            mongo:
+                condition: service_healthy
+        env_file:
+            - backend/.env
+        environment:
+            - MONGODB_URI=mongodb://mongo:27017/mern-app
+        volumes:
+            - backup_data:/backups
+        ports:
+            - '5000:5000'
+        restart: always
+
+    frontend:
+        build:
+            context: .
+            dockerfile: Dockerfile.frontend
+        container_name: frame-frontend
+        depends_on:
+            backend:
+                condition: service_healthy
+        ports:
+            - '3000:3000'
         restart: always
 
 volumes:

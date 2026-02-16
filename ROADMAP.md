@@ -56,7 +56,7 @@
 
 ### 4. DevOps & Deployment Hardening
 
-- [x] **Docker Compose Separation**: Split into three services via `docker-compose.split.yml`: `mongo` (official `mongo:6.0`), `backend` (`Dockerfile.backend` with Node.js), `frontend` (`Dockerfile.frontend` with multi-stage Nginx build). Includes `nginx.conf` for SPA fallback and API/WebSocket proxying. Original monolithic setup preserved as legacy fallback.
+- [x] **Docker Separation**: Split the monolithic Docker setup into three dedicated services (`mongo`, `backend`, `frontend`) using `Dockerfile.backend`, `Dockerfile.frontend`, and `docker-compose.yml`. Improved build reliability by modernizing GPG key installation for MongoDB tools. `backend` (`Dockerfile.backend` with Node.js), `frontend` (`Dockerfile.frontend` with multi-stage Nginx build). Includes `nginx.conf` for SPA fallback and API/WebSocket proxying. Original monolithic setup preserved as legacy fallback.
 - [x] **Health Check in Docker**: Added `HEALTHCHECK` instruction to all Dockerfiles (monolithic, backend, frontend) hitting `GET /api/health`. Added matching `healthcheck` block to `docker-compose.yml`. Split Dockerfiles include health checks by default.
 - [x] **Deployment Rollback**: `deploy.yml` now snapshots the current image as `frame-app:rollback` before rebuilding. Polls `docker inspect` health status every 5s for 60s. On failure, rolls back to the previous image automatically.
 - [x] **Environment Variable Validation**: Added `backend/.env.example` and `frontend/.env.example` documenting every variable with `[REQUIRED]`/`[Optional]`/`[Conditional]` labels, grouped by section (Server, Auth, Fleet, Email, CORS, Rate Limiting, Logging, Backup, Multi-Tenancy).
