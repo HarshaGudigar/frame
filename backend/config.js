@@ -16,15 +16,15 @@ if (process.env.NODE_ENV !== 'test') {
     }
 
     if (!process.env.HEARTBEAT_SECRET) {
-        console.error('❌ FATAL: HEARTBEAT_SECRET is not set in environment variables.');
-        console.error('   Add it to backend/.env: HEARTBEAT_SECRET=your-secure-key-here');
-        process.exit(1);
+        console.warn(
+            '⚠️ WARNING: HEARTBEAT_SECRET is not set. Fleet Manager features will be limited.',
+        );
+        console.warn('   Add it to backend/.env: HEARTBEAT_SECRET=your-secure-key-here');
     }
 
     if (!process.env.RESEND_API_KEY) {
-        console.error('❌ FATAL: RESEND_API_KEY is not set in environment variables.');
-        console.error('   Add it to backend/.env: RESEND_API_KEY=re_your-key-here');
-        process.exit(1);
+        console.warn('⚠️ WARNING: RESEND_API_KEY is not set. Email features will be disabled.');
+        console.warn('   Add it to backend/.env: RESEND_API_KEY=re_your-key-here');
     }
 }
 

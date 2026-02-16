@@ -15,7 +15,7 @@ services:
                     'CMD',
                     'node',
                     '-e',
-                    "const http=require('http');const r=http.get('http://localhost:5000/api/health',res=>{process.exit(res.statusCode===200?0:1)});r.on('error',()=>process.exit(1));r.end()",
+                    "const http=require('http');const r=http.get('http://127.0.0.1:5000/api/health',res=>{process.exit(res.statusCode===200?0:1)});r.on('error',()=>process.exit(1));r.end()",
                 ]
             interval: 10s
             timeout: 5s

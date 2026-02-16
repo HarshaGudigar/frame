@@ -41,7 +41,7 @@ EXPOSE 3000 5000
 
 # Health check — start-period=30s since monolithic container starts MongoDB too
 HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=3 \
-    CMD node -e "const http=require('http');const r=http.get('http://localhost:5000/api/health',res=>{process.exit(res.statusCode===200?0:1)});r.on('error',()=>process.exit(1));r.end()"
+    CMD node -e "const http=require('http');const r=http.get('http://127.0.0.1:5000/api/health',res=>{process.exit(res.statusCode===200?0:1)});r.on('error',()=>process.exit(1));r.end()"
 
 # Start Mongo, Backend, and Frontend (static serve)
 CMD ["npx", "concurrently", \

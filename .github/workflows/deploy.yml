@@ -66,7 +66,9 @@ jobs:
                           echo "Deployment successful — container is healthy."
                           sudo docker rmi frame-app:rollback 2>/dev/null || true
                       else
-                          echo "Deployment FAILED — container did not become healthy within 60s."
+                          echo "Deployment FAILED — container did not become healthy within 120s."
+                          echo "Reporting container logs for diagnostics:"
+                          sudo docker logs frame-app --tail 100
                           echo "Rolling back to previous image..."
                           sudo docker compose down
                           sudo docker tag frame-app:rollback frame-app:latest 2>/dev/null || true
