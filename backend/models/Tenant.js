@@ -46,6 +46,9 @@ const tenantSchema = new mongoose.Schema(
         lastSeen: {
             type: Date,
         },
+        lastHeartbeat: {
+            type: Date,
+        },
         metrics: {
             cpu: Number,
             ram: Number,

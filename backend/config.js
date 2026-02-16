@@ -104,4 +104,8 @@ module.exports = {
 
     // Runtime Mode
     RUNTIME_MODE: process.env.APP_TENANT_ID ? 'SILO' : 'HUB',
+
+    // Default Admin (Seeding)
+    DEFAULT_ADMIN_EMAIL: process.env.ADMIN_EMAIL || 'admin@frame.local',
+    DEFAULT_ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'Admin@123',
 };
