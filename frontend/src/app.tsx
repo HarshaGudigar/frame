@@ -65,8 +65,9 @@ function AppRoutes() {
         );
 
     // Authenticated but email not verified — show interstitial
-    // Allow verify-email route through so they can verify after clicking the link
-    if (user && !user.isEmailVerified) {
+    // Bypass in development to match backend behavior
+    const isDev = import.meta.env.DEV;
+    if (user && !user.isEmailVerified && !isDev) {
         return (
             <Suspense fallback={FullPageLoader}>
                 <Routes>

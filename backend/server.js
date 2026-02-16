@@ -38,6 +38,11 @@ if (require.main === module) {
             try {
                 await mongoose.connect(config.MONGODB_URI);
                 logger.info(`[${config.RUNTIME_MODE}] MongoDB connected (attempt ${attempt})`);
+
+                // Seed default admin on first startup
+                const { seedDefaultAdmin } = require('./jobs/seedAdmin');
+                await seedDefaultAdmin();
+
                 return;
             } catch (err) {
                 logger.warn(
