@@ -11,10 +11,12 @@ import { TransactionList } from './TransactionList';
 import { TransactionCategoryList } from './TransactionCategoryList';
 import { BusinessInfoPage } from './BusinessInfoPage';
 import { SettingsPage } from './SettingsPage';
+import Housekeeping from './Housekeeping';
 
 type Tab =
     | 'overview'
     | 'rooms'
+    | 'housekeeping'
     | 'customers'
     | 'bookings'
     | 'services'
@@ -30,6 +32,7 @@ const tabGroups: { label: string; tabs: { key: Tab; label: string }[] }[] = [
         tabs: [
             { key: 'overview', label: 'Overview' },
             { key: 'rooms', label: 'Rooms' },
+            { key: 'housekeeping', label: 'Housekeeping' },
             { key: 'customers', label: 'Customers' },
             { key: 'bookings', label: 'Bookings' },
         ],
@@ -241,6 +244,17 @@ export function HotelDashboard() {
                     </CardHeader>
                     <CardContent>
                         <RoomGrid hotelTenant={hotelTenant} />
+                    </CardContent>
+                </Card>
+            )}
+
+            {activeTab === 'housekeeping' && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Housekeeping Overview</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <Housekeeping hotelTenant={hotelTenant} />
                     </CardContent>
                 </Card>
             )}

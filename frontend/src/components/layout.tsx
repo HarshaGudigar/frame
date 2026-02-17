@@ -14,6 +14,7 @@ import {
     Brush,
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/notification-center';
+import { ModeToggle } from '@/components/mode-toggle';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
     Sidebar,
@@ -36,7 +37,6 @@ const navItems = [
     { to: '/users', icon: UsersIcon, label: 'Users', role: 'admin' },
     { to: '/marketplace', icon: Store, label: 'Marketplace', role: 'admin' },
     { to: '/hotel', icon: Building2, label: 'Hotel', module: 'hotel' },
-    { to: '/hotel/housekeeping', icon: Brush, label: 'Housekeeping', module: 'hotel' },
     { to: '/settings', icon: Settings, label: 'Settings' },
     { to: '/audit-logs', icon: ShieldCheck, label: 'Audit Logs', role: 'owner' },
 ];
@@ -149,6 +149,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     </div>
                     <div className="flex items-center gap-4">
                         <ConnectionStatus />
+                        <ModeToggle />
                         <NotificationCenter />
                     </div>
                 </header>

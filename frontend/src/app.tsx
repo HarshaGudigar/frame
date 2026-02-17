@@ -127,16 +127,19 @@ function AppRoutes() {
 }
 
 import { SocketProvider } from '@/components/providers/socket-provider';
+import { ThemeProvider } from '@/components/providers/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
 
 function App() {
     return (
         <ErrorBoundary>
             <AuthProvider>
-                <SocketProvider>
-                    <AppRoutes />
-                    <Toaster />
-                </SocketProvider>
+                <ThemeProvider defaultTheme="dark" storageKey="alyxnet-theme">
+                    <SocketProvider>
+                        <AppRoutes />
+                        <Toaster />
+                    </SocketProvider>
+                </ThemeProvider>
             </AuthProvider>
         </ErrorBoundary>
     );
