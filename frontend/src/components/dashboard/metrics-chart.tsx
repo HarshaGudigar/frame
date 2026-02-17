@@ -1,14 +1,5 @@
-import {
-    LineChart,
-    Line,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-    AreaChart,
-    Area,
-} from 'recharts';
+import { useEffect, useState, useRef } from 'react';
+import { XAxis, YAxis, CartesianGrid, Tooltip, AreaChart, Area } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface MetricsChartProps {
@@ -20,6 +11,37 @@ interface MetricsChartProps {
 }
 
 export function MetricsChart({ data, title, dataKey, color, unit = '%' }: MetricsChartProps) {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
+
+    useEffect(() => {
+        if (!containerRef.current) return;
+
+        const updateDimensions = () => {
+            if (containerRef.current) {
+                const { width, height } = containerRef.current.getBoundingClientRect();
+                if (width > 0 && height > 0) {
+                    setDimensions({ width, height });
+                }
+            }
+        };
+
+        const resizeObserver = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                const { width, height } = entry.contentRect;
+                if (width > 0 && height > 0) {
+                    setDimensions({ width, height });
+                }
+            }
+        });
+
+        resizeObserver.observe(containerRef.current);
+        // Initial measurement
+        updateDimensions();
+
+        return () => resizeObserver.disconnect();
+    }, []);
+
     // Format timestamp for XAxis
     const chartData = data.map((item) => ({
         ...item,
@@ -31,14 +53,23 @@ export function MetricsChart({ data, title, dataKey, color, unit = '%' }: Metric
     }));
 
     return (
-        <Card className="col-span-1">
-            <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <Card className="col-span-1 border-none shadow-none bg-transparent">
+            <CardHeader className="pb-2 px-0">
+                <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
             </CardHeader>
-            <CardContent>
-                <div className="h-[200px] w-full min-w-0">
-                    <ResponsiveContainer width="99%" height="100%" minWidth={0} debounce={100}>
-                        <AreaChart data={chartData}>
+            <CardContent className="px-0">
+                <div
+                    ref={containerRef}
+                    className="w-full relative h-[200px]"
+                    style={{ minHeight: '200px' }}
+                >
+                    {dimensions && (
+                        <AreaChart
+                            width={dimensions.width}
+                            height={dimensions.height}
+                            data={chartData}
+                            margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                        >
                             <defs>
                                 <linearGradient
                                     id={`gradient-${dataKey}`}
@@ -87,9 +118,15 @@ export function MetricsChart({ data, title, dataKey, color, unit = '%' }: Metric
                                 fillOpacity={1}
                                 fill={`url(#gradient-${dataKey})`}
                                 animationDuration={1000}
+                                isAnimationActive={true}
                             />
                         </AreaChart>
-                    </ResponsiveContainer>
+                    )}
+                    {!dimensions && (
+                        <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                            Loading chart...
+                        </div>
+                    )}
                 </div>
             </CardContent>
         </Card>
