@@ -69,6 +69,8 @@ export function MetricsChart({ data, title, dataKey, color, unit = '%' }: Metric
                             height={dimensions.height}
                             data={chartData}
                             margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                            style={{ outline: 'none' }}
+                            tabIndex={-1}
                         >
                             <defs>
                                 <linearGradient
@@ -85,30 +87,32 @@ export function MetricsChart({ data, title, dataKey, color, unit = '%' }: Metric
                             <CartesianGrid
                                 strokeDasharray="3 3"
                                 vertical={false}
-                                stroke="hsl(var(--muted))"
+                                stroke="var(--muted)"
                             />
                             <XAxis
                                 dataKey="displayTime"
                                 fontSize={10}
                                 tickLine={false}
                                 axisLine={false}
-                                stroke="hsl(var(--muted-foreground))"
+                                stroke="var(--muted-foreground)"
+                                tick={{ fill: 'var(--muted-foreground)' }}
                             />
                             <YAxis
                                 fontSize={10}
                                 tickLine={false}
                                 axisLine={false}
-                                stroke="hsl(var(--muted-foreground))"
+                                stroke="var(--muted-foreground)"
                                 tickFormatter={(value) => `${value}${unit}`}
+                                tick={{ fill: 'var(--muted-foreground)' }}
                             />
                             <Tooltip
                                 contentStyle={{
-                                    backgroundColor: 'hsl(var(--background))',
-                                    borderColor: 'hsl(var(--border))',
+                                    backgroundColor: 'var(--background)',
+                                    borderColor: 'var(--border)',
                                     fontSize: '12px',
                                 }}
                                 itemStyle={{ color: color }}
-                                labelStyle={{ color: 'hsl(var(--foreground))' }}
+                                labelStyle={{ color: 'var(--foreground)' }}
                             />
                             <Area
                                 type="monotone"
@@ -129,6 +133,14 @@ export function MetricsChart({ data, title, dataKey, color, unit = '%' }: Metric
                     )}
                 </div>
             </CardContent>
+            <style>{`
+                .recharts-surface:focus,
+                .recharts-wrapper:focus,
+                .recharts-wrapper *:focus {
+                    outline: none !important;
+                    box-shadow: none !important;
+                }
+            `}</style>
         </Card>
     );
 }
