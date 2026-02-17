@@ -33,6 +33,39 @@ A full-stack monorepo featuring a Dashboard (Vite + React + shadcn/ui), Desktop 
 └── package.json   # Root script manager
 ```
 
+## Architecture Overview
+
+Alyxnet Frame utilizes a **Hub-Silo** multi-tenant architecture designed for scalability and data isolation.
+
+```mermaid
+graph TD
+    subgraph "Frontend"
+        D[Dashboard UI] --> AC[Auth Context]
+        AC --> API[Axios Client]
+    end
+
+    subgraph "Backend (Express Gateway)"
+        API --> TM[Tenant Middleware]
+        TM --> |HUB| HR[Hub Router]
+        TM --> |SILO| SR[Silo Router]
+        TM --> ML[Module Loader]
+        ML --> MODS[Custom Modules]
+    end
+
+    subgraph "Data Layer"
+        MODS --> TDC[Tenant DB Cache]
+        TDC --> T1[(Tenant A DB)]
+        TDC --> T2[(Tenant B DB)]
+    end
+```
+
+### Core Concepts
+
+- **Hub Mode**: Central control plane for global management and multi-tenant routing.
+- **Silo Mode**: Dedicated instances for isolated, high-performance tenant environments.
+- **Isolated Multi-Tenancy**: Every tenant has a dedicated MongoDB database, managed dynamically via connection pooling.
+- **Modular Plugin System**: Features (like the Hotel module) are auto-discovered and namespaced under `/api/m/`.
+
 ## Getting Started
 
 ### 1. Simultaneous Run (Recommended)
