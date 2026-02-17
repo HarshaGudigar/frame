@@ -74,6 +74,31 @@ router.patch(
     },
 );
 
+// PATCH /rooms/:id/status (For Housekeeping/Quick updates)
+router.patch(
+    '/:id/status',
+    authMiddleware,
+    authorize(['owner', 'admin', 'user']),
+    async (req, res) => {
+        try {
+            const { Room } = await getModels(req);
+            const { status } = req.body;
+            if (!['Available', 'Occupied', 'Dirty', 'Maintenance'].includes(status)) {
+                return errorResponse(res, 'Invalid status', 400);
+            }
+            const room = await Room.findByIdAndUpdate(
+                req.params.id,
+                { status },
+                { new: true, runValidators: true },
+            );
+            if (!room) return errorResponse(res, 'Room not found', 404);
+            return successResponse(res, room, 'Room status updated successfully');
+        } catch (error) {
+            return errorResponse(res, 'Failed to update room status', 500, error);
+        }
+    },
+);
+
 // DELETE /rooms/:id
 router.delete(
     '/:id',

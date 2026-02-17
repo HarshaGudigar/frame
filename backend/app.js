@@ -20,8 +20,13 @@ const healthRoutes = require('./routes/health');
  * Creates and configures the Express app.
  * Separated from listen/connect so tests can import a clean app instance.
  */
+const path = require('path');
+
 function createApp() {
     const app = express();
+
+    // Serve static files from uploads directory
+    app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
     // ─── Security Middleware ─────────────────────────────────────────────────
     //

@@ -11,6 +11,7 @@ import {
     Server,
     Building2,
     ShieldCheck,
+    Brush,
 } from 'lucide-react';
 import { NotificationCenter } from '@/components/notifications/notification-center';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -35,6 +36,7 @@ const navItems = [
     { to: '/users', icon: UsersIcon, label: 'Users', role: 'admin' },
     { to: '/marketplace', icon: Store, label: 'Marketplace', role: 'admin' },
     { to: '/hotel', icon: Building2, label: 'Hotel', module: 'hotel' },
+    { to: '/hotel/housekeeping', icon: Brush, label: 'Housekeeping', module: 'hotel' },
     { to: '/settings', icon: Settings, label: 'Settings' },
     { to: '/audit-logs', icon: ShieldCheck, label: 'Audit Logs', role: 'owner' },
 ];

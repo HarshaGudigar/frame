@@ -61,6 +61,7 @@ const createCustomerSchema = z.object({
     state: z.string().max(100).optional(),
     pinCode: z.string().max(20).optional(),
     address: z.string().max(500).optional(),
+    idProofImageUrl: z.string().optional(),
     notes: z.string().max(1000).optional(),
 });
 
@@ -78,6 +79,7 @@ const updateCustomerSchema = z.object({
     state: z.string().max(100).optional(),
     pinCode: z.string().max(20).optional(),
     address: z.string().max(500).optional(),
+    idProofImageUrl: z.string().optional().nullable(),
     notes: z.string().max(1000).optional(),
 });
 

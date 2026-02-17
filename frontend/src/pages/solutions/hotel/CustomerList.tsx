@@ -27,7 +27,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Plus, Pencil } from 'lucide-react';
+import { Loader2, Plus, Pencil, Upload, Image as ImageIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Customer {
@@ -45,6 +45,7 @@ interface Customer {
     birthDate?: string;
     marriageDate?: string;
     address?: string;
+    idProofImageUrl?: string;
     notes?: string;
     createdAt: string;
 }
@@ -63,6 +64,7 @@ const emptyForm = {
     birthDate: '',
     marriageDate: '',
     address: '',
+    idProofImageUrl: '',
     notes: '',
 };
 
@@ -75,6 +77,44 @@ export function CustomerList({ hotelTenant }: { hotelTenant?: string }) {
     const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
     const [formData, setFormData] = useState(emptyForm);
     const [submitting, setSubmitting] = useState(false);
+    const [uploading, setUploading] = useState(false);
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !hotelTenant) return;
+
+        setUploading(true);
+        const formDataUpload = new FormData();
+        formDataUpload.append('file', file);
+
+        try {
+            const res = await api.post('/m/hotel/uploads/id-proof', formDataUpload, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                    'x-tenant-id': hotelTenant,
+                },
+            });
+
+            if (res.data.success) {
+                setFormData({ ...formData, idProofImageUrl: res.data.data.url });
+                toast({ title: 'Success', description: 'ID Proof uploaded successfully' });
+            } else {
+                toast({
+                    variant: 'destructive',
+                    title: 'Upload Failed',
+                    description: res.data.message,
+                });
+            }
+        } catch (error: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Upload Error',
+                description: error.response?.data?.message || 'Failed to upload file',
+            });
+        } finally {
+            setUploading(false);
+        }
+    };
 
     const fetchCustomers = async () => {
         if (!hotelTenant) {
@@ -119,6 +159,7 @@ export function CustomerList({ hotelTenant }: { hotelTenant?: string }) {
             birthDate: customer.birthDate ? customer.birthDate.split('T')[0] : '',
             marriageDate: customer.marriageDate ? customer.marriageDate.split('T')[0] : '',
             address: customer.address || '',
+            idProofImageUrl: customer.idProofImageUrl || '',
             notes: customer.notes || '',
         });
         setOpen(true);
@@ -148,6 +189,7 @@ export function CustomerList({ hotelTenant }: { hotelTenant?: string }) {
             if (!payload.state) delete payload.state;
             if (!payload.pinCode) delete payload.pinCode;
             if (!payload.address) delete payload.address;
+            if (!payload.idProofImageUrl) delete payload.idProofImageUrl;
             if (!payload.notes) delete payload.notes;
             if (payload.birthDate) {
                 payload.birthDate = new Date(payload.birthDate).toISOString();
@@ -376,6 +418,51 @@ export function CustomerList({ hotelTenant }: { hotelTenant?: string }) {
                                     }
                                 />
                             </div>
+
+                            <div className="space-y-4 rounded-lg border border-dashed p-4">
+                                <div className="space-y-2">
+                                    <Label className="text-base">ID Proof Scan</Label>
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex-1">
+                                            <Input
+                                                id="idProofFile"
+                                                type="file"
+                                                accept="image/*"
+                                                className="cursor-pointer"
+                                                onChange={handleFileUpload}
+                                                disabled={uploading}
+                                            />
+                                        </div>
+                                        {uploading && (
+                                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                                        )}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Upload a clear photo of the ID proof (JPG, PNG, WebP).
+                                    </p>
+                                </div>
+
+                                {formData.idProofImageUrl && (
+                                    <div className="relative aspect-video w-full overflow-hidden rounded-md border bg-muted">
+                                        <img
+                                            src={formData.idProofImageUrl}
+                                            alt="ID Proof Preview"
+                                            className="h-full w-full object-contain"
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="destructive"
+                                            size="sm"
+                                            className="absolute top-2 right-2 h-8 w-8 p-0"
+                                            onClick={() =>
+                                                setFormData({ ...formData, idProofImageUrl: '' })
+                                            }
+                                        >
+                                            <Plus className="h-4 w-4 rotate-45" />
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                         <DialogFooter>
                             <Button onClick={handleSubmit} disabled={submitting}>
@@ -424,11 +511,25 @@ export function CustomerList({ hotelTenant }: { hotelTenant?: string }) {
                                     <TableCell>{customer.email || '-'}</TableCell>
                                     <TableCell>{customer.city || '-'}</TableCell>
                                     <TableCell>
-                                        {customer.idProofType ? (
-                                            <Badge variant="outline">{customer.idProofType}</Badge>
-                                        ) : (
-                                            '-'
-                                        )}
+                                        <div className="flex items-center gap-2">
+                                            {customer.idProofType ? (
+                                                <Badge variant="outline">
+                                                    {customer.idProofType}
+                                                </Badge>
+                                            ) : (
+                                                '-'
+                                            )}
+                                            {customer.idProofImageUrl && (
+                                                <a
+                                                    href={customer.idProofImageUrl}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    title="View ID Proof"
+                                                >
+                                                    <ImageIcon className="h-4 w-4 text-primary cursor-pointer hover:text-primary/80" />
+                                                </a>
+                                            )}
+                                        </div>
                                     </TableCell>
                                     <TableCell>
                                         <Button

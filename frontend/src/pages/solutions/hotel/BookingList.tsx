@@ -33,7 +33,16 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Loader2, Plus, MoreHorizontal, LogIn, LogOut, XCircle, UserMinus } from 'lucide-react';
+import {
+    Loader2,
+    Plus,
+    MoreHorizontal,
+    LogIn,
+    LogOut,
+    XCircle,
+    UserMinus,
+    Printer,
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Customer {
@@ -635,6 +644,17 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
                                                         className="text-destructive"
                                                     >
                                                         <XCircle className="h-4 w-4 mr-2" /> Cancel
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem
+                                                        onClick={() =>
+                                                            window.open(
+                                                                `/solutions/hotel/invoice/${booking._id}?tenantId=${hotelTenant}`,
+                                                                '_blank',
+                                                            )
+                                                        }
+                                                    >
+                                                        <Printer className="h-4 w-4 mr-2" /> Print
+                                                        Invoice
                                                     </DropdownMenuItem>
                                                 </DropdownMenuContent>
                                             </DropdownMenu>

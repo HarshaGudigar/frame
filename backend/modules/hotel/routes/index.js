@@ -11,6 +11,7 @@ const settingsRouter = require('./settings');
 const businessInfoRouter = require('./business-info');
 const transactionsRouter = require('./transactions');
 const transactionCategoriesRouter = require('./transaction-categories');
+const uploadsRouter = require('./uploads');
 
 router.use('/rooms', roomsRouter);
 router.use('/customers', customersRouter);
@@ -22,5 +23,6 @@ router.use('/settings', settingsRouter);
 router.use('/business-info', businessInfoRouter);
 router.use('/transactions', transactionsRouter);
 router.use('/transaction-categories', transactionCategoriesRouter);
+router.use('/uploads', uploadsRouter);
 
 module.exports = router;

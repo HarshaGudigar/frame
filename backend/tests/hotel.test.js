@@ -132,4 +132,63 @@ describe('Hotel Module API', () => {
             expect(res.body.data.room._id.toString()).toBe(roomId.toString());
         });
     });
+
+    describe('New Features - Verification', () => {
+        it('should update room status via status-only endpoint', async () => {
+            const roomRes = await request.post('/api/m/hotel/rooms').set(authHeader()).send({
+                number: '301',
+                type: 'Suite',
+                pricePerNight: 500,
+                floor: 3,
+            });
+            const roomId = roomRes.body.data._id;
+
+            const res = await request
+                .patch(`/api/m/hotel/rooms/${roomId}/status`)
+                .set(authHeader())
+                .send({ status: 'Dirty' });
+
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data.status).toBe('Dirty');
+        });
+
+        it('should allow uploading an ID proof (mocked file)', async () => {
+            // Create a dummy file for testing
+            const fs = require('fs');
+            const path = require('path');
+            const testFilePath = path.join(__dirname, 'test-image.jpg');
+            fs.writeFileSync(testFilePath, 'dummy content');
+
+            const res = await request
+                .post('/api/m/hotel/uploads/id-proof')
+                .set(authHeader())
+                .attach('file', testFilePath);
+
+            expect(res.status).toBe(200);
+            expect(res.body.success).toBe(true);
+            expect(res.body.data).toHaveProperty('url');
+            expect(res.body.data.url).toMatch(/^\/uploads\/hotel\/id-proofs\//);
+
+            // Cleanup
+            fs.unlinkSync(testFilePath);
+        });
+
+        it('should save idProofImageUrl in customer record', async () => {
+            const customerData = {
+                firstName: 'Alice',
+                lastName: 'Smith',
+                phone: '1112223333',
+                idProofImageUrl: '/uploads/hotel/id-proofs/test.jpg',
+            };
+
+            const res = await request
+                .post('/api/m/hotel/customers')
+                .set(authHeader())
+                .send(customerData);
+
+            expect(res.status).toBe(201);
+            expect(res.body.data.idProofImageUrl).toBe(customerData.idProofImageUrl);
+        });
+    });
 });

@@ -31,6 +31,8 @@ const HotelDashboard = lazy(() =>
         default: module.HotelDashboard,
     })),
 );
+const Housekeeping = lazy(() => import('@/pages/solutions/hotel/Housekeeping'));
+const InvoicePrintView = lazy(() => import('@/pages/solutions/hotel/InvoicePrintView'));
 
 // Auth pages (unauthenticated)
 const AcceptInvitePage = lazy(() =>
@@ -85,26 +87,42 @@ function AppRoutes() {
 
     // Authenticated and verified
     return (
-        <Layout>
-            <Suspense
-                fallback={
-                    <div className="flex-1 flex items-center justify-center h-full">
-                        <Loader2 className="h-8 w-8 animate-spin" />
-                    </div>
+        <Routes>
+            <Route
+                path="/solutions/hotel/invoice/:id"
+                element={
+                    <Suspense fallback={FullPageLoader}>
+                        <InvoicePrintView />
+                    </Suspense>
                 }
-            >
-                <Routes>
-                    <Route path="/" element={<DashboardPage />} />
-                    <Route path="/tenants" element={<TenantsPage />} />
-                    <Route path="/marketplace" element={<MarketplacePage />} />
-                    <Route path="/users" element={<UsersPage />} />
-                    <Route path="/settings" element={<SettingsPage />} />
-                    <Route path="/audit-logs" element={<AuditLogsPage />} />
-                    <Route path="/hotel" element={<HotelDashboard />} />
-                    <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-            </Suspense>
-        </Layout>
+            />
+            <Route
+                path="*"
+                element={
+                    <Layout>
+                        <Suspense
+                            fallback={
+                                <div className="flex-1 flex items-center justify-center h-full">
+                                    <Loader2 className="h-8 w-8 animate-spin" />
+                                </div>
+                            }
+                        >
+                            <Routes>
+                                <Route path="/" element={<DashboardPage />} />
+                                <Route path="/tenants" element={<TenantsPage />} />
+                                <Route path="/marketplace" element={<MarketplacePage />} />
+                                <Route path="/users" element={<UsersPage />} />
+                                <Route path="/settings" element={<SettingsPage />} />
+                                <Route path="/audit-logs" element={<AuditLogsPage />} />
+                                <Route path="/hotel" element={<HotelDashboard />} />
+                                <Route path="/hotel/housekeeping" element={<Housekeeping />} />
+                                <Route path="*" element={<Navigate to="/" replace />} />
+                            </Routes>
+                        </Suspense>
+                    </Layout>
+                }
+            />
+        </Routes>
     );
 }
 

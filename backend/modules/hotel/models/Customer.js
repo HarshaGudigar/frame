@@ -12,6 +12,7 @@ const customerSchema = new mongoose.Schema(
         phone: { type: String, required: true },
         idProofType: String,
         idProofNumber: String,
+        idProofImageUrl: String,
         birthDate: Date,
         marriageDate: Date,
         gender: { type: String, enum: ['Male', 'Female', 'Other'] },
