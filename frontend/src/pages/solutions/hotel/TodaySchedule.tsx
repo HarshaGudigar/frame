@@ -19,10 +19,9 @@ export function TodaySchedule({
 }) {
     return (
         <Card className="border-primary/20">
-            <CardHeader className="pb-3">
-                <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <Calendar className="h-4 w-4 text-primary" /> Today's Schedule
-                </CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+                <CardTitle className="text-base font-semibold">Today's Schedule</CardTitle>
+                <Calendar className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent className="space-y-6">
                 <div className="space-y-3">
@@ -31,7 +30,9 @@ export function TodaySchedule({
                         )
                     </h4>
                     {arrivals.length === 0 ? (
-                        <p className="text-xs text-muted-foreground italic">No arrivals today</p>
+                        <div className="py-4 text-center w-full border border-dashed border-border/50 rounded-lg bg-muted/5">
+                            <p className="text-sm text-muted-foreground">No arrivals today</p>
+                        </div>
                     ) : (
                         arrivals.slice(0, 3).map((item) => (
                             <div
@@ -62,7 +63,9 @@ export function TodaySchedule({
                         {departures.length})
                     </h4>
                     {departures.length === 0 ? (
-                        <p className="text-xs text-muted-foreground italic">No departures today</p>
+                        <div className="py-4 text-center w-full border border-dashed border-border/50 rounded-lg bg-muted/5">
+                            <p className="text-sm text-muted-foreground">No departures today</p>
+                        </div>
                     ) : (
                         departures.slice(0, 3).map((item) => (
                             <div

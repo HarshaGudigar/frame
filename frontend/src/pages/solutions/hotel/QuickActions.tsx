@@ -2,7 +2,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Search, DollarSign, Bed, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-export function QuickActions({ onAction }: { onAction: (action: string) => void }) {
+export function QuickActions({
+    onAction,
+    className,
+}: {
+    onAction: (action: string) => void;
+    className?: string;
+}) {
     const actions = [
         {
             label: 'New Booking',
@@ -35,17 +41,17 @@ export function QuickActions({ onAction }: { onAction: (action: string) => void 
     ];
 
     return (
-        <Card className="border-primary/20 bg-primary/5 transition-all hover:shadow-md">
+        <Card className={`border-primary/20 bg-muted/50 transition-all ${className}`}>
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
                 <CardTitle className="text-base font-semibold">Quick Actions</CardTitle>
-                <Zap className="h-4 w-4 text-primary fill-primary/20" />
+                <Zap className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-3">
                 {actions.map((action) => (
                     <Button
                         key={action.id}
                         variant="ghost"
-                        className="h-auto flex-col items-center justify-center gap-2 p-3 hover:bg-muted border border-transparent hover:border-border"
+                        className="h-auto flex-col items-center justify-center gap-2 p-3 hover:bg-muted border border-transparent hover:border-border transition-colors"
                         onClick={() => onAction(action.id)}
                     >
                         <div className={`p-2 rounded-lg ${action.bg}`}>

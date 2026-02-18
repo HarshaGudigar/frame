@@ -172,28 +172,40 @@ export default function Housekeeping({ hotelTenant: propTenant }: { hotelTenant?
     return (
         <div className="space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Card className="bg-muted/50">
+                <Card className="bg-muted/50 border-primary/10 transition-all">
                     <CardHeader className="pb-2">
                         <CardDescription>Total Rooms</CardDescription>
-                        <CardTitle className="text-2xl">{stats.total}</CardTitle>
+                        <CardTitle className="text-2xl font-bold text-foreground">
+                            {stats.total}
+                        </CardTitle>
                     </CardHeader>
                 </Card>
-                <Card className="bg-red-50 border-red-100">
+                <Card className="bg-red-500/10 border-red-500/20 dark:border-red-500/30 transition-all">
                     <CardHeader className="pb-2">
-                        <CardDescription className="text-red-600">Dirty Rooms</CardDescription>
-                        <CardTitle className="text-2xl text-red-700">{stats.dirty}</CardTitle>
+                        <CardDescription className="text-red-600 dark:text-red-400 font-medium">
+                            Dirty Rooms
+                        </CardDescription>
+                        <CardTitle className="text-2xl font-bold text-red-700 dark:text-red-500">
+                            {stats.dirty}
+                        </CardTitle>
                     </CardHeader>
                 </Card>
-                <Card className="bg-green-50 border-green-100">
+                <Card className="bg-green-500/10 border-green-500/20 dark:border-green-500/30 transition-all">
                     <CardHeader className="pb-2">
-                        <CardDescription className="text-green-600">Available</CardDescription>
-                        <CardTitle className="text-2xl text-green-700">{stats.available}</CardTitle>
+                        <CardDescription className="text-green-600 dark:text-green-400 font-medium">
+                            Available
+                        </CardDescription>
+                        <CardTitle className="text-2xl font-bold text-green-700 dark:text-green-500">
+                            {stats.available}
+                        </CardTitle>
                     </CardHeader>
                 </Card>
-                <Card className="bg-blue-50 border-blue-100">
+                <Card className="bg-blue-500/10 border-blue-500/20 dark:border-blue-500/30 transition-all">
                     <CardHeader className="pb-2">
-                        <CardDescription className="text-blue-600">Pending Tasks</CardDescription>
-                        <CardTitle className="text-2xl text-blue-700">
+                        <CardDescription className="text-blue-600 dark:text-blue-400 font-medium">
+                            Pending Tasks
+                        </CardDescription>
+                        <CardTitle className="text-2xl font-bold text-blue-700 dark:text-blue-500">
                             {stats.pendingTasks}
                         </CardTitle>
                     </CardHeader>
@@ -214,14 +226,16 @@ export default function Housekeeping({ hotelTenant: propTenant }: { hotelTenant?
                         return (
                             <Card
                                 key={room._id}
-                                className="overflow-hidden border-l-4"
+                                className="overflow-hidden border-l-4 bg-muted/30 hover:bg-muted/50 transition-all border-primary/10"
                                 style={{
                                     borderLeftColor:
                                         room.status === 'Dirty'
                                             ? '#ef4444'
                                             : room.status === 'Available'
                                               ? '#10b981'
-                                              : '#f59e0b',
+                                              : room.status === 'Maintenance'
+                                                ? '#f59e0b'
+                                                : '#0ea5e9',
                                 }}
                             >
                                 <CardHeader className="pb-2">

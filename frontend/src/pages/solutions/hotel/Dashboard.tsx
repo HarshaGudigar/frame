@@ -260,7 +260,7 @@ export function HotelDashboard() {
             </div>
 
             {/* Tab Navigation — Grouped */}
-            <div className="flex gap-1 border-b overflow-x-auto">
+            <div className="flex gap-1 border-b overflow-x-auto scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {tabGroups.map((group, gi) => (
                     <div key={group.label} className="flex items-center">
                         {gi > 0 && <div className="w-px h-6 bg-border mx-2" />}
@@ -283,102 +283,117 @@ export function HotelDashboard() {
 
             {/* Tab Content */}
             {activeTab === 'overview' && (
-                <div className="space-y-6">
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                        <Card className="bg-muted/50 border-primary/10">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Total Rooms</CardTitle>
-                                <BedDouble className="h-4 w-4 text-muted-foreground" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{stats.totalRooms}</div>
-                            </CardContent>
-                        </Card>
-                        <Card className="bg-blue-500/10 border-blue-500/20">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Occupied</CardTitle>
-                                <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{stats.occupied}</div>
-                                <p className="text-xs text-muted-foreground">
-                                    {Math.round((stats.occupied / (stats.totalRooms || 1)) * 100)}%
-                                    Occupancy
-                                </p>
-                            </CardContent>
-                        </Card>
-                        <Card className="bg-green-500/10 border-green-500/20">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">Available</CardTitle>
-                                <CalendarCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{stats.available}</div>
-                            </CardContent>
-                        </Card>
-                        <Card className="bg-purple-500/10 border-purple-500/20">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">
-                                    Today's Check-ins
-                                </CardTitle>
-                                <BookOpen className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-2xl font-bold">{stats.todayCheckIns}</div>
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    <div className="grid gap-6 lg:grid-cols-12">
-                        {/* Main Content Area */}
-                        <div className="lg:col-span-8 space-y-6">
-                            <Card className="border-primary/20">
-                                <CardHeader className="flex flex-row items-center justify-between">
-                                    <CardTitle>Room Status Heatmap</CardTitle>
-                                    <div className="flex gap-2">
-                                        <div className="flex items-center gap-1">
-                                            <div className="w-3 h-3 rounded-full bg-green-500" />
-                                            <span className="text-[10px] text-muted-foreground">
-                                                Available
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <div className="w-3 h-3 rounded-full bg-red-500" />
-                                            <span className="text-[10px] text-muted-foreground">
-                                                Occupied
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                                            <span className="text-[10px] text-muted-foreground">
-                                                Dirty
-                                            </span>
-                                        </div>
-                                    </div>
+                <Card className="border-primary/10 transition-all">
+                    <CardHeader className="pb-4">
+                        <CardTitle className="text-xl font-bold">Dashboard Overview</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                            <Card className="bg-muted/50 border-primary/10">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">
+                                        Total Rooms
+                                    </CardTitle>
+                                    <BedDouble className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
                                 <CardContent>
-                                    <RoomGrid
-                                        hotelTenant={hotelTenant}
-                                        bookings={(window as any).__hotelData?.bookings || []}
-                                    />
+                                    <div className="text-2xl font-bold">{stats.totalRooms}</div>
+                                </CardContent>
+                            </Card>
+                            <Card className="bg-blue-500/10 border-blue-500/20">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Occupied</CardTitle>
+                                    <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{stats.occupied}</div>
+                                    <p className="text-xs text-muted-foreground">
+                                        {Math.round(
+                                            (stats.occupied / (stats.totalRooms || 1)) * 100,
+                                        )}
+                                        % Occupancy
+                                    </p>
+                                </CardContent>
+                            </Card>
+                            <Card className="bg-green-500/10 border-green-500/20">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Available</CardTitle>
+                                    <CalendarCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{stats.available}</div>
+                                </CardContent>
+                            </Card>
+                            <Card className="bg-purple-500/10 border-purple-500/20">
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">
+                                        Today's Check-ins
+                                    </CardTitle>
+                                    <BookOpen className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">{stats.todayCheckIns}</div>
                                 </CardContent>
                             </Card>
                         </div>
 
-                        {/* Sidebar Widgets */}
-                        <div className="lg:col-span-4 space-y-6">
-                            <QuickActions
-                                onAction={(action) => {
-                                    if (action === 'new-booking') setActiveTab('bookings');
-                                    if (action === 'check-in') setActiveTab('bookings');
-                                    if (action === 'search') setActiveTab('customers');
-                                }}
-                            />
-                            <TodaySchedule arrivals={arrivals} departures={departures} />
-                            <ActivityTimeline activities={activities} />
+                        <div className="grid gap-6 lg:grid-cols-12">
+                            {/* Primary Operational Row */}
+                            <div className="lg:col-span-8">
+                                <Card className="border-primary/20 h-full">
+                                    <CardHeader className="flex flex-row items-center justify-between">
+                                        <CardTitle>Room Status Heatmap</CardTitle>
+                                        <div className="flex gap-2">
+                                            <div className="flex items-center gap-1">
+                                                <div className="w-3 h-3 rounded-full bg-green-500" />
+                                                <span className="text-[10px] text-muted-foreground">
+                                                    Available
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <div className="w-3 h-3 rounded-full bg-red-500" />
+                                                <span className="text-[10px] text-muted-foreground">
+                                                    Occupied
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-1">
+                                                <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                                                <span className="text-[10px] text-muted-foreground">
+                                                    Dirty
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <RoomGrid
+                                            hotelTenant={hotelTenant}
+                                            bookings={(window as any).__hotelData?.bookings || []}
+                                        />
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            <div className="lg:col-span-4">
+                                <QuickActions
+                                    className="h-full"
+                                    onAction={(action) => {
+                                        if (action === 'new-booking') setActiveTab('bookings');
+                                        if (action === 'check-in') setActiveTab('bookings');
+                                        if (action === 'search') setActiveTab('customers');
+                                    }}
+                                />
+                            </div>
+
+                            {/* Feeds & Schedule Row */}
+                            <div className="lg:col-span-6">
+                                <TodaySchedule arrivals={arrivals} departures={departures} />
+                            </div>
+                            <div className="lg:col-span-6">
+                                <ActivityTimeline activities={activities} />
+                            </div>
                         </div>
-                    </div>
-                </div>
+                    </CardContent>
+                </Card>
             )}
 
             {activeTab === 'rooms' && (

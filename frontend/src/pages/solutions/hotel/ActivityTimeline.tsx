@@ -29,16 +29,16 @@ export function ActivityTimeline({ activities }: { activities: Activity[] }) {
 
     return (
         <Card className="border-primary/20">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
                 <CardTitle className="text-base font-semibold">Activity Feed</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
+                <Clock className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
                 <div className="space-y-4">
                     {activities.length === 0 ? (
-                        <p className="text-sm text-muted-foreground py-4 text-center">
-                            No recent activity
-                        </p>
+                        <div className="py-8 text-center w-full border border-dashed border-border/50 rounded-lg bg-muted/5">
+                            <p className="text-sm text-muted-foreground">No recent activity</p>
+                        </div>
                     ) : (
                         activities.map((activity, idx) => (
                             <div key={activity.id} className="relative pl-6 pb-4 last:pb-0">
