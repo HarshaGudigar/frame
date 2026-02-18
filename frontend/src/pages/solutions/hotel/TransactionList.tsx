@@ -314,11 +314,13 @@ export function TransactionList({ hotelTenant }: { hotelTenant?: string }) {
                                             <SelectValue placeholder="Select category" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {categories.map((cat) => (
-                                                <SelectItem key={cat._id} value={cat._id}>
-                                                    {cat.name} ({cat.type})
-                                                </SelectItem>
-                                            ))}
+                                            {categories
+                                                .filter((cat) => cat.type === formData.type)
+                                                .map((cat) => (
+                                                    <SelectItem key={cat._id} value={cat._id}>
+                                                        {cat.name}
+                                                    </SelectItem>
+                                                ))}
                                         </SelectContent>
                                     </Select>
                                 </div>

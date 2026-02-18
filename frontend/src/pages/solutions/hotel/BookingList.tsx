@@ -44,7 +44,12 @@ import {
     Printer,
     LayoutList,
     CalendarDays,
+    X,
+    Check,
 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { BookingTapeChart } from './BookingTapeChart';
 
@@ -121,7 +126,7 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
 
     const [formData, setFormData] = useState({
         customerId: '',
-        roomId: '',
+        roomIds: [] as string[],
         checkInDate: '',
         numberOfDays: 1,
         serviceType: '24 Hours',
@@ -163,11 +168,27 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
     }, [api, hotelTenant]);
 
     const getEstimatedTotal = () => {
-        const room = rooms.find((r) => r._id === formData.roomId);
-        if (room && formData.numberOfDays > 0) {
-            return room.pricePerNight * formData.numberOfDays;
+        const selectedRooms = rooms.filter((r) => formData.roomIds.includes(r._id));
+        if (selectedRooms.length > 0 && formData.numberOfDays > 0) {
+            const sum = selectedRooms.reduce((acc, r) => acc + r.pricePerNight, 0);
+            return sum * formData.numberOfDays;
         }
         return 0;
+    };
+
+    const getCheckoutPreview = () => {
+        if (!formData.checkInDate || formData.numberOfDays < 1) return null;
+        try {
+            const date = new Date(formData.checkInDate);
+            date.setDate(date.getDate() + formData.numberOfDays);
+            return date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+            });
+        } catch {
+            return null;
+        }
     };
 
     const handleCreate = async () => {
@@ -179,11 +200,11 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
             });
             return;
         }
-        if (!formData.customerId || !formData.roomId || !formData.checkInDate) {
+        if (!formData.customerId || formData.roomIds.length === 0 || !formData.checkInDate) {
             toast({
                 variant: 'destructive',
                 title: 'Error',
-                description: 'Please fill in all required fields',
+                description: 'Please select a customer, at least one room, and check-in date',
             });
             return;
         }
@@ -191,7 +212,7 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
         try {
             const payload: any = {
                 customerId: formData.customerId,
-                roomId: formData.roomId,
+                roomIds: formData.roomIds,
                 checkInDate: new Date(formData.checkInDate).toISOString(),
                 numberOfDays: formData.numberOfDays,
                 serviceType: formData.serviceType,
@@ -213,7 +234,7 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
                 setOpen(false);
                 setFormData({
                     customerId: '',
-                    roomId: '',
+                    roomIds: [],
                     checkInDate: '',
                     numberOfDays: 1,
                     serviceType: '24 Hours',
@@ -357,25 +378,58 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
                                     </Select>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label>Room *</Label>
-                                    <Select
-                                        value={formData.roomId}
-                                        onValueChange={(val) =>
-                                            setFormData({ ...formData, roomId: val })
-                                        }
-                                    >
-                                        <SelectTrigger id="roomId">
-                                            <SelectValue placeholder="Select a room" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {rooms.map((r) => (
-                                                <SelectItem key={r._id} value={r._id}>
-                                                    Room {r.number} - {r.type} ({r.pricePerNight}
-                                                    /night)
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <Label>Rooms * (Group Booking)</Label>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button
+                                                variant="outline"
+                                                className="w-full justify-between"
+                                            >
+                                                {formData.roomIds.length === 0
+                                                    ? 'Select rooms'
+                                                    : `${formData.roomIds.length} room(s) selected`}
+                                                <Plus className="h-4 w-4 opacity-50" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-[300px] p-0" align="start">
+                                            <div className="max-h-[300px] overflow-y-auto p-2">
+                                                {rooms.map((r) => (
+                                                    <div
+                                                        key={r._id}
+                                                        className="flex items-center space-x-2 p-2 hover:bg-muted rounded-md cursor-pointer"
+                                                        onClick={() => {
+                                                            const exists =
+                                                                formData.roomIds.includes(r._id);
+                                                            const newIds = exists
+                                                                ? formData.roomIds.filter(
+                                                                      (id) => id !== r._id,
+                                                                  )
+                                                                : [...formData.roomIds, r._id];
+                                                            setFormData({
+                                                                ...formData,
+                                                                roomIds: newIds,
+                                                            });
+                                                        }}
+                                                    >
+                                                        <Checkbox
+                                                            checked={formData.roomIds.includes(
+                                                                r._id,
+                                                            )}
+                                                            onCheckedChange={() => {}} // Handled by div click
+                                                        />
+                                                        <div className="grid gap-0.5 leading-none">
+                                                            <div className="text-sm font-medium">
+                                                                Room {r.number}
+                                                            </div>
+                                                            <div className="text-xs text-muted-foreground">
+                                                                {r.type} - {r.pricePerNight}/night
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </PopoverContent>
+                                    </Popover>
                                 </div>
                             </div>
                             <div className="grid grid-cols-3 gap-4">
@@ -538,9 +592,17 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
                                     />
                                 </div>
                             </div>
-                            <div className="p-3 bg-muted rounded-md text-sm">
-                                Estimated Total: <strong>{getEstimatedTotal()}</strong> (Room Rent =
-                                Price/Night x Days)
+                            <div className="p-3 bg-muted rounded-md text-sm flex justify-between items-center">
+                                <div>
+                                    Estimated Total: <strong>{getEstimatedTotal()}</strong> (Sum of
+                                    Rooms x Days)
+                                </div>
+                                <div className="text-muted-foreground">
+                                    Checkout:{' '}
+                                    <span className="text-primary font-medium">
+                                        {getCheckoutPreview() || 'N/A'}
+                                    </span>
+                                </div>
                             </div>
                         </div>
                         <DialogFooter>

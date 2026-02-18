@@ -70,6 +70,7 @@ const emptyForm = {
     bankBranch: '',
     bankIfsc: '',
     bankAccountNumber: '',
+    profilePic: '',
 };
 
 export function AgentList({ hotelTenant }: { hotelTenant?: string }) {
@@ -444,6 +445,21 @@ export function AgentList({ hotelTenant }: { hotelTenant?: string }) {
                                         }
                                     />
                                 </div>
+                            </div>
+
+                            {/* Social/Media */}
+                            <p className="text-sm font-semibold text-muted-foreground mt-2">
+                                Media
+                            </p>
+                            <div className="space-y-2">
+                                <Label>Profile Picture URL</Label>
+                                <Input
+                                    placeholder="https://example.com/photo.jpg"
+                                    value={formData.profilePic}
+                                    onChange={(e) =>
+                                        setFormData({ ...formData, profilePic: e.target.value })
+                                    }
+                                />
                             </div>
                         </div>
                         <DialogFooter>
