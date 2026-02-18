@@ -1,5 +1,9 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const fs = require('fs');
+const path = require('path');
+const { execSync } = require('child_process');
+const multer = require('multer');
 const router = express.Router();
 const Tenant = require('../models/Tenant');
 const { successResponse, errorResponse } = require('../utils/responseWrapper');
@@ -10,7 +14,8 @@ const {
     requireRole,
     requireVerifiedEmail,
 } = require('../middleware/authMiddleware');
-const { HEARTBEAT_SECRET } = require('../config');
+const config = require('../config');
+const { HEARTBEAT_SECRET } = config;
 const { validate } = require('../middleware/validate');
 const { z } = require('zod');
 const logger = require('../utils/logger');
@@ -31,6 +36,8 @@ const {
     updateUserRoleSchema,
     adminChangePasswordSchema,
 } = require('../schemas/admin');
+const { runBackup } = require('../jobs/backup');
+const { list: listBackups } = require('../jobs/backup-providers/local');
 
 // Async route wrapper
 const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
@@ -979,6 +986,267 @@ router.get(
             },
             'Audit logs retrieved',
         );
+    }),
+);
+
+// ─── Backup & Restore ───────────────────────────────────────────────────────
+
+// Multer config for backup uploads (500MB limit)
+const backupUpload = multer({
+    dest: config.BACKUP_DIR,
+    limits: { fileSize: 500 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+        if (file.originalname.endsWith('.gz')) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only .gz files are accepted'));
+        }
+    },
+});
+
+/**
+ * Path-traversal guard: rejects filenames containing "..", "/", or "\"
+ */
+function isSafeFilename(filename) {
+    return !/[/\\]/.test(filename) && !filename.includes('..');
+}
+
+/**
+ * @openapi
+ * /api/admin/backups:
+ *   get:
+ *     tags: [Admin]
+ *     summary: List all backups
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of backup files
+ */
+router.get(
+    '/backups',
+    authMiddleware,
+    requireVerifiedEmail,
+    requireRole('admin', 'owner'),
+    asyncHandler(async (req, res) => {
+        const backups = await listBackups();
+
+        const enriched = backups.map((b) => {
+            try {
+                const stat = fs.statSync(path.join(config.BACKUP_DIR, b.name));
+                return { name: b.name, date: b.date, size: stat.size };
+            } catch {
+                return { name: b.name, date: b.date, size: 0 };
+            }
+        });
+
+        enriched.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        return successResponse(res, enriched, 'Backups retrieved');
+    }),
+);
+
+/**
+ * @openapi
+ * /api/admin/backups:
+ *   post:
+ *     tags: [Admin]
+ *     summary: Trigger a manual backup
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Backup created
+ */
+router.post(
+    '/backups',
+    authMiddleware,
+    requireVerifiedEmail,
+    requireRole('admin', 'owner'),
+    asyncHandler(async (req, res) => {
+        await runBackup();
+
+        await logAction(req, 'BACKUP_CREATED', null, {});
+
+        return successResponse(res, null, 'Backup created successfully');
+    }),
+);
+
+/**
+ * @openapi
+ * /api/admin/backups/{filename}/download:
+ *   get:
+ *     tags: [Admin]
+ *     summary: Download a backup file
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: filename
+ *         in: path
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Backup file download
+ *       400:
+ *         description: Invalid filename
+ *       404:
+ *         description: Backup not found
+ */
+router.get(
+    '/backups/:filename/download',
+    authMiddleware,
+    requireVerifiedEmail,
+    requireRole('admin', 'owner'),
+    asyncHandler(async (req, res) => {
+        const { filename } = req.params;
+
+        if (!isSafeFilename(filename)) {
+            return errorResponse(res, 'Invalid filename', 400);
+        }
+
+        const filePath = path.join(config.BACKUP_DIR, filename);
+
+        if (!fs.existsSync(filePath)) {
+            return errorResponse(res, 'Backup not found', 404);
+        }
+
+        res.setHeader('Content-Type', 'application/gzip');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+        const stream = fs.createReadStream(filePath);
+        stream.pipe(res);
+    }),
+);
+
+/**
+ * @openapi
+ * /api/admin/backups/{filename}:
+ *   delete:
+ *     tags: [Admin]
+ *     summary: Delete a backup file
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - name: filename
+ *         in: path
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Backup deleted
+ *       400:
+ *         description: Invalid filename
+ *       404:
+ *         description: Backup not found
+ */
+router.delete(
+    '/backups/:filename',
+    authMiddleware,
+    requireVerifiedEmail,
+    requireRole('admin', 'owner'),
+    asyncHandler(async (req, res) => {
+        const { filename } = req.params;
+
+        if (!isSafeFilename(filename)) {
+            return errorResponse(res, 'Invalid filename', 400);
+        }
+
+        const filePath = path.join(config.BACKUP_DIR, filename);
+
+        if (!fs.existsSync(filePath)) {
+            return errorResponse(res, 'Backup not found', 404);
+        }
+
+        fs.unlinkSync(filePath);
+
+        await logAction(req, 'BACKUP_DELETED', null, { filename });
+
+        return successResponse(res, null, 'Backup deleted');
+    }),
+);
+
+/**
+ * @openapi
+ * /api/admin/backups/restore:
+ *   post:
+ *     tags: [Admin]
+ *     summary: Restore database from backup (Owner only)
+ *     description: >
+ *       Accepts either a JSON body with `{ filename }` to restore from an existing backup,
+ *       or a multipart file upload with a `.gz` archive. This is a destructive operation
+ *       that drops existing data before restoring.
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Database restored
+ *       400:
+ *         description: Invalid request
+ *       500:
+ *         description: Restore failed
+ */
+router.post(
+    '/backups/restore',
+    authMiddleware,
+    requireVerifiedEmail,
+    requireRole('owner'),
+    backupUpload.single('file'),
+    asyncHandler(async (req, res) => {
+        let archivePath;
+        let uploadedFile = null;
+
+        if (req.file) {
+            // Multipart upload — rename temp file to original name
+            uploadedFile = path.join(config.BACKUP_DIR, req.file.originalname);
+            fs.renameSync(req.file.path, uploadedFile);
+            archivePath = uploadedFile;
+        } else if (req.body.filename) {
+            const { filename } = req.body;
+
+            if (!isSafeFilename(filename)) {
+                return errorResponse(res, 'Invalid filename', 400);
+            }
+
+            archivePath = path.join(config.BACKUP_DIR, filename);
+
+            if (!fs.existsSync(archivePath)) {
+                return errorResponse(res, 'Backup file not found', 404);
+            }
+        } else {
+            return errorResponse(res, 'Provide a filename or upload a .gz file', 400);
+        }
+
+        try {
+            execSync(
+                `"${config.MONGORESTORE_BIN}" --uri="${config.MONGODB_URI}" --gzip --archive="${archivePath}" --drop`,
+                {
+                    timeout: 10 * 60 * 1000, // 10 minutes
+                    stdio: ['pipe', 'pipe', 'pipe'],
+                },
+            );
+        } catch (err) {
+            const stderr = err.stderr ? err.stderr.toString() : '';
+            logger.error({ err: err.message, stderr }, 'mongorestore failed');
+
+            // Clean up uploaded file on failure
+            if (uploadedFile && fs.existsSync(uploadedFile)) {
+                fs.unlinkSync(uploadedFile);
+            }
+
+            return errorResponse(res, `Restore failed: ${stderr || err.message}`, 500);
+        }
+
+        // Clean up uploaded file after successful restore
+        if (uploadedFile && fs.existsSync(uploadedFile)) {
+            fs.unlinkSync(uploadedFile);
+        }
+
+        await logAction(req, 'BACKUP_RESTORED', null, {
+            source: req.file ? req.file.originalname : req.body.filename,
+        });
+
+        return successResponse(res, null, 'Database restored successfully');
     }),
 );
 

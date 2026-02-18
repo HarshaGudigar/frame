@@ -16,7 +16,9 @@
             "Bash(git commit:*)",
             "Bash(git add:*)",
             "Bash(find:*)",
-            "mcp__ide__getDiagnostics"
+            "mcp__ide__getDiagnostics",
+            "Bash(\"C:/Users/harsh/mongodb-tools/mongodb-database-tools-windows-x86_64-100.10.0/bin/mongodump.exe\" --version)",
+            "Bash(node:*)"
         ]
     }
 }

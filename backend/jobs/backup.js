@@ -33,10 +33,13 @@ async function runBackup() {
     logger.info({ filename }, 'Starting MongoDB backup');
 
     try {
-        execSync(`mongodump --uri="${config.MONGODB_URI}" --gzip --archive="${filePath}"`, {
-            timeout: 5 * 60 * 1000,
-            stdio: ['pipe', 'pipe', 'pipe'],
-        });
+        execSync(
+            `"${config.MONGODUMP_BIN}" --uri="${config.MONGODB_URI}" --gzip --archive="${filePath}"`,
+            {
+                timeout: 5 * 60 * 1000,
+                stdio: ['pipe', 'pipe', 'pipe'],
+            },
+        );
     } catch (err) {
         const stderr = err.stderr ? err.stderr.toString() : '';
         logger.error({ err: err.message, stderr }, 'mongodump failed');

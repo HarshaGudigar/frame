@@ -5,7 +5,7 @@ FROM node:20-bullseye
 RUN apt-get update && apt-get install -y gnupg wget
 RUN wget -qO - https://www.mongodb.org/static/pgp/server-6.0.asc | apt-key add -
 RUN echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/debian bullseye/mongodb-org/6.0 main" | tee /etc/apt/sources.list.d/mongodb-org-6.0.list
-RUN apt-get update && apt-get install -y mongodb-org
+RUN apt-get update && apt-get install -y mongodb-org mongodb-database-tools
 
 # Create app directory
 WORKDIR /app

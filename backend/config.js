@@ -1,3 +1,52 @@
+const path = require('path');
+const { execSync } = require('child_process');
+
+/**
+ * Resolve the full path for a MongoDB tool binary (mongodump / mongorestore).
+ * Checks, in order: env var override → system PATH → well-known install locations.
+ */
+function resolveMongoTool(envVar, binaryName) {
+    // 1. Explicit env override
+    if (process.env[envVar]) return process.env[envVar];
+
+    // 2. Already on PATH?
+    try {
+        const cmd = process.platform === 'win32' ? `where ${binaryName}` : `which ${binaryName}`;
+        const result = execSync(cmd, {
+            encoding: 'utf8',
+            timeout: 5000,
+            stdio: ['pipe', 'pipe', 'pipe'],
+        });
+        const first = result.trim().split(/\r?\n/)[0];
+        if (first) return first;
+    } catch {
+        // not on PATH — continue
+    }
+
+    // 3. Well-known install locations
+    const candidates =
+        process.platform === 'win32'
+            ? [
+                  path.join(
+                      process.env.USERPROFILE || '',
+                      'mongodb-tools',
+                      'mongodb-database-tools-windows-x86_64-100.10.0',
+                      'bin',
+                      `${binaryName}.exe`,
+                  ),
+                  path.join('C:\\Program Files\\MongoDB\\Tools\\100\\bin', `${binaryName}.exe`),
+              ]
+            : [`/usr/bin/${binaryName}`, `/usr/local/bin/${binaryName}`];
+
+    const fs = require('fs');
+    for (const p of candidates) {
+        if (fs.existsSync(p)) return p;
+    }
+
+    // Fallback: bare name (will fail at runtime with a clear error)
+    return binaryName;
+}
+
 /**
  * Centralized Configuration — Alyxnet Frame
  *
@@ -86,11 +135,13 @@ module.exports = {
     LOG_LEVEL: process.env.LOG_LEVEL || 'info',
 
     // Backup
-    BACKUP_ENABLED: process.env.BACKUP_ENABLED === 'true',
+    BACKUP_ENABLED: process.env.BACKUP_ENABLED !== 'false',
     BACKUP_PROVIDER: process.env.BACKUP_PROVIDER || 'local', // 'local' | 's3' | 'gdrive'
     BACKUP_CRON: process.env.BACKUP_CRON || '0 2 * * *', // Default 02:00 UTC
-    BACKUP_RETENTION_DAYS: parseInt(process.env.BACKUP_RETENTION_DAYS, 10) || 7,
-    BACKUP_DIR: process.env.BACKUP_DIR || '/backups',
+    BACKUP_RETENTION_DAYS: parseInt(process.env.BACKUP_RETENTION_DAYS, 10) || 10,
+    BACKUP_DIR: process.env.BACKUP_DIR || path.join(__dirname, 'backup'),
+    MONGODUMP_BIN: resolveMongoTool('MONGODUMP_BIN', 'mongodump'),
+    MONGORESTORE_BIN: resolveMongoTool('MONGORESTORE_BIN', 'mongorestore'),
 
     // Backup — S3
     BACKUP_S3_BUCKET: process.env.BACKUP_S3_BUCKET || '',

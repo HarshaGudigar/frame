@@ -1,5 +1,7 @@
 import { ProfileForm } from '@/components/settings/profile-form';
 import { TwoFactorSettings } from '@/components/settings/two-factor-settings';
+import { DatabaseBackups } from '@/components/settings/database-backups';
+import { Can } from '@/hooks/use-permission';
 
 export function SettingsPage() {
     return (
@@ -13,6 +15,9 @@ export function SettingsPage() {
 
             <ProfileForm />
             <TwoFactorSettings />
+            <Can role="admin">
+                <DatabaseBackups />
+            </Can>
         </div>
     );
 }
