@@ -61,4 +61,51 @@ router.get('/summary', authMiddleware, async (req, res) => {
     }
 });
 
+/**
+ * @route   GET /api/hotel/reports/trends
+ * @desc    Get 7-day performance trends (Revenue & Occupancy)
+ * @access  Private (Admin/Manager)
+ */
+router.get('/trends', authMiddleware, async (req, res) => {
+    try {
+        const { Room, Booking } = await getModels(req);
+        const trends = [];
+        const totalRooms = await Room.countDocuments();
+
+        for (let i = 6; i >= 0; i--) {
+            const start = new Date();
+            start.setHours(0, 0, 0, 0);
+            start.setDate(start.getDate() - i);
+
+            const end = new Date();
+            end.setHours(23, 59, 59, 999);
+            end.setDate(end.getDate() - i);
+
+            const bookings = await Booking.find({
+                status: { $in: ['CheckedIn', 'CheckedOut'] },
+                $or: [{ checkInDate: { $lte: end }, checkOutDate: { $gte: start } }],
+            });
+
+            const revenue = bookings.reduce((sum, b) => {
+                const dailyRate = (b.totalRoomRent || b.totalAmount || 0) / (b.numberOfDays || 1);
+                return sum + dailyRate;
+            }, 0);
+
+            const roomsSold = bookings.reduce((sum, b) => sum + (b.rooms?.length || 1), 0);
+            const occupancy = totalRooms > 0 ? (roomsSold / totalRooms) * 100 : 0;
+
+            trends.push({
+                date: start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+                revenue: Math.round(revenue * 100) / 100,
+                occupancy: Math.round(occupancy * 100) / 100,
+            });
+        }
+
+        return successResponse(res, { trends });
+    } catch (error) {
+        console.error(error);
+        return errorResponse(res, 'Failed to fetch trends', 500, error);
+    }
+});
+
 module.exports = router;

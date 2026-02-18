@@ -42,8 +42,11 @@ import {
     XCircle,
     UserMinus,
     Printer,
+    LayoutList,
+    CalendarDays,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { BookingTapeChart } from './BookingTapeChart';
 
 interface Customer {
     _id: string;
@@ -112,6 +115,7 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
     const [rooms, setRooms] = useState<Room[]>([]);
     const [agents, setAgents] = useState<Agent[]>([]);
     const [loading, setLoading] = useState(true);
+    const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
     const [open, setOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
 
@@ -297,9 +301,29 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center">
-                <p className="text-sm text-muted-foreground">
-                    {bookings.length} booking{bookings.length !== 1 ? 's' : ''}
-                </p>
+                <div className="flex items-center gap-2">
+                    <div className="flex items-center border rounded-md p-1 bg-muted/50">
+                        <Button
+                            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                            size="sm"
+                            className="h-8 px-3"
+                            onClick={() => setViewMode('list')}
+                        >
+                            <LayoutList className="h-4 w-4 mr-2" /> List
+                        </Button>
+                        <Button
+                            variant={viewMode === 'calendar' ? 'secondary' : 'ghost'}
+                            size="sm"
+                            className="h-8 px-3"
+                            onClick={() => setViewMode('calendar')}
+                        >
+                            <CalendarDays className="h-4 w-4 mr-2" /> Timeline
+                        </Button>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                        {bookings.length} booking{bookings.length !== 1 ? 's' : ''}
+                    </p>
+                </div>
                 <Dialog open={open} onOpenChange={setOpen}>
                     <DialogTrigger asChild>
                         <Button>
@@ -543,6 +567,8 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
                         'No bookings yet. Create one to get started.'
                     )}
                 </div>
+            ) : viewMode === 'calendar' ? (
+                <BookingTapeChart bookings={bookings} rooms={rooms} />
             ) : (
                 <div className="rounded-md border">
                     <Table>

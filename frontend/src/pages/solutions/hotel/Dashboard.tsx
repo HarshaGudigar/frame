@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/auth-context';
 import { Loader2, BedDouble, Users, CalendarCheck, BookOpen } from 'lucide-react';
 import { RoomGrid } from './RoomGrid';
@@ -14,6 +15,9 @@ import { SettingsPage } from './SettingsPage';
 import Housekeeping from './Housekeeping';
 import { InventoryList } from './InventoryList';
 import { Reporting } from './Reporting';
+import { ActivityTimeline, Activity } from './ActivityTimeline';
+import { TodaySchedule, ScheduleItem } from './TodaySchedule';
+import { QuickActions } from './QuickActions';
 
 type Tab =
     | 'overview'
@@ -79,6 +83,9 @@ export function HotelDashboard() {
         available: 0,
         todayCheckIns: 0,
     });
+    const [activities, setActivities] = useState<Activity[]>([]);
+    const [arrivals, setArrivals] = useState<ScheduleItem[]>([]);
+    const [departures, setDepartures] = useState<ScheduleItem[]>([]);
     const [loading, setLoading] = useState(true);
 
     // Fetch fallback tenant for owners
@@ -140,6 +147,76 @@ export function HotelDashboard() {
                         (b: any) => b.checkInDate?.startsWith(today) && b.status === 'Confirmed',
                     ).length;
                     setStats((prev) => ({ ...prev, todayCheckIns }));
+
+                    // Populate Schedule Items
+                    const todayArrivals = bookings.data
+                        .filter(
+                            (b: any) =>
+                                b.checkInDate?.startsWith(today) && b.status === 'Confirmed',
+                        )
+                        .map((b: any) => ({
+                            id: b._id,
+                            guestName: `${b.customer?.firstName} ${b.customer?.lastName}`,
+                            roomNumber: b.room?.number || 'TBD',
+                            type: 'arrival',
+                            time: new Date(b.checkInDate).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                            }),
+                        }));
+
+                    const todayDepartures = bookings.data
+                        .filter(
+                            (b: any) =>
+                                b.checkOutDate?.startsWith(today) && b.status === 'CheckedIn',
+                        )
+                        .map((b: any) => ({
+                            id: b._id,
+                            guestName: `${b.customer?.firstName} ${b.customer?.lastName}`,
+                            roomNumber: b.room?.number || 'TBD',
+                            type: 'departure',
+                            time: new Date(b.checkOutDate).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                            }),
+                        }));
+
+                    setArrivals(todayArrivals);
+                    setDepartures(todayDepartures);
+
+                    // Generate dummy activity feed based on actual data
+                    const recentActivities: Activity[] = [];
+
+                    // Add check-ins as activity
+                    todayArrivals.forEach((a) => {
+                        recentActivities.push({
+                            id: `act-arr-${a.id}`,
+                            type: 'check-in',
+                            title: 'Guest Arrival',
+                            description: `${a.guestName} arriving for Room ${a.roomNumber}`,
+                            time: a.time,
+                            status: 'pending',
+                        });
+                    });
+
+                    // Add check-outs as activity
+                    todayDepartures.forEach((d) => {
+                        recentActivities.push({
+                            id: `act-dep-${d.id}`,
+                            type: 'check-out',
+                            title: 'Guest Departure',
+                            description: `${d.guestName} checking out from Room ${d.roomNumber}`,
+                            time: d.time,
+                            status: 'pending',
+                        });
+                    });
+
+                    setActivities(
+                        recentActivities.sort((a, b) => b.time.localeCompare(a.time)).slice(0, 5),
+                    );
+
+                    // Keep track of full bookings for components that need it
+                    (window as any).__hotelData = { bookings: bookings.data };
                 }
             } catch (error) {
                 console.error('Failed to fetch hotel stats', error);
@@ -151,16 +228,33 @@ export function HotelDashboard() {
         fetchStats();
     }, [api, hotelTenant]);
 
-    if (loading) {
+    if (loading && !stats.totalRooms) {
         return (
-            <div className="flex h-full items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin" />
+            <div className="p-6 space-y-6 animate-in fade-in duration-500">
+                <div className="flex justify-between items-center">
+                    <Skeleton className="h-10 w-48" />
+                    <Skeleton className="h-10 w-32" />
+                </div>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    {[1, 2, 3, 4].map((i) => (
+                        <Skeleton key={i} className="h-24 rounded-xl" />
+                    ))}
+                </div>
+                <div className="grid gap-6 lg:grid-cols-3">
+                    <div className="lg:col-span-2 space-y-6">
+                        <Skeleton className="h-[400px] rounded-xl" />
+                    </div>
+                    <div className="space-y-6">
+                        <Skeleton className="h-[200px] rounded-xl" />
+                        <Skeleton className="h-[300px] rounded-xl" />
+                    </div>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="space-y-6">
+        <div className="p-4 md:p-6 space-y-6 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">
             <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold tracking-tight">Hotel Management</h1>
             </div>
@@ -235,14 +329,55 @@ export function HotelDashboard() {
                         </Card>
                     </div>
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Room Status</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <RoomGrid hotelTenant={hotelTenant} />
-                        </CardContent>
-                    </Card>
+                    <div className="grid gap-6 lg:grid-cols-12">
+                        {/* Main Content Area */}
+                        <div className="lg:col-span-8 space-y-6">
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between">
+                                    <CardTitle>Room Status Heatmap</CardTitle>
+                                    <div className="flex gap-2">
+                                        <div className="flex items-center gap-1">
+                                            <div className="w-3 h-3 rounded-full bg-green-500" />
+                                            <span className="text-[10px] text-muted-foreground">
+                                                Available
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <div className="w-3 h-3 rounded-full bg-red-500" />
+                                            <span className="text-[10px] text-muted-foreground">
+                                                Occupied
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <div className="w-3 h-3 rounded-full bg-yellow-500" />
+                                            <span className="text-[10px] text-muted-foreground">
+                                                Dirty
+                                            </span>
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <RoomGrid
+                                        hotelTenant={hotelTenant}
+                                        bookings={(window as any).__hotelData?.bookings || []}
+                                    />
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        {/* Sidebar Widgets */}
+                        <div className="lg:col-span-4 space-y-6">
+                            <QuickActions
+                                onAction={(action) => {
+                                    if (action === 'new-booking') setActiveTab('bookings');
+                                    if (action === 'check-in') setActiveTab('bookings');
+                                    if (action === 'search') setActiveTab('customers');
+                                }}
+                            />
+                            <TodaySchedule arrivals={arrivals} departures={departures} />
+                            <ActivityTimeline activities={activities} />
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -252,7 +387,10 @@ export function HotelDashboard() {
                         <CardTitle>Room Management</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <RoomGrid hotelTenant={hotelTenant} />
+                        <RoomGrid
+                            hotelTenant={hotelTenant}
+                            bookings={(window as any).__hotelData?.bookings || []}
+                        />
                     </CardContent>
                 </Card>
             )}

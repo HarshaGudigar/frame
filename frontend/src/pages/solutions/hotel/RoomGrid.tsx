@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { Loader2, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2, CheckCircle, Square, CheckSquare, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -11,6 +11,7 @@ import {
     DialogFooter,
     DialogDescription,
 } from '@/components/ui/dialog';
+import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import {
@@ -21,6 +22,17 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import {
+    Sheet,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+    SheetDescription,
+} from '@/components/ui/sheet';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Brush, Clock, User, Calendar, Layers } from 'lucide-react';
 
 interface Room {
     _id: string;
@@ -31,6 +43,15 @@ interface Room {
     floor: number;
 }
 
+interface Booking {
+    _id: string;
+    customer: { firstName: string; lastName: string; phone: string };
+    room: { _id: string; number: string };
+    checkInDate: string;
+    checkOutDate: string;
+    status: string;
+}
+
 interface RoomTypeOption {
     label: string;
     value: string;
@@ -39,7 +60,13 @@ interface RoomTypeOption {
 
 const fallbackTypes = ['Single', 'Double', 'Suite', 'Deluxe'];
 
-export function RoomGrid({ hotelTenant }: { hotelTenant?: string }) {
+export function RoomGrid({
+    hotelTenant,
+    bookings = [],
+}: {
+    hotelTenant?: string;
+    bookings?: Booking[];
+}) {
     const { api } = useAuth();
     const { toast } = useToast();
     const [rooms, setRooms] = useState<Room[]>([]);
@@ -54,6 +81,9 @@ export function RoomGrid({ hotelTenant }: { hotelTenant?: string }) {
         floor: 1,
     });
     const [submitting, setSubmitting] = useState(false);
+    const [isSelectMode, setIsSelectMode] = useState(false);
+    const [selectedRooms, setSelectedRooms] = useState<Set<string>>(new Set());
+    const [peekRoom, setPeekRoom] = useState<Room | null>(null);
 
     const fetchRooms = async () => {
         if (!hotelTenant) {
@@ -204,6 +234,43 @@ export function RoomGrid({ hotelTenant }: { hotelTenant?: string }) {
         }
     };
 
+    const handleBulkStatusChange = async (status: string) => {
+        if (!hotelTenant || selectedRooms.size === 0) return;
+        try {
+            setSubmitting(true);
+            const promises = Array.from(selectedRooms).map((id) =>
+                api.patch(
+                    `/m/hotel/rooms/${id}`,
+                    { status },
+                    { headers: { 'x-tenant-id': hotelTenant } },
+                ),
+            );
+            await Promise.all(promises);
+            toast({
+                title: 'Success',
+                description: `Updated ${selectedRooms.size} rooms to ${status}`,
+            });
+            setSelectedRooms(new Set());
+            setIsSelectMode(false);
+            fetchRooms();
+        } catch (error: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'Failed to update some rooms',
+            });
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const toggleRoomSelection = (roomId: string) => {
+        const next = new Set(selectedRooms);
+        if (next.has(roomId)) next.delete(roomId);
+        else next.add(roomId);
+        setSelectedRooms(next);
+    };
+
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'Available':
@@ -219,12 +286,215 @@ export function RoomGrid({ hotelTenant }: { hotelTenant?: string }) {
         }
     };
 
-    if (loading) return <Loader2 className="h-8 w-8 animate-spin" />;
+    // Simplified loading check handled by skeletons below
+
+    if (loading && rooms.length === 0) {
+        return (
+            <div className="space-y-8">
+                {[1, 2].map((floor) => (
+                    <div key={floor} className="space-y-3">
+                        <Skeleton className="h-6 w-24" />
+                        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                            {[1, 2, 3, 4, 5, 6].map((i) => (
+                                <Skeleton key={i} className="h-36 rounded-xl" />
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    }
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-4 animate-in fade-in duration-500">
+            <Sheet open={!!peekRoom} onOpenChange={(open) => !open && setPeekRoom(null)}>
+                <SheetContent className="sm:max-w-md">
+                    <SheetHeader>
+                        <SheetTitle className="text-2xl font-bold flex items-center justify-between">
+                            Room {peekRoom?.number}
+                            <Badge className={peekRoom ? getStatusColor(peekRoom.status) : ''}>
+                                {peekRoom?.status}
+                            </Badge>
+                        </SheetTitle>
+                        <SheetDescription>
+                            {peekRoom?.type} - Floor {peekRoom?.floor}
+                        </SheetDescription>
+                    </SheetHeader>
+
+                    <div className="py-6 space-y-6">
+                        {/* Current Guest Selection */}
+                        {peekRoom?.status === 'Occupied' &&
+                            (() => {
+                                const activeBooking = bookings.find(
+                                    (b) =>
+                                        b.room?._id === peekRoom?._id && b.status === 'CheckedIn',
+                                );
+                                if (!activeBooking) return null;
+                                return (
+                                    <Card className="bg-primary/5 border-primary/20">
+                                        <div className="p-4 space-y-3">
+                                            <div className="flex items-center gap-2 text-primary font-bold text-sm uppercase tracking-wider">
+                                                <User className="h-4 w-4" /> Current Guest
+                                            </div>
+                                            <div>
+                                                <p className="text-lg font-bold">
+                                                    {activeBooking.customer.firstName}{' '}
+                                                    {activeBooking.customer.lastName}
+                                                </p>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {activeBooking.customer.phone}
+                                                </p>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4 pt-2">
+                                                <div>
+                                                    <p className="text-[10px] uppercase text-muted-foreground font-bold">
+                                                        Check In
+                                                    </p>
+                                                    <p className="text-xs font-medium">
+                                                        {new Date(
+                                                            activeBooking.checkInDate,
+                                                        ).toLocaleDateString()}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] uppercase text-muted-foreground font-bold">
+                                                        Check Out
+                                                    </p>
+                                                    <p className="text-xs font-medium">
+                                                        {new Date(
+                                                            activeBooking.checkOutDate,
+                                                        ).toLocaleDateString()}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                );
+                            })()}
+
+                        <Separator />
+
+                        <div className="space-y-4">
+                            <h4 className="text-sm font-bold flex items-center gap-2">
+                                <Clock className="h-4 w-4 text-muted-foreground" /> Upcoming
+                                Bookings
+                            </h4>
+                            {(() => {
+                                const upcoming = bookings
+                                    .filter(
+                                        (b) =>
+                                            b.room?._id === peekRoom?._id &&
+                                            b.status === 'Confirmed',
+                                    )
+                                    .slice(0, 3);
+                                if (upcoming.length === 0)
+                                    return (
+                                        <p className="text-xs text-muted-foreground italic">
+                                            No upcoming bookings
+                                        </p>
+                                    );
+                                return upcoming.map((b) => (
+                                    <div
+                                        key={b._id}
+                                        className="flex items-center justify-between p-3 rounded-lg border bg-muted/30 text-xs"
+                                    >
+                                        <div>
+                                            <span className="font-bold">
+                                                {b.customer.firstName} {b.customer.lastName}
+                                            </span>
+                                            <p className="text-muted-foreground opacity-70">
+                                                {new Date(b.checkInDate).toLocaleDateString()} -{' '}
+                                                {new Date(b.checkOutDate).toLocaleDateString()}
+                                            </p>
+                                        </div>
+                                        <Badge variant="outline" className="text-[10px]">
+                                            {b.status}
+                                        </Badge>
+                                    </div>
+                                ));
+                            })()}
+                        </div>
+
+                        <Separator />
+
+                        <div className="space-y-3">
+                            <h4 className="text-sm font-bold flex items-center gap-2">
+                                <Zap className="h-4 w-4 text-muted-foreground" /> Quick Actions
+                            </h4>
+                            <div className="grid grid-cols-2 gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleOpenEdit(peekRoom!)}
+                                >
+                                    <Pencil className="h-3 w-3 mr-2" /> Edit Room
+                                </Button>
+                                {peekRoom?.status === 'Dirty' && (
+                                    <Button
+                                        variant="default"
+                                        size="sm"
+                                        onClick={() => handleStatusChange(peekRoom!, 'Available')}
+                                    >
+                                        <Brush className="h-3 w-3 mr-2" /> Mark Clean
+                                    </Button>
+                                )}
+                                {peekRoom?.status === 'Available' && (
+                                    <Button
+                                        variant="secondary"
+                                        size="sm"
+                                        onClick={() => handleStatusChange(peekRoom!, 'Maintenance')}
+                                    >
+                                        Mark Maint.
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </SheetContent>
+            </Sheet>
+
             <div className="flex justify-between items-center">
-                <h2 className="text-xl font-semibold">Rooms</h2>
+                <div className="flex items-center gap-4">
+                    <h2 className="text-xl font-semibold">Rooms</h2>
+                    <Button
+                        variant={isSelectMode ? 'secondary' : 'ghost'}
+                        size="sm"
+                        onClick={() => {
+                            setIsSelectMode(!isSelectMode);
+                            setSelectedRooms(new Set());
+                        }}
+                    >
+                        {isSelectMode ? 'Cancel Selection' : 'Bulk Actions'}
+                    </Button>
+                    {isSelectMode && selectedRooms.size > 0 && (
+                        <div className="flex gap-2">
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-green-600"
+                                onClick={() => handleBulkStatusChange('Available')}
+                            >
+                                Mark Clean
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-yellow-600"
+                                onClick={() => handleBulkStatusChange('Dirty')}
+                            >
+                                Mark Dirty
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-gray-600"
+                                onClick={() => handleBulkStatusChange('Maintenance')}
+                            >
+                                Maintenance
+                            </Button>
+                        </div>
+                    )}
+                </div>
                 <Dialog open={open} onOpenChange={setOpen}>
                     <DialogTrigger asChild>
                         <Button onClick={handleOpenCreate}>
@@ -321,76 +591,137 @@ export function RoomGrid({ hotelTenant }: { hotelTenant?: string }) {
                 </Dialog>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                {rooms.map((room) => (
-                    <div
-                        key={room._id}
-                        className={`p-4 rounded-lg border-2 ${getStatusColor(room.status)} flex flex-col justify-between h-36 hover:shadow-md transition-shadow group relative`}
-                    >
-                        <div className="flex justify-between items-start">
-                            <span className="text-2xl font-bold">{room.number}</span>
-                            <span className="text-xs font-semibold px-2 py-0.5 bg-white/50 rounded-full">
-                                {room.type}
-                            </span>
-                        </div>
-                        <div>
-                            <div className="font-semibold">{room.status}</div>
-                            <div className="text-xs opacity-75">
-                                Floor {room.floor} - {room.pricePerNight}
+            <div className="space-y-8">
+                {(() => {
+                    const roomsByFloor = rooms.reduce(
+                        (acc, room) => {
+                            const floor = room.floor || 1;
+                            if (!acc[floor]) acc[floor] = [];
+                            acc[floor].push(room);
+                            return acc;
+                        },
+                        {} as Record<number, Room[]>,
+                    );
+
+                    const sortedFloors = Object.keys(roomsByFloor)
+                        .map(Number)
+                        .sort((a, b) => a - b);
+
+                    if (rooms.length === 0)
+                        return (
+                            <div className="text-center py-10 text-muted-foreground border-2 border-dashed rounded-lg">
+                                {!hotelTenant ? (
+                                    <div className="space-y-2">
+                                        <p className="font-semibold text-foreground">
+                                            No Tenant Selected
+                                        </p>
+                                        <p className="text-sm">
+                                            You are viewing the hotel module in global context.
+                                            Please select or be assigned to a hotel tenant.
+                                        </p>
+                                    </div>
+                                ) : (
+                                    'No rooms found. Create one to get started.'
+                                )}
+                            </div>
+                        );
+
+                    return sortedFloors.map((floor) => (
+                        <div key={floor} className="space-y-3">
+                            <div className="flex items-center gap-2">
+                                <span className="bg-primary/10 text-primary text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wider">
+                                    Floor {floor}
+                                </span>
+                                <div className="h-px flex-1 bg-border/50" />
+                            </div>
+                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                                {roomsByFloor[floor].map((room) => (
+                                    <div
+                                        key={room._id}
+                                        onClick={() =>
+                                            isSelectMode
+                                                ? toggleRoomSelection(room._id)
+                                                : setPeekRoom(room)
+                                        }
+                                        className={`p-4 rounded-xl border-2 ${getStatusColor(room.status)} flex flex-col justify-between h-36 hover:shadow-md transition-all group relative cursor-pointer ${selectedRooms.has(room._id) ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+                                    >
+                                        {isSelectMode && (
+                                            <div className="absolute top-2 right-2 z-10">
+                                                {selectedRooms.has(room._id) ? (
+                                                    <CheckSquare className="h-5 w-5 text-primary fill-background" />
+                                                ) : (
+                                                    <Square className="h-5 w-5 text-muted-foreground/50 fill-background" />
+                                                )}
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex flex-col">
+                                                <span className="text-2xl font-black tracking-tighter">
+                                                    {room.number}
+                                                </span>
+                                                {(() => {
+                                                    const activeBooking = bookings.find(
+                                                        (b) =>
+                                                            b.room?._id === room._id &&
+                                                            b.status === 'CheckedIn',
+                                                    );
+                                                    if (
+                                                        activeBooking &&
+                                                        activeBooking.rooms &&
+                                                        activeBooking.rooms.length > 1
+                                                    ) {
+                                                        return (
+                                                            <div className="flex items-center gap-1 text-[8px] font-bold text-primary/70 uppercase">
+                                                                <Layers className="h-2 w-2" /> Group
+                                                            </div>
+                                                        );
+                                                    }
+                                                    return null;
+                                                })()}
+                                            </div>
+                                            <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 bg-white/40 rounded border border-white/20">
+                                                {room.type}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-sm uppercase tracking-tight">
+                                                {room.status}
+                                            </div>
+                                            <div className="text-[10px] opacity-80 font-medium">
+                                                ₹{room.pricePerNight} / Night
+                                            </div>
+                                        </div>
+                                        {!isSelectMode && (
+                                            <div className="absolute top-1 right-1 hidden group-hover:flex gap-1">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleOpenEdit(room);
+                                                    }}
+                                                    className="p-1.5 rounded-lg bg-white/90 hover:bg-white text-gray-700 shadow-sm border"
+                                                >
+                                                    <Pencil className="h-3 w-3" />
+                                                </button>
+                                                {room.status === 'Dirty' && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleStatusChange(room, 'Available');
+                                                        }}
+                                                        className="p-1.5 rounded-lg bg-green-500 hover:bg-green-600 text-white shadow-sm"
+                                                        title="Mark as cleaned"
+                                                    >
+                                                        <Brush className="h-3 w-3" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
                         </div>
-                        <div className="absolute top-1 right-1 hidden group-hover:flex gap-1">
-                            <button
-                                onClick={() => handleOpenEdit(room)}
-                                className="p-1 rounded bg-white/80 hover:bg-white text-gray-600"
-                            >
-                                <Pencil className="h-3 w-3" />
-                            </button>
-                            {room.status === 'Dirty' && (
-                                <button
-                                    onClick={() => handleStatusChange(room, 'Available')}
-                                    className="p-1 rounded bg-white/80 hover:bg-white text-green-600 text-xs font-medium"
-                                    title="Mark as cleaned"
-                                >
-                                    Clean
-                                </button>
-                            )}
-                            {room.status === 'Available' && (
-                                <button
-                                    onClick={() => handleStatusChange(room, 'Maintenance')}
-                                    className="p-1 rounded bg-white/80 hover:bg-white text-gray-600 text-xs font-medium"
-                                    title="Set to maintenance"
-                                >
-                                    Maint.
-                                </button>
-                            )}
-                            {room.status === 'Maintenance' && (
-                                <button
-                                    onClick={() => handleStatusChange(room, 'Available')}
-                                    className="p-1 rounded bg-white/80 hover:bg-white text-green-600 text-xs font-medium"
-                                    title="Mark available"
-                                >
-                                    Ready
-                                </button>
-                            )}
-                        </div>
-                    </div>
-                ))}
-                {rooms.length === 0 && (
-                    <div className="col-span-full text-center py-10 text-muted-foreground border-2 border-dashed rounded-lg">
-                        {!hotelTenant ? (
-                            <div className="space-y-2">
-                                <p className="font-semibold text-foreground">No Tenant Selected</p>
-                                <p className="text-sm">
-                                    You are viewing the hotel module in global context. Please
-                                    select or be assigned to a hotel tenant.
-                                </p>
-                            </div>
-                        ) : (
-                            'No rooms found. Create one to get started.'
-                        )}
-                    </div>
-                )}
+                    ));
+                })()}
             </div>
         </div>
     );
