@@ -1,7 +1,8 @@
 import React, { useState, createContext, useContext, useEffect } from 'react';
 import axios, { AxiosInstance } from 'axios';
+import { getBackendUrls } from '@/config/urls';
 
-const API_BASE = `${window.location.protocol}//${window.location.hostname}:5000/api`;
+const { api: API_BASE } = getBackendUrls();
 
 export interface User {
     _id: string; // Backend uses _id

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
+import { getBackendUrls } from '@/config/urls';
 
 interface SocketContextType {
     socket: Socket | null;
@@ -32,11 +33,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             return;
         }
 
-        // Strip '/api' suffix if present to ensure socket.io connects to the root
-        const socketUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(
-            /\/api$/,
-            '',
-        );
+        const { socket: socketUrl } = getBackendUrls();
         const socketInstance = io(socketUrl, {
             withCredentials: true,
             transports: ['polling', 'websocket'], // Start with polling for better reliability in dev
