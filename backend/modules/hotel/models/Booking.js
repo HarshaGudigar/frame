@@ -3,11 +3,11 @@ const mongoose = require('mongoose');
 const bookingSchema = new mongoose.Schema(
     {
         customer: { type: mongoose.Schema.Types.ObjectId, ref: 'Customer', required: true },
-        room: { type: mongoose.Schema.Types.ObjectId, ref: 'Room', required: true },
+        rooms: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Room', required: true }],
         checkInDate: { type: Date, required: true },
         checkOutDate: { type: Date, required: true },
         numberOfDays: { type: Number, required: true, min: 1 },
-        roomRent: { type: Number, required: true },
+        totalRoomRent: { type: Number, required: true },
         status: {
             type: String,
             enum: ['Confirmed', 'CheckedIn', 'CheckedOut', 'Cancelled', 'NoShow'],

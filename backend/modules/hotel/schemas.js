@@ -4,7 +4,7 @@
 
 const { z } = require('zod');
 
-const mongoId = z.string().regex(/^[a-f\d]{24}$/i, 'Invalid ID format');
+const mongoId = z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ID format');
 
 const mongoIdParam = z.object({
     id: mongoId,
@@ -89,7 +89,7 @@ const createBookingSchema = z
     .object({
         customerId: mongoId.optional(),
         customerData: createCustomerSchema.optional(),
-        roomId: mongoId,
+        roomIds: z.array(mongoId).min(1, 'At least one room is required'),
         checkInDate: z
             .string({ required_error: 'Check-in date is required' })
             .datetime({ message: 'Invalid check-in date format' }),
@@ -324,6 +324,49 @@ const updateTransactionSchema = z.object({
     remarks: z.string().max(1000).optional(),
 });
 
+// ── Housekeeping Schemas ──
+
+const createHousekeepingTaskSchema = z.object({
+    roomId: mongoId,
+    staffName: z.string().max(100).optional(),
+    status: z
+        .enum(['Pending', 'In Progress', 'Completed', 'Delayed'])
+        .optional()
+        .default('Pending'),
+    type: z
+        .enum(['Routine', 'Deep Clean', 'Maintenance', 'Turn Down'])
+        .optional()
+        .default('Routine'),
+    priority: z.enum(['Low', 'Medium', 'High', 'Emergency']).optional().default('Medium'),
+    notes: z.string().max(500).optional(),
+    dueDate: z.string().datetime().optional(),
+});
+
+const updateHousekeepingTaskStatusSchema = z.object({
+    status: z.enum(['Pending', 'In Progress', 'Completed', 'Delayed']),
+    notes: z.string().max(500).optional(),
+});
+
+// ── Inventory Schemas ──
+
+const createInventoryItemSchema = z.object({
+    name: z.string({ required_error: 'Item name is required' }).min(1).trim(),
+    category: z.enum(['Linen', 'Toiletries', 'Mini Bar', 'Cleaning Supplies', 'Other']).optional(),
+    quantity: z.number().int().nonnegative().optional().default(0),
+    unit: z.string().optional().default('pcs'),
+    minThreshold: z.number().int().nonnegative().optional().default(5),
+    remarks: z.string().max(500).optional(),
+});
+
+const updateInventoryItemSchema = z.object({
+    name: z.string().min(1).trim().optional(),
+    category: z.enum(['Linen', 'Toiletries', 'Mini Bar', 'Cleaning Supplies', 'Other']).optional(),
+    quantity: z.number().int().nonnegative().optional(),
+    unit: z.string().optional(),
+    minThreshold: z.number().int().nonnegative().optional(),
+    remarks: z.string().max(500).optional(),
+});
+
 // ── Booking ID param (for sub-resources) ──
 
 const bookingIdParam = z.object({
@@ -368,4 +411,10 @@ module.exports = {
     // Transaction
     createTransactionSchema,
     updateTransactionSchema,
+    // Housekeeping
+    createHousekeepingTaskSchema,
+    updateHousekeepingTaskStatusSchema,
+    // Inventory
+    createInventoryItemSchema,
+    updateInventoryItemSchema,
 };

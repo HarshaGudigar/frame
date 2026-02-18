@@ -12,6 +12,9 @@ const businessInfoRouter = require('./business-info');
 const transactionsRouter = require('./transactions');
 const transactionCategoriesRouter = require('./transaction-categories');
 const uploadsRouter = require('./uploads');
+const housekeepingRouter = require('./housekeeping');
+const reportsRouter = require('./reports');
+const inventoryRouter = require('./inventory');
 
 router.use('/rooms', roomsRouter);
 router.use('/customers', customersRouter);
@@ -24,5 +27,8 @@ router.use('/business-info', businessInfoRouter);
 router.use('/transactions', transactionsRouter);
 router.use('/transaction-categories', transactionCategoriesRouter);
 router.use('/uploads', uploadsRouter);
+router.use('/housekeeping', housekeepingRouter);
+router.use('/reports', reportsRouter);
+router.use('/inventory', inventoryRouter);
 
 module.exports = router;

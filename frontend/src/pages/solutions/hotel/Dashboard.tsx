@@ -12,11 +12,14 @@ import { TransactionCategoryList } from './TransactionCategoryList';
 import { BusinessInfoPage } from './BusinessInfoPage';
 import { SettingsPage } from './SettingsPage';
 import Housekeeping from './Housekeeping';
+import { InventoryList } from './InventoryList';
+import { Reporting } from './Reporting';
 
 type Tab =
     | 'overview'
     | 'rooms'
     | 'housekeeping'
+    | 'inventory'
     | 'customers'
     | 'bookings'
     | 'services'
@@ -24,7 +27,8 @@ type Tab =
     | 'transaction-categories'
     | 'agents'
     | 'business-info'
-    | 'settings';
+    | 'settings'
+    | 'reports';
 
 const tabGroups: { label: string; tabs: { key: Tab; label: string }[] }[] = [
     {
@@ -33,6 +37,7 @@ const tabGroups: { label: string; tabs: { key: Tab; label: string }[] }[] = [
             { key: 'overview', label: 'Overview' },
             { key: 'rooms', label: 'Rooms' },
             { key: 'housekeeping', label: 'Housekeeping' },
+            { key: 'inventory', label: 'Inventory' },
             { key: 'customers', label: 'Customers' },
             { key: 'bookings', label: 'Bookings' },
         ],
@@ -52,6 +57,10 @@ const tabGroups: { label: string; tabs: { key: Tab; label: string }[] }[] = [
             { key: 'business-info', label: 'Business Info' },
             { key: 'settings', label: 'Settings' },
         ],
+    },
+    {
+        label: 'Analytics',
+        tabs: [{ key: 'reports', label: 'Reports' }],
     },
 ];
 
@@ -259,6 +268,17 @@ export function HotelDashboard() {
                 </Card>
             )}
 
+            {activeTab === 'inventory' && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Inventory Management</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <InventoryList hotelTenant={hotelTenant} />
+                    </CardContent>
+                </Card>
+            )}
+
             {activeTab === 'customers' && (
                 <Card>
                     <CardHeader>
@@ -343,6 +363,17 @@ export function HotelDashboard() {
                     </CardHeader>
                     <CardContent>
                         <SettingsPage hotelTenant={hotelTenant} />
+                    </CardContent>
+                </Card>
+            )}
+
+            {activeTab === 'reports' && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Management Reports</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <Reporting hotelTenant={hotelTenant} />
                     </CardContent>
                 </Card>
             )}

@@ -15,7 +15,7 @@ router.get('/', authMiddleware, async (req, res) => {
         const { Booking } = await getModels(req);
         const bookings = await Booking.find()
             .populate('customer')
-            .populate('room')
+            .populate('rooms')
             .populate('agent')
             .sort({ checkInDate: -1 });
         return successResponse(res, bookings);
@@ -30,7 +30,7 @@ router.get('/:id', authMiddleware, validate({ params: mongoIdParam }), async (re
         const { Booking } = await getModels(req);
         const booking = await Booking.findById(req.params.id)
             .populate('customer')
-            .populate('room')
+            .populate('rooms')
             .populate('agent');
         if (!booking) return errorResponse(res, 'Booking not found', 404);
         return successResponse(res, booking);
@@ -46,7 +46,7 @@ router.post('/', authMiddleware, validate({ body: createBookingSchema }), async 
         const {
             customerId,
             customerData,
-            roomId,
+            roomIds,
             checkInDate,
             numberOfDays,
             serviceType,
@@ -60,25 +60,38 @@ router.post('/', authMiddleware, validate({ body: createBookingSchema }), async 
             notes,
         } = req.body;
 
-        // 1. Verify room exists and is not in Maintenance
-        const room = await Room.findById(roomId);
-        if (!room) return errorResponse(res, 'Room not found', 404);
-        if (room.status === 'Maintenance') {
-            return errorResponse(res, 'Cannot book a room that is under maintenance', 400);
+        // 1. Verify all rooms exist and are not in Maintenance
+        const rooms = await Room.find({ _id: { $in: roomIds } });
+        if (rooms.length !== roomIds.length) {
+            return errorResponse(res, 'One or more rooms not found', 404);
+        }
+
+        for (const room of rooms) {
+            if (room.status === 'Maintenance') {
+                return errorResponse(
+                    res,
+                    `Room ${room.number} is under maintenance and cannot be booked`,
+                    400,
+                );
+            }
         }
 
         // 2. Calculate checkout date
         const checkOutDate = calculateCheckOutDate(checkInDate, numberOfDays, serviceType);
 
-        // 3. Check for overlapping bookings
+        // 3. Check for overlapping bookings for any of the rooms
         const overlap = await Booking.findOne({
-            room: roomId,
+            rooms: { $in: roomIds },
             status: { $in: ['Confirmed', 'CheckedIn'] },
             checkInDate: { $lt: checkOutDate },
             checkOutDate: { $gt: new Date(checkInDate) },
         });
         if (overlap) {
-            return errorResponse(res, 'Room is already booked for the selected dates', 409);
+            return errorResponse(
+                res,
+                'One or more rooms are already booked for the selected dates',
+                409,
+            );
         }
 
         // 4. Resolve customer
@@ -97,20 +110,20 @@ router.post('/', authMiddleware, validate({ body: createBookingSchema }), async 
             if (!agent) return errorResponse(res, 'Agent not found', 404);
         }
 
-        // 6. Auto-calculate room rent
-        const roomRent = room.pricePerNight * numberOfDays;
+        // 6. Auto-calculate total room rent
+        const totalRoomRent = rooms.reduce((sum, r) => sum + r.pricePerNight, 0) * numberOfDays;
 
         // 7. Generate check-in number
         const checkInNumber = await getNextCheckInNumber(connection);
 
         const booking = await Booking.create({
             customer: finalCustomerId,
-            room: roomId,
+            rooms: roomIds,
             checkInDate,
             checkOutDate,
             numberOfDays,
-            roomRent,
-            totalAmount: roomRent,
+            totalRoomRent,
+            totalAmount: totalRoomRent,
             serviceType,
             checkInType,
             maleCount,
@@ -125,10 +138,10 @@ router.post('/', authMiddleware, validate({ body: createBookingSchema }), async 
 
         const populated = await Booking.findById(booking._id)
             .populate('customer')
-            .populate('room')
+            .populate('rooms')
             .populate('agent');
 
-        return successResponse(res, populated, 'Booking created successfully', 201);
+        return successResponse(res, populated, 'Group booking created successfully', 201);
     } catch (error) {
         if (error.code === 11000) {
             return errorResponse(res, 'A customer with this email already exists', 409);
@@ -156,29 +169,31 @@ router.post(
                 );
             }
 
-            const room = await Room.findById(booking.room);
-            if (!room) return errorResponse(res, 'Room not found', 404);
-            if (room.status !== 'Available') {
-                return errorResponse(
-                    res,
-                    `Cannot check in: Room ${room.number} is currently ${room.status}. It must be "Available".`,
-                    400,
-                );
+            const rooms = await Room.find({ _id: { $in: booking.rooms } });
+
+            for (const room of rooms) {
+                if (room.status !== 'Available') {
+                    return errorResponse(
+                        res,
+                        `Cannot check in: Room ${room.number} is currently ${room.status}. All rooms must be "Available".`,
+                        400,
+                    );
+                }
             }
 
             booking.status = 'CheckedIn';
             booking.checkedInAt = new Date();
             await booking.save();
 
-            room.status = 'Occupied';
-            await room.save();
+            // Update all rooms to Occupied
+            await Room.updateMany({ _id: { $in: booking.rooms } }, { status: 'Occupied' });
 
             const populated = await Booking.findById(booking._id)
                 .populate('customer')
-                .populate('room')
+                .populate('rooms')
                 .populate('agent');
 
-            return successResponse(res, populated, 'Guest checked in successfully');
+            return successResponse(res, populated, 'Guest checked in successfully (Group)');
         } catch (error) {
             return errorResponse(res, 'Failed to check in guest', 500, error);
         }
@@ -209,14 +224,26 @@ router.post(
             booking.paymentStatus = 'Paid';
             await booking.save();
 
-            await Room.findByIdAndUpdate(booking.room, { status: 'Dirty' });
+            const { HousekeepingTask } = await getModels(req);
+
+            // Create housekeeping tasks for ALL rooms in the booking
+            const tasks = booking.rooms.map((roomId) => ({
+                room: roomId,
+                type: 'Routine',
+                notes: `Auto-generated task after group check-out of ${booking.checkInNumber}`,
+                priority: 'Medium',
+            }));
+            await HousekeepingTask.insertMany(tasks);
+
+            // Mark all rooms as Dirty
+            await Room.updateMany({ _id: { $in: booking.rooms } }, { status: 'Dirty' });
 
             const populated = await Booking.findById(booking._id)
                 .populate('customer')
-                .populate('room')
+                .populate('rooms')
                 .populate('agent');
 
-            return successResponse(res, populated, 'Guest checked out successfully');
+            return successResponse(res, populated, 'Guest checked out successfully (Group)');
         } catch (error) {
             return errorResponse(res, 'Failed to check out guest', 500, error);
         }

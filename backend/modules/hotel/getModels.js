@@ -10,6 +10,8 @@ const TransactionCategorySchema = require('./models/TransactionCategory');
 const BusinessInfoSchema = require('./models/BusinessInfo');
 const SettingsSchema = require('./models/Settings');
 const CounterSchema = require('./models/Counter');
+const HousekeepingTaskSchema = require('./models/HousekeepingTask');
+const InventoryItemSchema = require('./models/InventoryItem');
 
 /**
  * Get all hotel models bound to the current tenant's connection.
@@ -29,6 +31,8 @@ const getModels = async (req) => {
         BusinessInfo: BusinessInfoSchema(connection),
         Settings: SettingsSchema(connection),
         Counter: CounterSchema(connection),
+        HousekeepingTask: HousekeepingTaskSchema(connection),
+        InventoryItem: InventoryItemSchema(connection),
         connection,
     };
 };
