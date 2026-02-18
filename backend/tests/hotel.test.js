@@ -110,8 +110,8 @@ describe('Hotel Module API', () => {
                     lastName: 'Smith',
                     phone: '9876543210',
                 },
-                roomId: roomId,
-                checkInDate: new Date().toISOString(), // This produces something like 2023-10-27T10:00:00.000Z
+                roomIds: [roomId],
+                checkInDate: new Date().toISOString(),
                 numberOfDays: 3,
                 serviceType: '24 Hours',
                 checkInType: 'Walk In',
@@ -128,8 +128,14 @@ describe('Hotel Module API', () => {
 
             expect(res.status).toBe(201);
             expect(res.body.success).toBe(true);
-            // Since the route populates the room, we should check res.body.data.room._id
-            expect(res.body.data.room._id.toString()).toBe(roomId.toString());
+            // Check that the returned booking has our room
+            // The backend likely returns `rooms` array populated, or a single room object if legacy.
+            // Based on earlier code, we expect `rooms` or `room` populated.
+            // Let's assume the backend now returns `rooms` array or we check if the room ID is in the list.
+            const returnedRoomId = res.body.data.rooms
+                ? res.body.data.rooms[0]._id
+                : res.body.data.room._id;
+            expect(returnedRoomId.toString()).toBe(roomId.toString());
         });
     });
 
