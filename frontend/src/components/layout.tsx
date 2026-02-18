@@ -28,9 +28,11 @@ import {
     SidebarMenuItem,
     SidebarProvider,
     SidebarInset,
+    SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
 import { BRAND } from '@/config/brand';
+import { BackgroundDecoration } from './ui/background-decoration';
 
 const navItems = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -48,17 +50,26 @@ function AppSidebar() {
 
     return (
         <Sidebar variant="inset" collapsible="icon">
-            <SidebarHeader>
-                <SidebarMenu>
+            <SidebarHeader className="h-16 flex items-center justify-center overflow-hidden border-b border-transparent transition-all group-data-[collapsible=icon]:p-0">
+                <SidebarMenu className="group-data-[collapsible=icon]:items-center">
                     <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" asChild>
-                            <NavLink to="/">
-                                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                                    <Server className="size-4" />
+                        <SidebarMenuButton
+                            size="lg"
+                            asChild
+                            className="group-data-[collapsible=icon]:size-9 group-data-[collapsible=icon]:p-0 transition-all duration-300 h-10"
+                        >
+                            <NavLink
+                                to="/"
+                                className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center"
+                            >
+                                <div className="flex aspect-square size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 shrink-0 transition-all">
+                                    <Server className="size-5" />
                                 </div>
-                                <div className="grid flex-1 text-left text-sm leading-tight">
-                                    <span className="truncate font-semibold">{BRAND.name}</span>
-                                    <span className="truncate text-xs text-muted-foreground">
+                                <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+                                    <span className="truncate font-bold tracking-tight text-base leading-none">
+                                        {BRAND.name}
+                                    </span>
+                                    <span className="truncate text-[10px] text-muted-foreground/80 font-medium uppercase tracking-wider mt-0.5">
                                         {BRAND.product}
                                     </span>
                                 </div>
@@ -87,10 +98,14 @@ function AppSidebar() {
 
                                 return (
                                     <SidebarMenuItem key={item.to}>
-                                        <SidebarMenuButton asChild tooltip={item.label}>
+                                        <SidebarMenuButton
+                                            asChild
+                                            tooltip={item.label}
+                                            className="transition-all duration-300 hover:bg-primary/10 hover:text-primary group"
+                                        >
                                             <NavLink to={item.to} end={item.to === '/'}>
-                                                <item.icon className="size-4" />
-                                                <span>{item.label}</span>
+                                                <item.icon className="size-4 transition-transform duration-300 group-hover:scale-110" />
+                                                <span className="font-medium">{item.label}</span>
                                             </NavLink>
                                         </SidebarMenuButton>
                                     </SidebarMenuItem>
@@ -100,15 +115,24 @@ function AppSidebar() {
                     </SidebarGroupContent>
                 </SidebarGroup>
             </SidebarContent>
-            <SidebarFooter>
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton onClick={logout} tooltip="Logout">
-                            <LogOut className="size-4" />
-                            <span>Logout</span>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                </SidebarMenu>
+            <SidebarFooter className="p-3">
+                <div className="flex items-center justify-between gap-2 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:items-center">
+                    <SidebarMenu className="flex-1">
+                        <SidebarMenuItem>
+                            <SidebarMenuButton
+                                onClick={logout}
+                                tooltip="Logout"
+                                className="h-9 transition-all hover:bg-destructive/10 hover:text-destructive group/logout"
+                            >
+                                <LogOut className="size-4 shrink-0 group-data-[collapsible=icon]:mx-auto transition-colors" />
+                                <span className="group-data-[collapsible=icon]:hidden font-medium">
+                                    Logout
+                                </span>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    </SidebarMenu>
+                    <SidebarTrigger className="size-8 rounded-md bg-accent/30 hover:bg-accent border border-border/40 transition-all opacity-40 hover:opacity-100 shrink-0 group-data-[collapsible=icon]:mt-2" />
+                </div>
             </SidebarFooter>
         </Sidebar>
     );
@@ -142,9 +166,10 @@ function ConnectionStatus() {
 export function Layout({ children }: { children: React.ReactNode }) {
     return (
         <SidebarProvider>
+            <BackgroundDecoration />
             <AppSidebar />
-            <SidebarInset>
-                <header className="flex h-16 shrink-0 items-center justify-between px-6 border-b">
+            <SidebarInset className="bg-background/20 dark:bg-background/40">
+                <header className="flex h-16 shrink-0 items-center justify-between px-6 border-b glass-panel sticky top-0 z-10">
                     <div className="flex items-center gap-2">
                         {/* Title or Breadcrumbs could go here */}
                     </div>
@@ -154,7 +179,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                         <NotificationCenter />
                     </div>
                 </header>
-                <main className="flex-1 p-6">{children}</main>
+                <main className="flex-1 p-6 page-transition relative">{children}</main>
             </SidebarInset>
         </SidebarProvider>
     );
