@@ -55,9 +55,16 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             setIsConnected(true);
         });
 
-        socketInstance.on('disconnect', () => {
-            console.log('Disconnected from socket server');
+        socketInstance.on('disconnect', (reason) => {
+            console.log('Disconnected from socket server:', reason);
             setIsConnected(false);
+
+            // If the disconnect was intentional (like logout), don't show the error toast
+            if (reason === 'io client disconnect' || reason === 'io server disconnect') {
+                hasConnectedOnce.current = false;
+                return;
+            }
+
             if (hasConnectedOnce.current) {
                 toast({
                     variant: 'destructive',
