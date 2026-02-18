@@ -139,7 +139,7 @@ module.exports = {
     BACKUP_PROVIDER: process.env.BACKUP_PROVIDER || 'local', // 'local' | 's3' | 'gdrive'
     BACKUP_CRON: process.env.BACKUP_CRON || '0 2 * * *', // Default 02:00 UTC
     BACKUP_RETENTION_DAYS: parseInt(process.env.BACKUP_RETENTION_DAYS, 10) || 10,
-    BACKUP_DIR: process.env.BACKUP_DIR || path.join(__dirname, 'backup'),
+    BACKUP_DIR: process.env.BACKUP_DIR || '/backups',
     MONGODUMP_BIN: resolveMongoTool('MONGODUMP_BIN', 'mongodump'),
     MONGORESTORE_BIN: resolveMongoTool('MONGORESTORE_BIN', 'mongorestore'),
 

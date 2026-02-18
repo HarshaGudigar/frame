@@ -1237,10 +1237,7 @@ router.post(
             return errorResponse(res, `Restore failed: ${stderr || err.message}`, 500);
         }
 
-        // Clean up uploaded file after successful restore
-        if (uploadedFile && fs.existsSync(uploadedFile)) {
-            fs.unlinkSync(uploadedFile);
-        }
+        // Successfully restored
 
         await logAction(req, 'BACKUP_RESTORED', null, {
             source: req.file ? req.file.originalname : req.body.filename,
