@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/auth-context';
+import { BRAND } from '@/config/brand';
 
 const API_BASE = `${window.location.protocol}//${window.location.hostname}:5000/api`;
 
@@ -90,8 +91,8 @@ export function LoginPage() {
                     <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
                         <Server className="size-6" />
                     </div>
-                    <h1 className="text-2xl font-bold tracking-tight">Alyxnet Frame</h1>
-                    <p className="text-sm text-muted-foreground">Control Plane Dashboard</p>
+                    <h1 className="text-2xl font-bold tracking-tight">{BRAND.fullName}</h1>
+                    <p className="text-sm text-muted-foreground">{BRAND.description}</p>
                 </CardHeader>
                 <CardContent>
                     {twoFactorPending ? (

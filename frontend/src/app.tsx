@@ -130,7 +130,14 @@ import { SocketProvider } from '@/components/providers/socket-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
 
+import { BRAND } from '@/config/brand';
+import { useEffect } from 'react';
+
 function App() {
+    useEffect(() => {
+        document.title = BRAND.fullName;
+    }, []);
+
     return (
         <ErrorBoundary>
             <AuthProvider>

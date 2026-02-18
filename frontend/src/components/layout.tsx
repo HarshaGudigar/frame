@@ -30,6 +30,7 @@ import {
     SidebarInset,
 } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
+import { BRAND } from '@/config/brand';
 
 const navItems = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -56,9 +57,9 @@ function AppSidebar() {
                                     <Server className="size-4" />
                                 </div>
                                 <div className="grid flex-1 text-left text-sm leading-tight">
-                                    <span className="truncate font-semibold">Alyxnet</span>
+                                    <span className="truncate font-semibold">{BRAND.name}</span>
                                     <span className="truncate text-xs text-muted-foreground">
-                                        Control Plane
+                                        {BRAND.product}
                                     </span>
                                 </div>
                             </NavLink>
