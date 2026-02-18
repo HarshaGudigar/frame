@@ -28,7 +28,7 @@ export function ActivityTimeline({ activities }: { activities: Activity[] }) {
     };
 
     return (
-        <Card>
+        <Card className="border-primary/20">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-base font-semibold">Activity Feed</CardTitle>
                 <Clock className="h-4 w-4 text-muted-foreground" />
@@ -45,7 +45,7 @@ export function ActivityTimeline({ activities }: { activities: Activity[] }) {
                                 {idx !== activities.length - 1 && (
                                     <div className="absolute left-[7px] top-6 bottom-0 w-px bg-border" />
                                 )}
-                                <div className="absolute left-0 top-1 p-1 bg-background rounded-full border">
+                                <div className="absolute left-0 top-1 p-1 bg-muted/30 rounded-full border border-border/50">
                                     {getIcon(activity.type)}
                                 </div>
                                 <div className="space-y-1">

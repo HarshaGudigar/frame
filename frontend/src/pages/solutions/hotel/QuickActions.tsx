@@ -7,29 +7,29 @@ export function QuickActions({ onAction }: { onAction: (action: string) => void 
         {
             label: 'New Booking',
             icon: Plus,
-            color: 'text-blue-600',
-            bg: 'bg-blue-50',
+            color: 'text-blue-600 dark:text-blue-400',
+            bg: 'bg-blue-500/10',
             id: 'new-booking',
         },
         {
             label: 'Check In',
             icon: Bed,
-            color: 'text-green-600',
-            bg: 'bg-green-50',
+            color: 'text-green-600 dark:text-green-400',
+            bg: 'bg-green-500/10',
             id: 'check-in',
         },
         {
             label: 'Add Expense',
             icon: DollarSign,
-            color: 'text-orange-600',
-            bg: 'bg-orange-50',
+            color: 'text-orange-600 dark:text-orange-400',
+            bg: 'bg-orange-500/10',
             id: 'add-expense',
         },
         {
             label: 'Guest Search',
             icon: Search,
-            color: 'text-purple-600',
-            bg: 'bg-purple-50',
+            color: 'text-purple-600 dark:text-purple-400',
+            bg: 'bg-purple-500/10',
             id: 'search',
         },
     ];
@@ -45,7 +45,7 @@ export function QuickActions({ onAction }: { onAction: (action: string) => void 
                     <Button
                         key={action.id}
                         variant="ghost"
-                        className={`h-auto flex-col items-center justify-center gap-2 p-3 hover:${action.bg} border border-transparent hover:border-${action.color.split('-')[1]}-200`}
+                        className="h-auto flex-col items-center justify-center gap-2 p-3 hover:bg-muted border border-transparent hover:border-border"
                         onClick={() => onAction(action.id)}
                     >
                         <div className={`p-2 rounded-lg ${action.bg}`}>

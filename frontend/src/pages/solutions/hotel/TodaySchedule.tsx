@@ -18,7 +18,7 @@ export function TodaySchedule({
     departures: ScheduleItem[];
 }) {
     return (
-        <Card>
+        <Card className="border-primary/20">
             <CardHeader className="pb-3">
                 <CardTitle className="text-base font-semibold flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-primary" /> Today's Schedule
@@ -36,7 +36,7 @@ export function TodaySchedule({
                         arrivals.slice(0, 3).map((item) => (
                             <div
                                 key={item.id}
-                                className="flex items-center justify-between p-2 rounded-lg bg-green-50/50 border border-green-100 italic"
+                                className="flex items-center justify-between p-2 rounded-lg bg-green-500/10 border border-green-500/20 italic"
                             >
                                 <div>
                                     <p className="text-sm font-medium">{item.guestName}</p>
@@ -47,7 +47,7 @@ export function TodaySchedule({
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 hover:bg-green-100"
+                                    className="h-8 w-8 hover:bg-green-500/20"
                                 >
                                     <ArrowRight className="h-4 w-4" />
                                 </Button>
@@ -67,7 +67,7 @@ export function TodaySchedule({
                         departures.slice(0, 3).map((item) => (
                             <div
                                 key={item.id}
-                                className="flex items-center justify-between p-2 rounded-lg bg-orange-50/50 border border-orange-100 italic"
+                                className="flex items-center justify-between p-2 rounded-lg bg-orange-500/10 border border-orange-500/20 italic"
                             >
                                 <div>
                                     <p className="text-sm font-medium">{item.guestName}</p>
@@ -78,7 +78,7 @@ export function TodaySchedule({
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-8 w-8 hover:bg-orange-100"
+                                    className="h-8 w-8 hover:bg-orange-500/20"
                                 >
                                     <ArrowRight className="h-4 w-4" />
                                 </Button>

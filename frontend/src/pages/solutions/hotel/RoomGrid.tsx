@@ -274,15 +274,15 @@ export function RoomGrid({
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'Available':
-                return 'bg-green-100 border-green-300 text-green-800';
+                return 'bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-400';
             case 'Occupied':
-                return 'bg-red-100 border-red-300 text-red-800';
+                return 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-400';
             case 'Dirty':
-                return 'bg-yellow-100 border-yellow-300 text-yellow-800';
+                return 'bg-yellow-500/10 border-yellow-500/30 text-yellow-700 dark:text-yellow-400';
             case 'Maintenance':
-                return 'bg-gray-100 border-gray-300 text-gray-800';
+                return 'bg-gray-500/10 border-gray-500/30 text-gray-700 dark:text-gray-400';
             default:
-                return 'bg-gray-100 border-gray-300 text-gray-800';
+                return 'bg-gray-500/10 border-gray-500/30 text-gray-700 dark:text-gray-400';
         }
     };
 
@@ -679,7 +679,7 @@ export function RoomGrid({
                                                     return null;
                                                 })()}
                                             </div>
-                                            <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 bg-white/40 rounded border border-white/20">
+                                            <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 bg-muted/50 rounded border border-border">
                                                 {room.type}
                                             </span>
                                         </div>

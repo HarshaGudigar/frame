@@ -285,7 +285,7 @@ export function HotelDashboard() {
             {activeTab === 'overview' && (
                 <div className="space-y-6">
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                        <Card>
+                        <Card className="bg-muted/50 border-primary/10">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium">Total Rooms</CardTitle>
                                 <BedDouble className="h-4 w-4 text-muted-foreground" />
@@ -294,10 +294,10 @@ export function HotelDashboard() {
                                 <div className="text-2xl font-bold">{stats.totalRooms}</div>
                             </CardContent>
                         </Card>
-                        <Card>
+                        <Card className="bg-blue-500/10 border-blue-500/20">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium">Occupied</CardTitle>
-                                <Users className="h-4 w-4 text-muted-foreground" />
+                                <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                             </CardHeader>
                             <CardContent>
                                 <div className="text-2xl font-bold">{stats.occupied}</div>
@@ -307,21 +307,21 @@ export function HotelDashboard() {
                                 </p>
                             </CardContent>
                         </Card>
-                        <Card>
+                        <Card className="bg-green-500/10 border-green-500/20">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium">Available</CardTitle>
-                                <CalendarCheck className="h-4 w-4 text-muted-foreground" />
+                                <CalendarCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
                             </CardHeader>
                             <CardContent>
                                 <div className="text-2xl font-bold">{stats.available}</div>
                             </CardContent>
                         </Card>
-                        <Card>
+                        <Card className="bg-purple-500/10 border-purple-500/20">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                 <CardTitle className="text-sm font-medium">
                                     Today's Check-ins
                                 </CardTitle>
-                                <BookOpen className="h-4 w-4 text-muted-foreground" />
+                                <BookOpen className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                             </CardHeader>
                             <CardContent>
                                 <div className="text-2xl font-bold">{stats.todayCheckIns}</div>
@@ -332,7 +332,7 @@ export function HotelDashboard() {
                     <div className="grid gap-6 lg:grid-cols-12">
                         {/* Main Content Area */}
                         <div className="lg:col-span-8 space-y-6">
-                            <Card>
+                            <Card className="border-primary/20">
                                 <CardHeader className="flex flex-row items-center justify-between">
                                     <CardTitle>Room Status Heatmap</CardTitle>
                                     <div className="flex gap-2">

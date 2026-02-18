@@ -98,10 +98,10 @@ export function Reporting({ hotelTenant }: { hotelTenant?: string }) {
     return (
         <div className="space-y-6">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card className="bg-blue-50/50">
+                <Card className="bg-blue-500/10 border-blue-500/20">
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-sm font-medium">Occupancy</CardTitle>
-                        <Percent className="h-4 w-4 text-blue-600" />
+                        <Percent className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{metrics.occupancyRate}%</div>
@@ -110,10 +110,10 @@ export function Reporting({ hotelTenant }: { hotelTenant?: string }) {
                         </p>
                     </CardContent>
                 </Card>
-                <Card className="bg-green-50/50">
+                <Card className="bg-green-500/10 border-green-500/20">
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-sm font-medium">Daily Revenue</CardTitle>
-                        <DollarSign className="h-4 w-4 text-green-600" />
+                        <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">
@@ -124,20 +124,20 @@ export function Reporting({ hotelTenant }: { hotelTenant?: string }) {
                         </p>
                     </CardContent>
                 </Card>
-                <Card className="bg-purple-50/50">
+                <Card className="bg-purple-500/10 border-purple-500/20">
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-sm font-medium">ADR</CardTitle>
-                        <TrendingUp className="h-4 w-4 text-purple-600" />
+                        <TrendingUp className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">₹{metrics.adr.toFixed(2)}</div>
                         <p className="text-xs text-muted-foreground">Average Daily Rate</p>
                     </CardContent>
                 </Card>
-                <Card className="bg-orange-50/50">
+                <Card className="bg-orange-500/10 border-orange-500/20">
                     <CardHeader className="flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-sm font-medium">RevPAR</CardTitle>
-                        <BarChart3 className="h-4 w-4 text-orange-600" />
+                        <BarChart3 className="h-4 w-4 text-orange-600 dark:text-orange-400" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">₹{metrics.revpar.toFixed(2)}</div>
@@ -226,21 +226,21 @@ export function Reporting({ hotelTenant }: { hotelTenant?: string }) {
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div className="flex justify-between items-center p-3 rounded-xl bg-blue-50/30 border border-blue-100">
+                        <div className="flex justify-between items-center p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
                             <span className="text-sm font-medium">Total Rooms Sold</span>
-                            <span className="font-bold text-blue-700">
+                            <span className="font-bold text-blue-600 dark:text-blue-400">
                                 {metrics.totalRoomsSoldToday}
                             </span>
                         </div>
-                        <div className="flex justify-between items-center p-3 rounded-xl bg-green-50/30 border border-green-100">
+                        <div className="flex justify-between items-center p-3 rounded-xl bg-green-500/10 border border-green-500/20">
                             <span className="text-sm font-medium">Average Room Price</span>
-                            <span className="font-bold text-green-700">
+                            <span className="font-bold text-green-600 dark:text-green-400">
                                 ₹{metrics.adr.toFixed(2)}
                             </span>
                         </div>
-                        <div className="flex justify-between items-center p-3 rounded-xl bg-purple-50/30 border border-purple-100">
+                        <div className="flex justify-between items-center p-3 rounded-xl bg-purple-500/10 border border-purple-500/20">
                             <span className="text-sm font-medium">RevPAR</span>
-                            <span className="font-bold text-purple-700">
+                            <span className="font-bold text-purple-600 dark:text-purple-400">
                                 ₹{metrics.revpar.toFixed(2)}
                             </span>
                         </div>
@@ -299,13 +299,13 @@ export function Reporting({ hotelTenant }: { hotelTenant?: string }) {
                     </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-indigo-50/50 to-purple-50/50 border-indigo-100">
+                <Card className="bg-muted/30 border-primary/10">
                     <CardHeader>
                         <CardTitle className="text-sm">Strategic Insights</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <div className="bg-white/80 p-4 rounded-xl shadow-sm border border-indigo-100">
-                            <h5 className="text-xs font-bold text-indigo-700 uppercase mb-1">
+                        <div className="bg-background/50 p-4 rounded-xl shadow-sm border border-primary/10">
+                            <h5 className="text-xs font-bold text-primary uppercase mb-1">
                                 Recommendation
                             </h5>
                             <p className="text-sm">
