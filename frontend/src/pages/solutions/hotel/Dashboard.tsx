@@ -254,7 +254,7 @@ export function HotelDashboard() {
     }
 
     return (
-        <div className="p-4 md:p-6 space-y-6 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">
+        <div className="space-y-6 max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">
             <div className="flex items-center justify-between">
                 <h1 className="text-3xl font-bold tracking-tight">Hotel Management</h1>
             </div>

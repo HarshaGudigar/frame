@@ -24,6 +24,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, Trash2, ShieldCheck, KeyRound } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 
 export default function Users() {
     const { api } = useAuth();
@@ -73,7 +74,7 @@ export default function Users() {
     }
 
     return (
-        <div className="p-8 space-y-6">
+        <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Users</h1>
@@ -82,116 +83,120 @@ export default function Users() {
                 {hasRole('admin') && <InviteUserModal onUserInvited={fetchUsers} />}
             </div>
 
-            <div className="rounded-md border">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Email</TableHead>
-                            <TableHead>Role</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {isLoading &&
-                            users.length === 0 &&
-                            Array.from({ length: 4 }).map((_, i) => (
-                                <TableRow key={`skeleton-${i}`}>
-                                    {Array.from({ length: 5 }).map((_, j) => (
-                                        <TableCell key={j}>
-                                            <Skeleton className="h-4 w-full" />
-                                        </TableCell>
-                                    ))}
+            <Card>
+                <CardContent className="pt-6">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Name</TableHead>
+                                <TableHead>Email</TableHead>
+                                <TableHead>Role</TableHead>
+                                <TableHead>Status</TableHead>
+                                <TableHead className="text-right">Actions</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {isLoading &&
+                                users.length === 0 &&
+                                Array.from({ length: 4 }).map((_, i) => (
+                                    <TableRow key={`skeleton-${i}`}>
+                                        {Array.from({ length: 5 }).map((_, j) => (
+                                            <TableCell key={j}>
+                                                <Skeleton className="h-4 w-full" />
+                                            </TableCell>
+                                        ))}
+                                    </TableRow>
+                                ))}
+                            {users.map((user) => (
+                                <TableRow key={user._id || user.id}>
+                                    <TableCell className="font-medium">
+                                        {user.firstName} {user.lastName}
+                                    </TableCell>
+                                    <TableCell>{user.email}</TableCell>
+                                    <TableCell>
+                                        <Badge
+                                            variant={
+                                                user.role === 'owner'
+                                                    ? 'default'
+                                                    : user.role === 'admin'
+                                                      ? 'secondary'
+                                                      : 'outline'
+                                            }
+                                        >
+                                            {user.role}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge
+                                            variant={user.isActive ? 'outline' : 'destructive'}
+                                            className={
+                                                user.isActive
+                                                    ? 'text-green-600 border-green-600'
+                                                    : ''
+                                            }
+                                        >
+                                            {user.isActive ? 'Active' : 'Inactive'}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" className="h-8 w-8 p-0">
+                                                    <span className="sr-only">Open menu</span>
+                                                    <MoreHorizontal className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                {hasRole('owner') && (
+                                                    <>
+                                                        <DropdownMenuItem
+                                                            onClick={() => {
+                                                                setEditUser(user);
+                                                                setIsEditModalOpen(true);
+                                                            }}
+                                                        >
+                                                            <ShieldCheck className="mr-2 h-4 w-4" />
+                                                            Edit Role
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            onClick={() => {
+                                                                setEditUser(user);
+                                                                setIsPasswordModalOpen(true);
+                                                            }}
+                                                        >
+                                                            <KeyRound className="mr-2 h-4 w-4" />
+                                                            Change Password
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            className="text-red-600"
+                                                            onClick={() =>
+                                                                user._id && handleDelete(user._id)
+                                                            }
+                                                        >
+                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                            Deactivate
+                                                        </DropdownMenuItem>
+                                                    </>
+                                                )}
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
                                 </TableRow>
                             ))}
-                        {users.map((user) => (
-                            <TableRow key={user._id || user.id}>
-                                <TableCell className="font-medium">
-                                    {user.firstName} {user.lastName}
-                                </TableCell>
-                                <TableCell>{user.email}</TableCell>
-                                <TableCell>
-                                    <Badge
-                                        variant={
-                                            user.role === 'owner'
-                                                ? 'default'
-                                                : user.role === 'admin'
-                                                  ? 'secondary'
-                                                  : 'outline'
-                                        }
+                            {!users.length && !isLoading && (
+                                <TableRow>
+                                    <TableCell
+                                        colSpan={5}
+                                        className="text-center text-muted-foreground py-8"
                                     >
-                                        {user.role}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell>
-                                    <Badge
-                                        variant={user.isActive ? 'outline' : 'destructive'}
-                                        className={
-                                            user.isActive ? 'text-green-600 border-green-600' : ''
-                                        }
-                                    >
-                                        {user.isActive ? 'Active' : 'Inactive'}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" className="h-8 w-8 p-0">
-                                                <span className="sr-only">Open menu</span>
-                                                <MoreHorizontal className="h-4 w-4" />
-                                            </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end">
-                                            {hasRole('owner') && (
-                                                <>
-                                                    <DropdownMenuItem
-                                                        onClick={() => {
-                                                            setEditUser(user);
-                                                            setIsEditModalOpen(true);
-                                                        }}
-                                                    >
-                                                        <ShieldCheck className="mr-2 h-4 w-4" />
-                                                        Edit Role
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        onClick={() => {
-                                                            setEditUser(user);
-                                                            setIsPasswordModalOpen(true);
-                                                        }}
-                                                    >
-                                                        <KeyRound className="mr-2 h-4 w-4" />
-                                                        Change Password
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem
-                                                        className="text-red-600"
-                                                        onClick={() =>
-                                                            user._id && handleDelete(user._id)
-                                                        }
-                                                    >
-                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                        Deactivate
-                                                    </DropdownMenuItem>
-                                                </>
-                                            )}
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                        {!users.length && !isLoading && (
-                            <TableRow>
-                                <TableCell
-                                    colSpan={5}
-                                    className="text-center text-muted-foreground py-8"
-                                >
-                                    No users found.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </div>
+                                        No users found.
+                                    </TableCell>
+                                </TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
 
             <EditRoleModal
                 user={editUser}
