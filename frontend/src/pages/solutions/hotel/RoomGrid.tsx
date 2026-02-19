@@ -321,7 +321,7 @@ export function RoomGrid({
                         </SheetDescription>
                     </SheetHeader>
 
-                    <div className="py-6 space-y-6">
+                    <div className="p-6 space-y-6">
                         {/* Current Guest Selection */}
                         {peekRoom?.status === 'Occupied' &&
                             (() => {

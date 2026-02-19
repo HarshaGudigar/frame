@@ -50,7 +50,7 @@ function AppSidebar() {
 
     return (
         <Sidebar variant="inset" collapsible="icon">
-            <SidebarHeader className="h-16 flex items-center justify-center overflow-hidden border-b border-transparent transition-all group-data-[collapsible=icon]:p-0">
+            <SidebarHeader className="h-16 flex items-center justify-center overflow-hidden border-b glass-panel transition-all group-data-[collapsible=icon]:p-0 z-10">
                 <SidebarMenu className="group-data-[collapsible=icon]:items-center">
                     <SidebarMenuItem>
                         <SidebarMenuButton
@@ -69,7 +69,7 @@ function AppSidebar() {
                                     <span className="truncate font-bold tracking-tight text-base leading-none">
                                         {BRAND.name}
                                     </span>
-                                    <span className="truncate text-[10px] text-muted-foreground/80 font-medium uppercase tracking-wider mt-0.5">
+                                    <span className="truncate text-[10px] text-muted-foreground/80 font-medium uppercase tracking-wider mt-0.5 leading-none">
                                         {BRAND.product}
                                     </span>
                                 </div>
