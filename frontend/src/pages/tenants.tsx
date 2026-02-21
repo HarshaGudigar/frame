@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { Plus, Pencil, Trash2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
