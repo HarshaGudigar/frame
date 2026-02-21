@@ -1,9 +1,9 @@
 /**
  * Module Loader — Auto-discovers and registers modules from the modules/ directory.
- * 
+ *
  * Each module must export a manifest from its index.js:
  *   { name, slug, version, description, routes }
- * 
+ *
  * The loader mounts each module's routes under /api/m/{slug}/
  */
 
@@ -15,7 +15,7 @@ const MODULES_DIR = path.join(__dirname, '..', 'modules');
 /**
  * Discovers all valid modules in the modules/ directory.
  * Skips folders starting with _ (e.g., _template) and folders without index.js.
- * 
+ *
  * @param {Object} logger - Pino logger instance
  * @returns {Array} Array of module manifests
  */
@@ -35,28 +35,54 @@ function discoverModules(logger) {
             continue;
         }
 
-        const modulePath = path.join(MODULES_DIR, entry.name, 'index.js');
+        const modulePath = path.join(MODULES_DIR, entry.name);
+        const indexPath = path.join(modulePath, 'index.js');
+        const manifestPath = path.join(modulePath, 'manifest.json');
 
-        if (!fs.existsSync(modulePath)) {
+        if (!fs.existsSync(indexPath)) {
             logger.warn({ module: entry.name }, 'Module folder missing index.js — skipped');
             continue;
         }
 
+        if (!fs.existsSync(manifestPath)) {
+            logger.warn({ module: entry.name }, 'Module folder missing manifest.json — skipped');
+            continue;
+        }
+
         try {
-            const manifest = require(modulePath);
+            // Read manifest.json
+            const manifestContent = fs.readFileSync(manifestPath, 'utf-8');
+            const manifest = JSON.parse(manifestContent);
+
+            // Require index.js (exports routes)
+            const moduleExport = require(indexPath);
 
             // Validate required fields
-            if (!manifest.slug || !manifest.routes) {
-                logger.warn({ module: entry.name }, 'Module missing slug or routes — skipped');
+            if (!manifest.slug || !manifest.name) {
+                logger.warn({ module: entry.name }, 'manifest.json missing slug or name — skipped');
                 continue;
             }
 
-            modules.push(manifest);
-            logger.info({
-                module: manifest.name,
-                slug: manifest.slug,
-                version: manifest.version || '0.0.0',
-            }, 'Module discovered');
+            if (!moduleExport.routes) {
+                logger.warn({ module: entry.name }, 'index.js missing exported routes — skipped');
+                continue;
+            }
+
+            // Merge manifest with exported routes
+            const combinedModule = {
+                ...manifest,
+                routes: moduleExport.routes,
+            };
+
+            modules.push(combinedModule);
+            logger.info(
+                {
+                    module: combinedModule.name,
+                    slug: combinedModule.slug,
+                    version: combinedModule.version || '0.0.0',
+                },
+                'Module discovered',
+            );
         } catch (err) {
             logger.error({ module: entry.name, err }, 'Failed to load module');
         }
@@ -68,7 +94,7 @@ function discoverModules(logger) {
 /**
  * Registers discovered modules on the Express app.
  * Mounts each module's routes under /api/m/{slug}/
- * 
+ *
  * @param {Object} app - Express app instance
  * @param {Array} modules - Array of module manifests
  * @param {Function} accessMiddleware - Module access check middleware
@@ -88,7 +114,7 @@ function registerModules(app, modules, accessMiddleware, logger) {
  * Returns a summary of all loaded modules (for health check / docs).
  */
 function getModuleSummary(modules) {
-    return modules.map(m => ({
+    return modules.map((m) => ({
         name: m.name,
         slug: m.slug,
         version: m.version || '0.0.0',

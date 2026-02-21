@@ -32,11 +32,6 @@ const DEFAULT_SETTINGS = [
 ];
 
 module.exports = {
-    name: 'Hotel Management',
-    slug: 'hotel',
-    version: '2.0.0',
-    description:
-        'Complete hotel management solution: Rooms, Bookings, Customers, Services, Agents, Transactions, and more.',
     routes,
 
     /**

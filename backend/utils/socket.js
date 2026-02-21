@@ -47,7 +47,7 @@ module.exports = {
                 };
 
                 next();
-            } catch (err) {
+            } catch (_err) {
                 return next(new Error('Invalid or expired token'));
             }
         });

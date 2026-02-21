@@ -90,7 +90,7 @@ if (require.main === module) {
                         logger.info('Socket.io connections closed');
                     });
                 }
-            } catch (e) {
+            } catch (_e) {
                 // Ignore if io not initialized
             }
 

@@ -1,6 +1,7 @@
 const Tenant = require('../models/Tenant');
 const { errorResponse } = require('../utils/responseWrapper');
 const { getTenantConnection } = require('../utils/tenantDBCache');
+const asyncContext = require('../utils/asyncContext');
 
 /**
  * Determines the runtime mode of this server instance.
@@ -21,9 +22,9 @@ const RUNTIME_MODE = process.env.APP_TENANT_ID ? 'silo' : 'hub';
 const tenantMiddleware = async (req, res, next) => {
     try {
         if (RUNTIME_MODE === 'silo') {
-            return handleSiloMode(req, res, next);
+            return await handleSiloMode(req, res, next);
         } else {
-            return handleHubMode(req, res, next);
+            return await handleHubMode(req, res, next);
         }
     } catch (error) {
         console.error('Tenant Middleware Error:', error);
@@ -69,7 +70,9 @@ async function handleSiloMode(req, res, next) {
     const mongoose = require('mongoose');
     req.db = mongoose.connection;
 
-    next();
+    // Run the rest of the request within the async context
+    const store = { tenant: req.tenant };
+    asyncContext.run(store, () => next());
 }
 
 /**
@@ -112,7 +115,7 @@ async function handleHubMode(req, res, next) {
     if (tenant.dbUri) {
         try {
             req.db = await getTenantConnection(tenant.slug, tenant.dbUri);
-        } catch (dbErr) {
+        } catch (_dbErr) {
             // Fallback to hub connection if tenant DB is unreachable
             const mongoose = require('mongoose');
             req.db = mongoose.connection;
@@ -123,7 +126,9 @@ async function handleHubMode(req, res, next) {
         req.db = mongoose.connection;
     }
 
-    next();
+    // Run the rest of the request within the async context
+    const store = { tenant: req.tenant };
+    asyncContext.run(store, () => next());
 }
 
 module.exports = tenantMiddleware;

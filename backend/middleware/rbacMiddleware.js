@@ -1,4 +1,4 @@
-const config = require('../config');
+const { errorResponse } = require('../utils/responseWrapper');
 const logger = require('../utils/logger');
 
 /**

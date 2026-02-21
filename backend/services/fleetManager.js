@@ -1,8 +1,6 @@
 const { execFile } = require('child_process');
 const path = require('path');
-const axios = require('axios');
 const Tenant = require('../models/Tenant');
-const config = require('../config');
 const logger = require('../utils/logger');
 
 /**

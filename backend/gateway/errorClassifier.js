@@ -1,6 +1,6 @@
 /**
  * Error Classifier — Smart error handler for the API Gateway
- * 
+ *
  * Classifies known error types and logs at appropriate levels
  * instead of treating everything as a critical error.
  */
@@ -44,18 +44,21 @@ const ERROR_MAP = {
  * @param {Object} logger - Pino logger instance
  */
 function createErrorClassifier(logger) {
-    return (err, req, res, next) => {
+    return (err, req, res, _next) => {
         const errorType = err.constructor?.name || err.type || 'UnknownError';
         const classified = ERROR_MAP[errorType];
 
         if (classified) {
             // Known error — log at appropriate level, no stack trace
-            logger[classified.level]({
-                type: errorType,
-                method: req.method,
-                path: req.path,
-                detail: err.message,
-            }, classified.message);
+            logger[classified.level](
+                {
+                    type: errorType,
+                    method: req.method,
+                    path: req.path,
+                    detail: err.message,
+                },
+                classified.message,
+            );
 
             return res.status(err.statusCode || err.status || classified.status).json({
                 success: false,
@@ -64,11 +67,14 @@ function createErrorClassifier(logger) {
         }
 
         // Unknown error — log at error level with full stack
-        logger.error({
-            err,
-            method: req.method,
-            path: req.path,
-        }, 'Unhandled server error');
+        logger.error(
+            {
+                err,
+                method: req.method,
+                path: req.path,
+            },
+            'Unhandled server error',
+        );
 
         const statusCode = err.statusCode || err.status || 500;
         return res.status(statusCode).json({

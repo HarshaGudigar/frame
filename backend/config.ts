@@ -81,9 +81,10 @@ if (process.env.NODE_ENV !== 'test') {
 
 module.exports = {
     // Server
-    PORT: parseInt(process.env.PORT, 10) || 5000,
+    PORT: parseInt(process.env.PORT || '', 10) || 5000,
     NODE_ENV: process.env.NODE_ENV || 'development',
     MONGODB_URI: process.env.MONGODB_URI || 'mongodb://localhost:27017/mern-app',
+    REDIS_URI: process.env.REDIS_URI || 'redis://localhost:6379',
 
     // Auth
     JWT_SECRET: process.env.JWT_SECRET,
@@ -106,30 +107,29 @@ module.exports = {
     EMAIL_FROM: process.env.EMAIL_FROM || 'Alyxnet Frame <noreply@yourdomain.com>',
 
     // Rate Limiting
-    RATE_LIMIT_WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 15 * 60 * 1000, // 15 min
+    RATE_LIMIT_WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '', 10) || 15 * 60 * 1000, // 15 min
     RATE_LIMIT_MAX_AUTH:
-        parseInt(process.env.RATE_LIMIT_MAX_AUTH, 10) ||
-        (process.env.NODE_ENV === 'production' ? 20 : 1000),
-
-    // Endpoint-specific rate limits
+        parseInt(process.env.RATE_LIMIT_MAX_AUTH || '', 10) ||
+        (process.env.NODE_ENV === 'production' ? 20 : 1000), // Less strict for general auth endpoints
     RATE_LIMIT_LOGIN_WINDOW_MS:
-        parseInt(process.env.RATE_LIMIT_LOGIN_WINDOW_MS, 10) || 15 * 60 * 1000,
+        parseInt(process.env.RATE_LIMIT_LOGIN_WINDOW_MS || '', 10) || 15 * 60 * 1000,
     RATE_LIMIT_LOGIN_MAX:
-        parseInt(process.env.RATE_LIMIT_LOGIN_MAX, 10) ||
+        parseInt(process.env.RATE_LIMIT_LOGIN_MAX || '', 10) ||
         (process.env.NODE_ENV === 'production' ? 10 : 1000),
     RATE_LIMIT_REGISTER_WINDOW_MS:
-        parseInt(process.env.RATE_LIMIT_REGISTER_WINDOW_MS, 10) || 15 * 60 * 1000,
+        parseInt(process.env.RATE_LIMIT_REGISTER_WINDOW_MS || '', 10) || 15 * 60 * 1000,
     RATE_LIMIT_REGISTER_MAX:
-        parseInt(process.env.RATE_LIMIT_REGISTER_MAX, 10) ||
+        parseInt(process.env.RATE_LIMIT_REGISTER_MAX || '', 10) ||
         (process.env.NODE_ENV === 'production' ? 5 : 1000),
     RATE_LIMIT_FORGOT_PW_WINDOW_MS:
-        parseInt(process.env.RATE_LIMIT_FORGOT_PW_WINDOW_MS, 10) || 15 * 60 * 1000,
+        parseInt(process.env.RATE_LIMIT_FORGOT_PW_WINDOW_MS || '', 10) || 15 * 60 * 1000,
     RATE_LIMIT_FORGOT_PW_MAX:
-        parseInt(process.env.RATE_LIMIT_FORGOT_PW_MAX, 10) ||
+        parseInt(process.env.RATE_LIMIT_FORGOT_PW_MAX || '', 10) ||
         (process.env.NODE_ENV === 'production' ? 5 : 1000),
 
     // Request Limits
     BODY_SIZE_LIMIT: process.env.BODY_SIZE_LIMIT || '10kb',
+    TENANT_QUERY_LIMIT: parseInt(process.env.TENANT_QUERY_LIMIT || '', 10) || 100,
 
     // Logging
     LOG_LEVEL: process.env.LOG_LEVEL || 'info',
@@ -138,7 +138,7 @@ module.exports = {
     BACKUP_ENABLED: process.env.BACKUP_ENABLED !== 'false',
     BACKUP_PROVIDER: process.env.BACKUP_PROVIDER || 'local', // 'local' | 's3' | 'gdrive'
     BACKUP_CRON: process.env.BACKUP_CRON || '0 2 * * *', // Default 02:00 UTC
-    BACKUP_RETENTION_DAYS: parseInt(process.env.BACKUP_RETENTION_DAYS, 10) || 10,
+    BACKUP_RETENTION_DAYS: parseInt(process.env.BACKUP_RETENTION_DAYS || '', 10) || 10,
     BACKUP_DIR: process.env.BACKUP_DIR || '/backups',
     MONGODUMP_BIN: resolveMongoTool('MONGODUMP_BIN', 'mongodump'),
     MONGORESTORE_BIN: resolveMongoTool('MONGORESTORE_BIN', 'mongorestore'),
@@ -159,4 +159,9 @@ module.exports = {
     // Default Admin (Seeding)
     DEFAULT_ADMIN_EMAIL: process.env.ADMIN_EMAIL || 'admin@frame.local',
     DEFAULT_ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'Admin@123',
+
+    // Razorpay
+    RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || 'rzp_test_fake',
+    RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET || 'fake_secret',
+    RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET || 'whsec_fake',
 };

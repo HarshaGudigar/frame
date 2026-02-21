@@ -44,6 +44,10 @@ const productSchema = new mongoose.Schema(
             type: Boolean,
             default: true,
         },
+        razorpayPlanId: {
+            type: String,
+            trim: true,
+        },
     },
     {
         timestamps: true,

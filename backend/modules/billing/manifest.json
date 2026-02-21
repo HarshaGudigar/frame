@@ -1,0 +1,19 @@
+{
+    "slug": "billing",
+    "version": "1.0.0",
+    "minPlatformVersion": "1.0.0",
+    "name": "Billing & Subscriptions",
+    "description": "Core commercial layer. Integrates Stripe Checkout, Customer Portal, and Subscription Management.",
+    "category": "Core",
+    "features": ["Checkout", "Customer Portal", "Invoice Webhooks"],
+    "dependencies": [],
+    "events": {
+        "publishes": [
+            "billing.subscription.created",
+            "billing.subscription.updated",
+            "billing.subscription.canceled",
+            "billing.payment.failed"
+        ],
+        "subscribes": ["tenant.created", "tenant.suspended"]
+    }
+}

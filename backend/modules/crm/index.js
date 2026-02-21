@@ -1,10 +1,6 @@
 const routes = require('./routes');
 
 module.exports = {
-    name: 'Customer Relationship Management',
-    slug: 'crm',
-    version: '1.0.0',
-    description: 'Track leads, contacts, and sales pipeline.',
     routes,
 
     /**

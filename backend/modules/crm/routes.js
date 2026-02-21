@@ -23,6 +23,16 @@ router.post('/leads', async (req, res) => {
     try {
         const Lead = getLeadModel(req.db);
         const lead = await Lead.create(req.body);
+
+        if (req.eventBus && typeof req.eventBus.publish === 'function') {
+            await req.eventBus.publish('crm', 'crm.lead.created', lead);
+
+            // For the Developer Debug Panel
+            if (req.emittedEvents) {
+                req.emittedEvents.push({ name: 'crm.lead.created', timestamp: new Date() });
+            }
+        }
+
         return successResponse(res, lead, 'Lead created', 201);
     } catch (err) {
         return errorResponse(res, 'Failed to create lead', 500, err);

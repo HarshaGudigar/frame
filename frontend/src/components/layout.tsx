@@ -1,3 +1,4 @@
+import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth-context';
 import { usePermission } from '@/hooks/use-permission';
@@ -33,6 +34,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { BRAND } from '@/config/brand';
 import { BackgroundDecoration } from './ui/background-decoration';
+import { DebugPanel } from '@/components/debug-panel';
 
 const navItems = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -181,6 +183,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </header>
                 <main className="flex-1 p-6 page-transition relative">{children}</main>
             </SidebarInset>
+            <DebugPanel />
         </SidebarProvider>
     );
 }

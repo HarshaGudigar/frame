@@ -8,7 +8,7 @@ const GlobalUser = require('../models/GlobalUser');
 const RefreshToken = require('../models/RefreshToken');
 const VerificationToken = require('../models/VerificationToken');
 const { successResponse, errorResponse } = require('../utils/responseWrapper');
-const { JWT_SECRET, JWT_EXPIRY, REFRESH_TOKEN_EXPIRY } = require('../config');
+const { JWT_SECRET, JWT_EXPIRY } = require('../config');
 const { authMiddleware } = require('../middleware/authMiddleware');
 const { validate } = require('../middleware/validate');
 const {

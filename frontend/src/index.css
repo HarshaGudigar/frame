@@ -156,27 +156,27 @@
 }
 
 @utility glass-panel {
-    background-color: var(--background / 0.7);
+    background-color: color-mix(in oklab, var(--background) 70%, transparent);
     backdrop-filter: blur(12px);
-    border: 1px solid var(--border / 0.5);
+    border: 1px solid color-mix(in oklab, var(--border) 50%, transparent);
 }
 
 @utility glass-card {
-    background-color: var(--card / 0.6);
+    background-color: color-mix(in oklab, var(--card) 60%, transparent);
     backdrop-filter: blur(10px);
-    border: 1px solid var(--border / 0.4);
+    border: 1px solid color-mix(in oklab, var(--border) 40%, transparent);
     box-shadow:
-        0 4px 6px -1px var(--foreground / 0.05),
-        0 2px 4px -2px var(--foreground / 0.05),
-        inset 0 1px 1px var(--background / 0.1);
+        0 4px 6px -1px color-mix(in oklab, var(--foreground) 5%, transparent),
+        0 2px 4px -2px color-mix(in oklab, var(--foreground) 5%, transparent),
+        inset 0 1px 1px color-mix(in oklab, var(--background) 10%, transparent);
 }
 
 @utility glow-primary {
-    filter: drop-shadow(0 0 8px var(--primary / 0.3));
+    filter: drop-shadow(0 0 8px color-mix(in oklab, var(--primary) 30%, transparent));
 }
 
 @utility glow-accent {
-    filter: drop-shadow(0 0 8px var(--accent / 0.3));
+    filter: drop-shadow(0 0 8px color-mix(in oklab, var(--accent) 30%, transparent));
 }
 
 @utility vignette {

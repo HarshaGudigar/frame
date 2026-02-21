@@ -1,0 +1,11 @@
+{
+    "name": "Customer Relationship Management",
+    "slug": "crm",
+    "version": "1.0.0",
+    "description": "Track leads, contacts, and sales pipeline.",
+    "dependencies": [],
+    "events": {
+        "publishes": ["crm.lead.created", "crm.lead.updated", "crm.lead.deleted"],
+        "subscribes": ["tenant.created"]
+    }
+}

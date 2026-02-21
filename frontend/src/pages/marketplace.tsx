@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useRazorpay } from 'react-razorpay';
 import { useAuth } from '@/contexts/auth-context';
 import { Plus, Store, Package, AlertCircle, UserPlus, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -43,6 +44,7 @@ export function MarketplacePage() {
     const [assigningTo, setAssigningTo] = useState<any>(null);
     const [selectedTenant, setSelectedTenant] = useState('');
     const [assignLoading, setAssignLoading] = useState(false);
+    const { Razorpay } = useRazorpay();
 
     const fetchProducts = async () => {
         try {
@@ -72,6 +74,27 @@ export function MarketplacePage() {
         const timer = setTimeout(fetchProducts, 300);
         return () => clearTimeout(timer);
     }, [search, category]);
+
+    useEffect(() => {
+        const query = new URLSearchParams(window.location.search);
+        if (query.get('success')) {
+            toast({
+                title: 'Checkout Successful!',
+                description: 'Your subscription is now active.',
+            });
+        }
+        if (query.get('canceled')) {
+            toast({
+                variant: 'destructive',
+                title: 'Checkout Canceled',
+                description: 'You abandoned the checkout process.',
+            });
+        }
+        // Clean up URL
+        if (query.has('success') || query.has('canceled')) {
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+    }, [toast]);
 
     const formatPrice = (price: any) => {
         if (!price || !price.amount) return 'Free';
@@ -115,23 +138,79 @@ export function MarketplacePage() {
         if (!selectedTenant || !assigningTo) return;
         setAssignLoading(true);
         try {
-            await api.post('/marketplace/purchase', {
-                tenantId: selectedTenant,
-                productId: assigningTo._id,
+            // 1. Create Subscription on Backend
+            const res = await api.post(
+                '/m/billing/checkout',
+                {
+                    tenantId: selectedTenant,
+                    productId: assigningTo._id,
+                },
+                {
+                    headers: { 'x-tenant-id': selectedTenant },
+                },
+            );
+
+            const { subscription_id, key_id } = res.data.data;
+
+            // 2. Open Razorpay Checkou Modal
+            const options = {
+                key: key_id,
+                subscription_id: subscription_id,
+                name: 'Alyxnet Frame',
+                description: `Subscription for ${assigningTo.name}`,
+                handler: async function (response: any) {
+                    try {
+                        // 3. Verify Payment
+                        await api.post(
+                            '/m/billing/verify',
+                            {
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_subscription_id: response.razorpay_subscription_id,
+                                razorpay_signature: response.razorpay_signature,
+                            },
+                            {
+                                headers: { 'x-tenant-id': selectedTenant },
+                            },
+                        );
+
+                        toast({
+                            title: 'Checkout Successful!',
+                            description: 'Your subscription is now active.',
+                        });
+                        setAssigningTo(null);
+                        setSelectedTenant('');
+                        fetchProducts();
+                    } catch (err: any) {
+                        toast({
+                            variant: 'destructive',
+                            title: 'Verification Failed',
+                            description: 'Payment was made but verification failed.',
+                        });
+                    }
+                },
+                theme: {
+                    color: '#0f172a', // Tailwind slate-900 or primary
+                },
+            };
+
+            const rzp = new Razorpay(options);
+
+            rzp.on('payment.failed', function (response: any) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Payment Failed',
+                    description: response.error.description,
+                });
             });
-            toast({
-                title: 'Success',
-                description: `${assigningTo.name} assigned to tenant successfully!`,
-            });
-            setAssigningTo(null);
-            setSelectedTenant('');
+
+            rzp.open();
         } catch (err: any) {
             toast({
                 variant: 'destructive',
-                title: 'Assignment Failed',
-                description: err.response?.data?.message || 'Failed to assign module',
+                title: 'Checkout Failed',
+                description:
+                    err.response?.data?.message || err.message || 'Failed to initiate checkout',
             });
-        } finally {
             setAssignLoading(false);
         }
     };

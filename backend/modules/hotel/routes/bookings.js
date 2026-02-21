@@ -7,8 +7,6 @@ const getModels = require('../getModels');
 const { createBookingSchema, mongoIdParam } = require('../schemas');
 const { getNextCheckInNumber, calculateCheckOutDate } = require('../helpers');
 
-const populateFields = ['customer', 'room', 'agent'];
-
 // GET /bookings
 router.get('/', authMiddleware, async (req, res) => {
     try {
@@ -140,6 +138,14 @@ router.post('/', authMiddleware, validate({ body: createBookingSchema }), async 
             .populate('customer')
             .populate('rooms')
             .populate('agent');
+
+        if (req.eventBus && typeof req.eventBus.publish === 'function') {
+            await req.eventBus.publish('hotel', 'hotel.booking.created', populated);
+
+            if (req.emittedEvents) {
+                req.emittedEvents.push({ name: 'hotel.booking.created', timestamp: new Date() });
+            }
+        }
 
         return successResponse(res, populated, 'Group booking created successfully', 201);
     } catch (error) {

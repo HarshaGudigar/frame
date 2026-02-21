@@ -7,9 +7,6 @@
  * On validation failure, returns a clean 400 response with field-level errors.
  */
 
-const { ZodError } = require('zod');
-const { errorResponse } = require('../utils/responseWrapper');
-
 /**
  * Creates validation middleware for an Express route.
  *

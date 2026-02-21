@@ -32,10 +32,14 @@ const subscriptionSchema = new mongoose.Schema(
             type: String,
             default: '1.0.0',
         },
-        trialExpiry: {
-            type: Date,
+        razorpaySubscriptionId: {
+            type: String,
+            trim: true,
         },
-        paymentId: String, // Stripe Subscription ID or similar
+        razorpayPaymentId: {
+            type: String,
+            trim: true,
+        },
     },
     {
         timestamps: true,

@@ -72,11 +72,14 @@ const tenantSchema = new mongoose.Schema(
             faviconUrl: String,
             loginDomain: String,
         },
-        onboardingProgress: {
-            type: Number,
-            default: 0,
-            min: 0,
-            max: 100,
+        razorpayCustomerId: {
+            type: String,
+            trim: true,
+        },
+        billingStatus: {
+            type: String,
+            enum: ['active', 'past_due', 'canceled', 'unpaid', 'trialing'],
+            default: 'active',
         },
     },
     {

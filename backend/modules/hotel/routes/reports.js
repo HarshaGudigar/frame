@@ -38,7 +38,7 @@ router.get('/summary', authMiddleware, async (req, res) => {
             return sum + dailyRate;
         }, 0);
 
-        const roomsSoldToday = activeBookings.length; // Actually should be count of rooms across these bookings
+        const _roomsSoldToday = activeBookings.length; // Actually should be count of rooms across these bookings
         const totalRoomsSoldToday = activeBookings.reduce((sum, b) => sum + b.rooms.length, 0);
 
         const adr = totalRoomsSoldToday > 0 ? totalRevenueToday / totalRoomsSoldToday : 0;

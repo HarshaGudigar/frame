@@ -3,6 +3,12 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 const express = require('express');
+const mongoose = require('mongoose');
+
+// Register global Mongoose plugins
+const tenantPlugin = require('./plugins/tenantPlugin');
+mongoose.plugin(tenantPlugin);
+
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -55,6 +61,9 @@ function createApp() {
         return res.status(403).json({ success: false, message: 'Origin not allowed' });
     });
 
+    // ─── Razorpay Webhooks (Raw Body Required) ─────────────────────────────────
+    app.use('/api/m/billing/webhooks', require('./modules/billing/webhooks'));
+
     // Parse JSON with size limit
     app.use(express.json({ limit: config.BODY_SIZE_LIMIT }));
 
@@ -85,6 +94,10 @@ function createApp() {
     const tenantMiddleware = require('./middleware/tenantMiddleware');
     app.use(tenantMiddleware);
 
+    // ─── Developer Debug Panel ───────────────────────────────────────────────
+    const debugMiddleware = require('./middleware/debugMiddleware');
+    app.use(debugMiddleware);
+
     // ─── Usage Metering ──────────────────────────────────────────────────────
     const usageMiddleware = require('./middleware/usageMiddleware');
     app.use(usageMiddleware);
@@ -94,6 +107,14 @@ function createApp() {
 
     // Attach modules to app.locals for health check access
     app.locals.modules = modules;
+
+    // ─── Centralized Event Bus ───────────────────────────────────────────────
+    const eventBus = require('./events/EventBus');
+    eventBus.setModuleRegistry(modules);
+    app.use((req, res, next) => {
+        req.eventBus = eventBus;
+        next();
+    });
 
     // ─── Core Routes ─────────────────────────────────────────────────────────
     const authRoutes = require('./routes/auth');

@@ -19,6 +19,9 @@ const TenantsPage = lazy(() =>
 const MarketplacePage = lazy(() =>
     import('@/pages/marketplace').then((module) => ({ default: module.MarketplacePage })),
 );
+const BillingPage = lazy(() =>
+    import('@/pages/billing').then((module) => ({ default: module.BillingPage })),
+);
 const UsersPage = lazy(() => import('@/pages/users')); // Default export
 const SettingsPage = lazy(() =>
     import('@/pages/settings').then((module) => ({ default: module.SettingsPage })),
@@ -111,6 +114,7 @@ function AppRoutes() {
                                 <Route path="/" element={<DashboardPage />} />
                                 <Route path="/tenants" element={<TenantsPage />} />
                                 <Route path="/marketplace" element={<MarketplacePage />} />
+                                <Route path="/billing" element={<BillingPage />} />
                                 <Route path="/users" element={<UsersPage />} />
                                 <Route path="/settings" element={<SettingsPage />} />
                                 <Route path="/audit-logs" element={<AuditLogsPage />} />
