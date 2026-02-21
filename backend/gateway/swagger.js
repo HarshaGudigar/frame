@@ -1,6 +1,6 @@
 /**
  * Swagger Documentation Setup — Serves OpenAPI specs and Swagger UI.
- * 
+ *
  * - /api/docs          → Master Swagger UI (core platform APIs)
  * - /api/docs/modules  → List of available module docs
  */
@@ -19,12 +19,11 @@ function createCoreSpec() {
             info: {
                 title: 'Alyxnet Frame API',
                 version: '1.0.0',
-                description: 'Multi-tenant SaaS platform API — Authentication, Admin, and Marketplace endpoints.',
+                description:
+                    'Multi-tenant SaaS platform API — Authentication, Admin, and Marketplace endpoints.',
                 contact: { name: 'Alyxnet', url: 'https://github.com/HarshaGudigar/frame' },
             },
-            servers: [
-                { url: `http://localhost:${config.PORT}`, description: 'Local development' },
-            ],
+            servers: [{ url: `http://localhost:${config.PORT}`, description: 'Local development' }],
             components: {
                 securitySchemes: {
                     bearerAuth: {
@@ -62,6 +61,13 @@ function createCoreSpec() {
                         properties: {
                             success: { type: 'boolean', example: false },
                             message: { type: 'string' },
+                        },
+                    },
+                    AuthToken: {
+                        type: 'object',
+                        properties: {
+                            accessToken: { type: 'string' },
+                            refreshToken: { type: 'string' },
                         },
                     },
                 },
@@ -104,7 +110,7 @@ function createCoreSpec() {
  *                 uptime: { type: string }
  *                 database: { type: string, enum: [connected, disconnected, connecting, disconnecting] }
  *                 timestamp: { type: string, format: date-time }
- * 
+ *
  * /:
  *   get:
  *     tags: [System]
@@ -117,7 +123,7 @@ function createCoreSpec() {
 
 /**
  * Mounts Swagger UI and JSON spec endpoints on the app.
- * 
+ *
  * @param {Object} app - Express app instance
  * @param {Array} modules - Loaded module manifests
  * @param {Object} logger - Pino logger instance
@@ -133,8 +139,8 @@ function mountSwaggerDocs(app, modules, logger) {
     // List available module docs
     app.get('/api/docs/modules', (req, res) => {
         const moduleDocs = modules
-            .filter(m => m.swaggerSpec)
-            .map(m => ({
+            .filter((m) => m.swaggerSpec)
+            .map((m) => ({
                 name: m.name,
                 slug: m.slug,
                 docs: `/api/docs/modules/${m.slug}`,
@@ -159,10 +165,13 @@ function mountSwaggerDocs(app, modules, logger) {
                 swaggerUi.serveFiles(mod.swaggerSpec),
                 swaggerUi.setup(mod.swaggerSpec, {
                     customSiteTitle: `${mod.name} API Docs`,
-                })
+                }),
             );
 
-            logger.info({ module: mod.slug, path: `/api/docs/modules/${mod.slug}` }, 'Module docs mounted');
+            logger.info(
+                { module: mod.slug, path: `/api/docs/modules/${mod.slug}` },
+                'Module docs mounted',
+            );
         }
     }
 
@@ -178,7 +187,7 @@ function mountSwaggerDocs(app, modules, logger) {
                 docExpansion: 'list',
                 filter: true,
             },
-        })
+        }),
     );
 
     logger.info('Swagger UI mounted at /api/docs');

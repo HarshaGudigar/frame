@@ -5,7 +5,7 @@ const { execSync } = require('child_process');
  * Resolve the full path for a MongoDB tool binary (mongodump / mongorestore).
  * Checks, in order: env var override → system PATH → well-known install locations.
  */
-function resolveMongoTool(envVar, binaryName) {
+function resolveMongoTool(envVar: string, binaryName: string): string {
     // 1. Explicit env override
     if (process.env[envVar]) return process.env[envVar];
 

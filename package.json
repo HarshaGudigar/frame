@@ -1,18 +1,25 @@
 {
     "name": "frame",
     "version": "1.0.0",
+    "packageManager": "npm@10.9.3",
     "description": "Alyxnet Frame — Multi-tenant SaaS platform",
     "main": "index.js",
+    "workspaces": [
+        "frontend",
+        "backend",
+        "desktop",
+        "mobile"
+    ],
     "scripts": {
-        "dev": "concurrently -n backend,frontend,electron -c blue,green,magenta \"npm run start --prefix backend\" \"npm run dev --prefix frontend\" \"npm run dev:electron\"",
-        "dev:electron": "node -e \"setTimeout(()=>{},5000)\" && npm start --prefix desktop",
-        "start": "concurrently \"mongod --bind_ip_all\" \"npm run start --prefix backend\" \"npx serve -s frontend/dist -l 3000\"",
-        "lint": "eslint backend/",
-        "lint:fix": "eslint backend/ --fix",
+        "dev": "turbo run dev",
+        "build": "turbo run build",
+        "start": "concurrently \"mongod --bind_ip_all\" \"npm run start --workspace=backend\" \"npx serve -s frontend/dist -l 3000\"",
+        "lint": "turbo run lint",
+        "lint:fix": "turbo run lint:fix",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
         "prepare": "husky",
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "test": "turbo run test"
     },
     "keywords": [],
     "author": "",
@@ -27,7 +34,9 @@
         "eslint-config-prettier": "^10.1.5",
         "husky": "^9.1.7",
         "lint-staged": "^16.1.0",
-        "prettier": "^3.5.3"
+        "prettier": "^3.5.3",
+        "turbo": "^2.8.10",
+        "typescript-eslint": "^8.56.0"
     },
     "lint-staged": {
         "*.{js,ts,tsx,jsx}": [
