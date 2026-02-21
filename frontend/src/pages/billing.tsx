@@ -41,16 +41,6 @@ export function BillingPage() {
             }
         };
 
-        // Also handle the success redirect from Stripe Checkout
-        const query = new URLSearchParams(window.location.search);
-        if (query.get('success')) {
-            toast({
-                title: 'Subscription Active',
-                description: 'Your payment was successful and the module is provisioning.',
-            });
-            window.history.replaceState({}, '', window.location.pathname);
-        }
-
         fetchBillingData();
     }, [api, toast]);
 
