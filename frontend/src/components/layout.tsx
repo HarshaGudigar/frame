@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth-context';
 import { usePermission } from '@/hooks/use-permission';
 import { useSocket } from '@/components/providers/socket-provider';
@@ -60,6 +60,12 @@ function AppSidebar() {
     const { user, logout } = useAuth();
     const { hasRole } = usePermission();
     const { isConnected } = useSocket();
+    const location = useLocation();
+
+    const checkActive = (to: string) => {
+        if (to === '/') return location.pathname === '/';
+        return location.pathname.startsWith(to);
+    };
 
     const activeTenantSlug =
         user?.tenants?.find((t: any) => t.isActive)?.tenant?.slug || 'hub-control';
@@ -88,7 +94,7 @@ function AppSidebar() {
                                     <span className="truncate font-bold tracking-tight text-base leading-none">
                                         {BRAND.name}
                                     </span>
-                                    <span className="truncate text-[10px] text-muted-foreground/80 font-medium uppercase tracking-wider mt-0.5 leading-none">
+                                    <span className="text-[10px] text-muted-foreground/80 font-medium uppercase tracking-wider mt-0.5 leading-none">
                                         v2.1.0 · HUB MODE
                                     </span>
                                 </div>
@@ -140,6 +146,7 @@ function AppSidebar() {
                                         <SidebarMenuButton
                                             asChild
                                             tooltip={item.label}
+                                            isActive={checkActive(item.to)}
                                             className="transition-all duration-300 hover:bg-primary/10 hover:text-primary group data-[active=true]:bg-primary/10 data-[active=true]:text-primary border border-transparent data-[active=true]:border-primary/20"
                                         >
                                             <NavLink to={item.to} end={item.to === '/'}>
@@ -168,7 +175,8 @@ function AppSidebar() {
                                         <SidebarMenuButton
                                             asChild
                                             tooltip={item.label}
-                                            className="transition-all duration-300 hover:bg-primary/10 hover:text-primary group"
+                                            isActive={checkActive(item.to)}
+                                            className="transition-all duration-300 hover:bg-primary/10 hover:text-primary group data-[active=true]:bg-primary/10 data-[active=true]:text-primary border border-transparent data-[active=true]:border-primary/20"
                                         >
                                             <NavLink to={item.to} end={false}>
                                                 <item.icon className="size-4 transition-transform duration-300 group-hover:scale-110" />
@@ -201,7 +209,8 @@ function AppSidebar() {
                                         <SidebarMenuButton
                                             asChild
                                             tooltip={item.label}
-                                            className="transition-all duration-300 hover:bg-primary/10 hover:text-primary group"
+                                            isActive={checkActive(item.to)}
+                                            className="transition-all duration-300 hover:bg-primary/10 hover:text-primary group data-[active=true]:bg-primary/10 data-[active=true]:text-primary border border-transparent data-[active=true]:border-primary/20"
                                         >
                                             <NavLink to={item.to} end={false}>
                                                 <item.icon className="size-4 transition-transform duration-300 group-hover:scale-110" />
@@ -229,7 +238,8 @@ function AppSidebar() {
                                     <SidebarMenuButton
                                         asChild
                                         tooltip={item.label}
-                                        className="transition-all duration-300 hover:bg-primary/10 hover:text-primary group"
+                                        isActive={checkActive(item.to)}
+                                        className="transition-all duration-300 hover:bg-primary/10 hover:text-primary group data-[active=true]:bg-primary/10 data-[active=true]:text-primary border border-transparent data-[active=true]:border-primary/20"
                                     >
                                         <NavLink to={item.to} end={false}>
                                             <item.icon className="size-4 transition-transform duration-300 group-hover:scale-110" />
