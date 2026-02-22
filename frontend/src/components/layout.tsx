@@ -23,6 +23,7 @@ import {
     SidebarFooter,
     SidebarGroup,
     SidebarGroupContent,
+    SidebarGroupLabel,
     SidebarHeader,
     SidebarMenu,
     SidebarMenuButton,
@@ -36,23 +37,39 @@ import { BRAND } from '@/config/brand';
 import { BackgroundDecoration } from './ui/background-decoration';
 import { DebugPanel } from '@/components/debug-panel';
 
-const navItems = [
+const navCore = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/tenants', icon: Building2, label: 'Tenants', role: 'owner' },
     { to: '/users', icon: UsersIcon, label: 'Users', role: 'admin' },
+];
+
+const navPlatform = [
     { to: '/marketplace', icon: Store, label: 'Marketplace', role: 'admin' },
-    { to: '/hotel', icon: Building2, label: 'Hotel', module: 'hotel' },
-    { to: '/settings', icon: Settings, label: 'Settings' },
     { to: '/audit-logs', icon: ShieldCheck, label: 'Audit Logs', role: 'owner' },
 ];
+
+const navModules = [
+    { to: '/hotel', icon: Building2, label: 'Hotel Mgmt', module: 'hotel' },
+    { to: '/crm', icon: UsersIcon, label: 'CRM', module: 'crm' },
+    { to: '/billing', icon: Store, label: 'Billing', module: 'billing' },
+];
+
+const navConfig = [{ to: '/settings', icon: Settings, label: 'Settings' }];
 
 function AppSidebar() {
     const { user, logout } = useAuth();
     const { hasRole } = usePermission();
+    const { isConnected } = useSocket();
+
+    const activeTenantSlug =
+        user?.tenants?.find((t: any) => t.isActive)?.tenant?.slug || 'hub-control';
+    const activeTenantRole =
+        user?.tenants?.find((t: any) => t.isActive)?.role ||
+        (user?.role === 'owner' ? 'Fleet Owner' : 'System');
 
     return (
         <Sidebar variant="inset" collapsible="icon">
-            <SidebarHeader className="h-16 flex items-center justify-center overflow-hidden border-b glass-panel transition-all group-data-[collapsible=icon]:p-0 z-10">
+            <SidebarHeader className="flex flex-col overflow-hidden border-b glass-panel transition-all group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:h-16 group-data-[collapsible=icon]:justify-center z-10 py-4 gap-4">
                 <SidebarMenu className="group-data-[collapsible=icon]:items-center">
                     <SidebarMenuItem>
                         <SidebarMenuButton
@@ -72,38 +89,58 @@ function AppSidebar() {
                                         {BRAND.name}
                                     </span>
                                     <span className="truncate text-[10px] text-muted-foreground/80 font-medium uppercase tracking-wider mt-0.5 leading-none">
-                                        {BRAND.product}
+                                        v2.1.0 · HUB MODE
                                     </span>
                                 </div>
                             </NavLink>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
+
+                <div className="mt-4 px-2 group-data-[collapsible=icon]:hidden w-full">
+                    <div className="bg-primary/5 hover:bg-primary/10 transition-colors border border-primary/20 rounded-lg flex items-center justify-between px-3 py-2 cursor-default">
+                        <div className="flex flex-col">
+                            <span className="text-xs font-mono font-medium text-primary tracking-tight truncate max-w-[120px]">
+                                {activeTenantSlug}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground capitalize">
+                                {activeTenantRole}
+                            </span>
+                        </div>
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger>
+                                    <div
+                                        className={`size-2 rounded-full shadow-[0_0_8px] ${isConnected ? 'bg-green-500 shadow-green-500/50 animate-pulse-slow' : 'bg-red-500 shadow-red-500/50'}`}
+                                    />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    {isConnected
+                                        ? 'Real-time WebSocket connected'
+                                        : 'WebSocket disconnected'}
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    </div>
+                </div>
             </SidebarHeader>
             <Separator />
-            <SidebarContent>
+            <SidebarContent className="gap-0">
+                {/* Core Overview */}
                 <SidebarGroup>
+                    <SidebarGroupLabel className="text-[10px] font-mono tracking-wider uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
+                        Overview
+                    </SidebarGroupLabel>
                     <SidebarGroupContent>
                         <SidebarMenu>
-                            {navItems.map((item) => {
+                            {navCore.map((item) => {
                                 if (item.role && !hasRole(item.role as any)) return null;
-
-                                // Module access check
-                                if ((item as any).module) {
-                                    const moduleSlug = (item as any).module;
-                                    const hasModuleAccess = user?.tenants?.some((t: any) =>
-                                        t.tenant?.subscribedModules?.includes(moduleSlug),
-                                    );
-                                    // Also allow owner to see it for debugging/admin
-                                    if (!hasModuleAccess && user?.role !== 'owner') return null;
-                                }
-
                                 return (
                                     <SidebarMenuItem key={item.to}>
                                         <SidebarMenuButton
                                             asChild
                                             tooltip={item.label}
-                                            className="transition-all duration-300 hover:bg-primary/10 hover:text-primary group"
+                                            className="transition-all duration-300 hover:bg-primary/10 hover:text-primary group data-[active=true]:bg-primary/10 data-[active=true]:text-primary border border-transparent data-[active=true]:border-primary/20"
                                         >
                                             <NavLink to={item.to} end={item.to === '/'}>
                                                 <item.icon className="size-4 transition-transform duration-300 group-hover:scale-110" />
@@ -113,6 +150,94 @@ function AppSidebar() {
                                     </SidebarMenuItem>
                                 );
                             })}
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
+
+                {/* Platform */}
+                <SidebarGroup>
+                    <SidebarGroupLabel className="text-[10px] font-mono tracking-wider uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
+                        Platform
+                    </SidebarGroupLabel>
+                    <SidebarGroupContent>
+                        <SidebarMenu>
+                            {navPlatform.map((item) => {
+                                if (item.role && !hasRole(item.role as any)) return null;
+                                return (
+                                    <SidebarMenuItem key={item.to}>
+                                        <SidebarMenuButton
+                                            asChild
+                                            tooltip={item.label}
+                                            className="transition-all duration-300 hover:bg-primary/10 hover:text-primary group"
+                                        >
+                                            <NavLink to={item.to} end={false}>
+                                                <item.icon className="size-4 transition-transform duration-300 group-hover:scale-110" />
+                                                <span className="font-medium">{item.label}</span>
+                                            </NavLink>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                );
+                            })}
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
+
+                {/* Modules */}
+                <SidebarGroup>
+                    <SidebarGroupLabel className="text-[10px] font-mono tracking-wider uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
+                        Modules
+                    </SidebarGroupLabel>
+                    <SidebarGroupContent>
+                        <SidebarMenu>
+                            {navModules.map((item) => {
+                                const moduleSlug = (item as any).module;
+                                const hasModuleAccess = user?.tenants?.some((t: any) =>
+                                    t.tenant?.subscribedModules?.includes(moduleSlug),
+                                );
+                                if (!hasModuleAccess && user?.role !== 'owner') return null;
+
+                                return (
+                                    <SidebarMenuItem key={item.to}>
+                                        <SidebarMenuButton
+                                            asChild
+                                            tooltip={item.label}
+                                            className="transition-all duration-300 hover:bg-primary/10 hover:text-primary group"
+                                        >
+                                            <NavLink to={item.to} end={false}>
+                                                <item.icon className="size-4 transition-transform duration-300 group-hover:scale-110" />
+                                                <span className="font-medium">{item.label}</span>
+                                                {/* Mock indicator for active modules */}
+                                                <div className="ml-auto size-2 rounded-full bg-primary/50 group-hover:bg-primary group-hover:shadow-[0_0_8px] group-hover:shadow-primary/50 transition-all group-data-[collapsible=icon]:hidden" />
+                                            </NavLink>
+                                        </SidebarMenuButton>
+                                    </SidebarMenuItem>
+                                );
+                            })}
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
+
+                {/* Config */}
+                <SidebarGroup className="mt-auto">
+                    <SidebarGroupLabel className="text-[10px] font-mono tracking-wider uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
+                        Config
+                    </SidebarGroupLabel>
+                    <SidebarGroupContent>
+                        <SidebarMenu>
+                            {navConfig.map((item) => (
+                                <SidebarMenuItem key={item.to}>
+                                    <SidebarMenuButton
+                                        asChild
+                                        tooltip={item.label}
+                                        className="transition-all duration-300 hover:bg-primary/10 hover:text-primary group"
+                                    >
+                                        <NavLink to={item.to} end={false}>
+                                            <item.icon className="size-4 transition-transform duration-300 group-hover:scale-110" />
+                                            <span className="font-medium">{item.label}</span>
+                                        </NavLink>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            ))}
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
@@ -140,31 +265,6 @@ function AppSidebar() {
     );
 }
 
-function ConnectionStatus() {
-    const { isConnected } = useSocket();
-    return (
-        <TooltipProvider>
-            <Tooltip>
-                <TooltipTrigger asChild>
-                    <div className="flex items-center gap-1.5 text-xs cursor-default">
-                        <span
-                            className={`size-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`}
-                        />
-                        <span className="text-muted-foreground">
-                            {isConnected ? 'Connected' : 'Disconnected'}
-                        </span>
-                    </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                    {isConnected
-                        ? 'Real-time connection active'
-                        : 'Connection lost — attempting to reconnect'}
-                </TooltipContent>
-            </Tooltip>
-        </TooltipProvider>
-    );
-}
-
 export function Layout({ children }: { children: React.ReactNode }) {
     return (
         <SidebarProvider>
@@ -176,7 +276,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
                         {/* Title or Breadcrumbs could go here */}
                     </div>
                     <div className="flex items-center gap-4">
-                        <ConnectionStatus />
                         <ModeToggle />
                         <NotificationCenter />
                     </div>

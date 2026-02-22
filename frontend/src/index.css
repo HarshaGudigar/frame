@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Sora:wght@100..800&display=swap');
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
@@ -42,6 +43,9 @@
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
+
+    --font-sans: 'Sora', sans-serif;
+    --font-mono: 'DM Mono', monospace;
 
     @keyframes float {
         0%,
@@ -122,37 +126,39 @@
 }
 
 .dark {
-    --background: oklch(0.12 0.02 240);
-    --foreground: oklch(0.95 0.01 240);
-    --card: oklch(0.16 0.02 240 / 0.8);
-    --card-foreground: oklch(0.95 0.01 240);
-    --popover: oklch(0.16 0.02 240);
-    --popover-foreground: oklch(0.95 0.01 240);
-    --primary: oklch(0.65 0.2 260);
-    --primary-foreground: oklch(0.12 0.02 240);
-    --secondary: oklch(0.22 0.03 240);
-    --secondary-foreground: oklch(0.95 0.01 240);
-    --muted: oklch(0.22 0.03 240);
-    --muted-foreground: oklch(0.6 0.02 240);
-    --accent: oklch(0.25 0.05 260);
-    --accent-foreground: oklch(0.9 0.05 260);
-    --destructive: oklch(0.5 0.2 25);
-    --border: oklch(0.25 0.02 240);
-    --input: oklch(0.25 0.02 240);
-    --ring: oklch(0.65 0.2 260);
-    --chart-1: oklch(0.65 0.2 260);
-    --chart-2: oklch(0.65 0.2 180);
-    --chart-3: oklch(0.65 0.2 40);
-    --chart-4: oklch(0.65 0.2 100);
-    --chart-5: oklch(0.65 0.2 300);
-    --sidebar: oklch(0.14 0.02 240);
-    --sidebar-foreground: oklch(0.9 0.01 240);
-    --sidebar-primary: oklch(0.65 0.2 260);
-    --sidebar-primary-foreground: oklch(0.12 0.02 240);
-    --sidebar-accent: oklch(0.2 0.03 240);
-    --sidebar-accent-foreground: oklch(0.95 0.01 240);
-    --sidebar-border: oklch(0.22 0.02 240);
-    --sidebar-ring: oklch(0.65 0.2 260);
+    --background: #0a0b0d;
+    --foreground: #f1f5f9;
+    --card: #111318;
+    /* slightly lighter charcoal */
+    --card-foreground: #f1f5f9;
+    --popover: #111318;
+    --popover-foreground: #f1f5f9;
+    --primary: #00d4ff;
+    /* electric cyan/teal */
+    --primary-foreground: #000000;
+    --secondary: #1a1e26;
+    --secondary-foreground: #f1f5f9;
+    --muted: #1a1e26;
+    --muted-foreground: #8b9bb4;
+    --accent: #00d4ff;
+    --accent-foreground: #000000;
+    --destructive: #ff3344;
+    --border: #222631;
+    --input: #222631;
+    --ring: #00d4ff;
+    --chart-1: #00d4ff;
+    --chart-2: #8a2be2;
+    --chart-3: #20c997;
+    --chart-4: #ffbf00;
+    --chart-5: #ff3344;
+    --sidebar: #0a0b0d;
+    --sidebar-foreground: #f1f5f9;
+    --sidebar-primary: #00d4ff;
+    --sidebar-primary-foreground: #000000;
+    --sidebar-accent: #1a1e26;
+    --sidebar-accent-foreground: #f1f5f9;
+    --sidebar-border: #222631;
+    --sidebar-ring: #00d4ff;
 }
 
 @utility glass-panel {
@@ -192,6 +198,11 @@
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
 }
 
+@utility bg-grid-pattern {
+    background-image: radial-gradient(#222631 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
 @utility page-transition {
     @apply animate-in fade-in slide-in-from-bottom-2 duration-700 ease-out;
 }
@@ -203,10 +214,6 @@
 
     body {
         @apply bg-background text-foreground;
-        font-family:
-            'Inter',
-            -apple-system,
-            BlinkMacSystemFont,
-            sans-serif;
+        font-family: var(--font-sans);
     }
 }

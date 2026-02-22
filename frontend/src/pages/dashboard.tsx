@@ -151,25 +151,161 @@ export function DashboardPage() {
                 <>
                     {isAdmin && stats && <FleetStats stats={stats} />}
 
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <MetricsChart
-                            title="Average CPU Utilization"
-                            data={history}
-                            dataKey="cpu"
-                            color="#3b82f6"
-                        />
-                        <MetricsChart
-                            title="Average RAM Usage"
-                            data={history}
-                            dataKey="ram"
-                            color="#10b981"
-                            unit="MB"
-                        />
+                    <div className="grid gap-6 lg:grid-cols-12">
+                        {/* 7 Columns for Charts */}
+                        <div className="lg:col-span-7 flex flex-col gap-6">
+                            <MetricsChart
+                                title="Fleet CPU Load - 24h Breakdown"
+                                data={history}
+                                dataKey="cpu"
+                                color="#00d4ff"
+                            />
+                            <MetricsChart
+                                title="Fleet RAM Storage"
+                                data={history}
+                                dataKey="ram"
+                                color="#10b981"
+                                unit="MB"
+                            />
+                        </div>
+
+                        {/* 5 Columns for Activity Feed */}
+                        <div className="lg:col-span-5 flex">
+                            <Card className="glass-card flex-1 flex flex-col overflow-hidden">
+                                <CardHeader className="border-b border-border/40 pb-4 bg-background/20">
+                                    <div className="flex items-center justify-between">
+                                        <CardTitle className="text-sm font-mono flex items-center gap-2">
+                                            <div className="size-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)] animate-pulse-slow shrink-0" />
+                                            Live Activity Feed
+                                        </CardTitle>
+                                        <Badge
+                                            variant="outline"
+                                            className="text-[10px] font-mono border-green-500/30 text-green-500 bg-green-500/10"
+                                        >
+                                            SOCKET.IO
+                                        </Badge>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="flex-1 overflow-y-auto p-0 max-h-[600px] scrollbar-thin">
+                                    <div className="flex flex-col divide-y divide-border/20">
+                                        {[
+                                            {
+                                                id: 1,
+                                                type: 'cr',
+                                                msg: 'crm-webhook synced lead to',
+                                                target: 'crm.contact#3368',
+                                                time: 'just now',
+                                                status: 'info',
+                                            },
+                                            {
+                                                id: 2,
+                                                type: 'sy',
+                                                msg: 'token-cleanup purged expired tokens for',
+                                                target: '174 users',
+                                                time: '1m ago',
+                                                status: 'success',
+                                            },
+                                            {
+                                                id: 3,
+                                                type: 'sy',
+                                                msg: 'token-cleanup purged expired tokens for',
+                                                target: '4784 users',
+                                                time: '2m ago',
+                                                status: 'success',
+                                            },
+                                            {
+                                                id: 4,
+                                                type: 'ho',
+                                                msg: 'acme-api processed booking in',
+                                                target: 'hotel.booking#2805',
+                                                time: '3m ago',
+                                                status: 'info',
+                                            },
+                                            {
+                                                id: 5,
+                                                type: 'cr',
+                                                msg: 'crm-webhook synced lead to',
+                                                target: 'crm.contact#9301',
+                                                time: '15m ago',
+                                                status: 'info',
+                                            },
+                                            {
+                                                id: 6,
+                                                type: 'au',
+                                                msg: 'auth.login failed attempt for',
+                                                target: 'admin@acme.com',
+                                                time: '1h ago',
+                                                status: 'error',
+                                            },
+                                            {
+                                                id: 7,
+                                                type: 'bi',
+                                                msg: 'subscription.renew processed for',
+                                                target: 'orbit-saas',
+                                                time: '2h ago',
+                                                status: 'success',
+                                            },
+                                        ].map((item) => (
+                                            <div
+                                                key={item.id}
+                                                className="p-4 hover:bg-white/5 transition-colors group cursor-default"
+                                            >
+                                                <div className="flex items-start gap-3">
+                                                    <div
+                                                        className={`mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full text-[10px] uppercase font-bold tracking-wider ${
+                                                            item.type === 'cr'
+                                                                ? 'bg-purple-500/10 text-purple-400 ring-1 ring-purple-500/20'
+                                                                : item.type === 'ho'
+                                                                  ? 'bg-blue-500/10 text-blue-400 ring-1 ring-blue-500/20'
+                                                                  : item.type === 'sy'
+                                                                    ? 'bg-green-500/10 text-green-400 ring-1 ring-green-500/20'
+                                                                    : item.type === 'au'
+                                                                      ? 'bg-red-500/10 text-red-400 ring-1 ring-red-500/20'
+                                                                      : 'bg-primary/10 text-primary ring-1 ring-primary/20'
+                                                        }`}
+                                                    >
+                                                        {item.type}
+                                                    </div>
+                                                    <div className="flex-1 space-y-1.5">
+                                                        <p className="text-xs leading-relaxed">
+                                                            <span className="font-bold text-foreground mr-1">
+                                                                {item.msg.split(' ')[0]}
+                                                            </span>
+                                                            <span className="text-muted-foreground mr-1">
+                                                                {item.msg
+                                                                    .split(' ')
+                                                                    .slice(1)
+                                                                    .join(' ')}
+                                                            </span>
+                                                            <span className="font-mono text-primary bg-primary/10 px-1 py-0.5 rounded">
+                                                                {item.target}
+                                                            </span>
+                                                        </p>
+                                                        <p className="text-[10px] font-mono text-muted-foreground/60">
+                                                            {item.time}
+                                                        </p>
+                                                    </div>
+                                                    <div
+                                                        className={`size-1.5 rounded-full mt-1.5 shrink-0 ${
+                                                            item.status === 'success'
+                                                                ? 'bg-green-500'
+                                                                : item.status === 'error'
+                                                                  ? 'bg-red-500'
+                                                                  : 'bg-primary'
+                                                        }`}
+                                                    />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
                     </div>
 
                     {isAdmin && (
-                        <Card>
-                            <CardHeader className="flex flex-row items-center justify-between">
+                        <Card className="glass-card overflow-hidden">
+                            <CardHeader className="flex flex-row items-center justify-between border-b border-border/40 bg-background/20">
                                 <CardTitle>Silo Fleet</CardTitle>
                                 <div className="text-xs text-muted-foreground flex gap-4">
                                     <span className="flex items-center">

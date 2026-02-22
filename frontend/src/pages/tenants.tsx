@@ -145,7 +145,7 @@ export function TenantsPage() {
                     if (!open) resetForm();
                 }}
             >
-                <DialogContent className="sm:max-w-lg">
+                <DialogContent className="sm:max-w-lg glass-panel border-primary/20 shadow-2xl">
                     <DialogHeader>
                         <DialogTitle>{editingId ? 'Edit Tenant' : 'Create Tenant'}</DialogTitle>
                     </DialogHeader>
@@ -223,11 +223,11 @@ export function TenantsPage() {
             </Dialog>
 
             {/* Tenants Table */}
-            <Card>
-                <CardContent className="pt-6">
+            <Card className="glass-card flex flex-col overflow-hidden max-h-[calc(100vh-220px)]">
+                <CardContent className="p-0 overflow-y-auto scrollbar-thin">
                     <Table>
-                        <TableHeader>
-                            <TableRow>
+                        <TableHeader className="bg-background/40 sticky top-0 z-10 backdrop-blur-md border-b border-border/40">
+                            <TableRow className="hover:bg-transparent">
                                 <TableHead>Name</TableHead>
                                 <TableHead>Slug</TableHead>
                                 <TableHead>Status</TableHead>
@@ -249,8 +249,24 @@ export function TenantsPage() {
                                     </TableRow>
                                 ))}
                             {tenants.map((t) => (
-                                <TableRow key={t._id}>
-                                    <TableCell className="font-medium">{t.name}</TableCell>
+                                <TableRow
+                                    key={t._id}
+                                    className="group transition-colors hover:bg-white/5 border-b border-border/20"
+                                >
+                                    <TableCell className="font-medium p-0 pl-4 py-3">
+                                        <div className="flex items-center gap-3">
+                                            <div
+                                                className={`w-1 h-8 rounded-full shadow-[0_0_8px] ${
+                                                    t.status === 'online'
+                                                        ? 'bg-green-500 shadow-green-500/50'
+                                                        : t.status === 'error'
+                                                          ? 'bg-red-500 shadow-red-500/50'
+                                                          : 'bg-muted shadow-transparent'
+                                                }`}
+                                            />
+                                            {t.name}
+                                        </div>
+                                    </TableCell>
                                     <TableCell>
                                         <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
                                             {t.slug}
@@ -288,12 +304,12 @@ export function TenantsPage() {
                                             ))}
                                         </div>
                                     </TableCell>
-                                    <TableCell className="text-right">
-                                        <div className="flex justify-end gap-1">
+                                    <TableCell className="text-right py-2 px-4">
+                                        <div className="flex justify-end gap-1 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity duration-300">
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                className="size-8"
+                                                className="size-8 hover:bg-primary/20 hover:text-primary transition-colors"
                                                 onClick={() => handleEdit(t)}
                                             >
                                                 <Pencil className="size-3.5" />
@@ -301,7 +317,7 @@ export function TenantsPage() {
                                             <Button
                                                 variant="ghost"
                                                 size="icon"
-                                                className="size-8 text-destructive hover:text-destructive"
+                                                className="size-8 text-muted-foreground hover:bg-destructive/20 hover:text-destructive transition-colors"
                                                 onClick={() => handleDelete(t._id, t.name)}
                                             >
                                                 <Trash2 className="size-3.5" />
