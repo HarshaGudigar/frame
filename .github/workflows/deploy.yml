@@ -49,12 +49,14 @@ jobs:
                       sudo docker compose down --remove-orphans
                       sudo docker compose up -d --build --remove-orphans
 
-                      # Wait for health check (poll every 5s, max 24 attempts = 120s)
+                      # Wait for health check — initial sleep matches Docker start-period,
+                      # then poll every 5s for up to 180s (36 attempts)
                       echo "Waiting for container to become healthy..."
+                      sleep 60
                       HEALTHY=false
-                      for i in $(seq 1 24); do
+                      for i in $(seq 1 36); do
                           STATUS=$(sudo docker inspect --format='{{.State.Health.Status}}' frame-app 2>/dev/null || echo "unknown")
-                          echo "  Attempt $i/24: status=$STATUS"
+                          echo "  Attempt $i/36: status=$STATUS"
                           if [ "$STATUS" = "healthy" ]; then
                               HEALTHY=true
                               break

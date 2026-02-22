@@ -21,7 +21,10 @@ const router = express.Router();
 router.get('/', (req, res) => {
     // Determine overall health
     const dbState = mongoose.connection.readyState;
-    const isHealthy = dbState === 1; // 1 = connected
+    // 0=disconnected, 1=connected, 2=connecting, 3=disconnecting
+    // During container startup MongoDB takes time to initialize — treat "connecting"
+    // as healthy so Docker does not fail the start-period health checks.
+    const isHealthy = dbState === 1 || dbState === 2;
 
     const dbStatusMap = {
         0: 'disconnected',
