@@ -50,7 +50,6 @@ const navPlatform = [
 
 const navModules = [
     { to: '/hotel', icon: Building2, label: 'Hotel Mgmt', module: 'hotel' },
-    { to: '/crm', icon: UsersIcon, label: 'CRM', module: 'crm' },
     { to: '/billing', icon: Store, label: 'Billing', module: 'billing' },
 ];
 

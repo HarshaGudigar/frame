@@ -148,7 +148,7 @@ router.post(
  *               name: { type: string, example: "Acme Corporation" }
  *               slug: { type: string, pattern: "^[a-z0-9-]+$", example: "acme-corp" }
  *               vmIpAddress: { type: string, example: "10.0.1.5" }
- *               subscribedModules: { type: array, items: { type: string }, example: ["accounting", "crm"] }
+ *               subscribedModules: { type: array, items: { type: string }, example: ["hotel", "billing"] }
  *     responses:
  *       201:
  *         description: Tenant created

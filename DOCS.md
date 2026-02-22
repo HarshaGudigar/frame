@@ -185,11 +185,11 @@ All configuration lives in `backend/.env`. The full reference:
 
 ### Multi-Tenancy (Silo Mode Only)
 
-| Variable                 | Default | Description                                        |
-| :----------------------- | :------ | :------------------------------------------------- |
-| `APP_TENANT_ID`          | —       | Tenant slug — **set this to enable Silo mode**     |
-| `APP_TENANT_NAME`        | —       | Display name for the tenant                        |
-| `APP_SUBSCRIBED_MODULES` | —       | Comma-separated module slugs (e.g., `crm,billing`) |
+| Variable                 | Default | Description                                          |
+| :----------------------- | :------ | :--------------------------------------------------- |
+| `APP_TENANT_ID`          | —       | Tenant slug — **set this to enable Silo mode**       |
+| `APP_TENANT_NAME`        | —       | Display name for the tenant                          |
+| `APP_SUBSCRIBED_MODULES` | —       | Comma-separated module slugs (e.g., `hotel,billing`) |
 
 ### Rate Limiting
 
@@ -245,7 +245,7 @@ Frame supports two runtime modes that enable flexible multi-tenant architectures
 │  │ Local Mongo │  │          │  │ Local Mongo │  │
 │  │  (Tenant A) │  │          │  │  (Tenant B) │  │
 │  └─────────────┘  │          │  └─────────────┘  │
-│  Modules: crm     │          │  Modules: crm,erp │
+│  Modules: hotel   │          │  Modules: hotel,billing │
 └───────────────────┘          └───────────────────┘
 ```
 
@@ -343,7 +343,7 @@ Create a `.env` file for the silo instance:
 # ─── Silo Identity ────────────────────────────────────
 APP_TENANT_ID=acme-corp
 APP_TENANT_NAME=Acme Corporation
-APP_SUBSCRIBED_MODULES=crm
+APP_SUBSCRIBED_MODULES=billing
 
 # ─── Server ───────────────────────────────────────────
 PORT=5000
@@ -405,7 +405,7 @@ docker run -d \
   -p 5000:5000 \
   -e APP_TENANT_ID=acme-corp \
   -e APP_TENANT_NAME="Acme Corporation" \
-  -e APP_SUBSCRIBED_MODULES=crm \
+  -e APP_SUBSCRIBED_MODULES=billing \
   -e JWT_SECRET=silo-specific-secret \
   -e MONGODB_URI=mongodb://localhost:27017/frame_tenant_acme-corp \
   -v acme_data:/data/db \
@@ -619,7 +619,7 @@ Create a product in the Marketplace (via API or dashboard) with `slug: 'your-mod
 All module routes are mounted under `/api/m/{slug}/`:
 
 ```
-GET  /api/m/crm/leads          → CRM module's leads endpoint
+GET  /api/m/hotel/rooms        → Hotel module's rooms endpoint
 POST /api/m/your-module/       → Your module's root endpoint
 ```
 

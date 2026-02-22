@@ -34,15 +34,15 @@ describe('Phase 2 Completion Verification', () => {
     describe('Marketplace Hardening & Search', () => {
         it('should support search and category filtering in /products', async () => {
             await Product.create([
-                { name: 'CRM Module', slug: 'crm', category: 'Sales', isActive: true },
+                { name: 'Hotel Module', slug: 'hotel', category: 'Operations', isActive: true },
                 { name: 'Billing Module', slug: 'billing', category: 'Finance', isActive: true },
                 { name: 'Archived Module', slug: 'archived', category: 'General', isActive: false },
             ]);
 
             // Test Search
-            const resSearch = await request.get('/api/marketplace/products?search=CRM');
+            const resSearch = await request.get('/api/marketplace/products?search=Hotel');
             expect(resSearch.body.data.length).toBe(1);
-            expect(resSearch.body.data[0].slug).toBe('crm');
+            expect(resSearch.body.data[0].slug).toBe('hotel');
 
             // Test Category
             const resCat = await request.get('/api/marketplace/products?category=Finance');
@@ -76,7 +76,7 @@ describe('Phase 2 Completion Verification', () => {
             const billing = await Product.create({
                 name: 'Billing',
                 slug: 'billing',
-                dependencies: ['crm'],
+                dependencies: ['hotel'],
             });
 
             const res = await request
@@ -86,7 +86,7 @@ describe('Phase 2 Completion Verification', () => {
                 .send({ tenantId: tenant._id.toString(), productId: billing._id.toString() });
 
             expect(res.status).toBe(400);
-            expect(res.body.message).toContain('Missing required dependencies: crm');
+            expect(res.body.message).toContain('Missing required dependencies: hotel');
         });
     });
 
@@ -124,19 +124,19 @@ describe('Phase 2 Completion Verification', () => {
             const tenant = await Tenant.create({
                 name: 'Usage Tenant',
                 slug: 'usage-tenant',
-                subscribedModules: ['crm'],
+                subscribedModules: ['billing'],
             });
 
-            // Mock a CRM request with the module header
+            // Mock a billing request with the module header
             await request
-                .get('/api/m/crm/leads')
+                .get('/api/m/billing/dashboard') // The route doesn't have to exist, usage middleware applies first
                 .set('x-tenant-id', 'usage-tenant')
-                .set('x-module-id', 'crm');
+                .set('x-module-id', 'billing');
 
             // Give it a moment to fire-and-forget
             await new Promise((r) => setTimeout(r, 100));
 
-            const usage = await UsageMeter.findOne({ tenant: tenant._id, module: 'crm' });
+            const usage = await UsageMeter.findOne({ tenant: tenant._id, module: 'billing' });
             expect(usage).toBeDefined();
             expect(usage.callCount).toBe(1);
         });

@@ -534,10 +534,10 @@ socket.on('module.provisioned', ({ tenantSlug, moduleSlug }) => {
 
 ```javascript
 // In a module route handler
-req.eventBus.emit('crm:lead.created', { tenantId, leadId });
+req.eventBus.emit('billing:invoice.paid', { tenantId, invoiceId });
 
 // In another module that subscribes
-eventBus.on('crm:lead.created', async ({ tenantId, leadId }) => {
+eventBus.on('billing:invoice.paid', async ({ tenantId, invoiceId }) => {
     // React to the event
 });
 ```
@@ -993,17 +993,6 @@ Handles Razorpay payment integration, subscription lifecycle, and webhook proces
 | `/billing/subscribe` | POST   | Initiate Razorpay checkout           |
 | `/billing/webhooks`  | POST   | Razorpay webhook receiver (raw body) |
 | `/billing/status`    | GET    | Current subscription status          |
-
-**Dependencies**: None
-
-### CRM (`/api/m/crm/`)
-
-Customer Relationship Management with lead tracking.
-
-| Endpoint         | Method           | Description       |
-| :--------------- | :--------------- | :---------------- |
-| `/crm/leads`     | GET/POST         | List/create leads |
-| `/crm/leads/:id` | GET/PATCH/DELETE | Manage a lead     |
 
 **Dependencies**: None
 

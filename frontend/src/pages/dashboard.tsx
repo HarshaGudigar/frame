@@ -190,14 +190,6 @@ export function DashboardPage() {
                                     <div className="flex flex-col divide-y divide-border/20">
                                         {[
                                             {
-                                                id: 1,
-                                                type: 'cr',
-                                                msg: 'crm-webhook synced lead to',
-                                                target: 'crm.contact#3368',
-                                                time: 'just now',
-                                                status: 'info',
-                                            },
-                                            {
                                                 id: 2,
                                                 type: 'sy',
                                                 msg: 'token-cleanup purged expired tokens for',
@@ -219,14 +211,6 @@ export function DashboardPage() {
                                                 msg: 'acme-api processed booking in',
                                                 target: 'hotel.booking#2805',
                                                 time: '3m ago',
-                                                status: 'info',
-                                            },
-                                            {
-                                                id: 5,
-                                                type: 'cr',
-                                                msg: 'crm-webhook synced lead to',
-                                                target: 'crm.contact#9301',
-                                                time: '15m ago',
                                                 status: 'info',
                                             },
                                             {
