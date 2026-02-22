@@ -33,6 +33,7 @@ jobs:
                   host: ${{ steps.set-host.outputs.host }}
                   username: ${{ secrets.LIGHTSAIL_USERNAME }}
                   key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+                  timeout: 60m
                   script: |
                       set -e
 
@@ -50,25 +51,25 @@ jobs:
                       sudo docker compose up -d --build --remove-orphans
 
                       # Wait for health check — initial sleep matches Docker start-period,
-                      # then poll every 5s for up to 180s (36 attempts)
+                      # then poll every 10s for up to 600s (60 attempts)
                       echo "Waiting for container to become healthy..."
-                      sleep 60
+                      sleep 90
                       HEALTHY=false
-                      for i in $(seq 1 36); do
+                      for i in $(seq 1 60); do
                           STATUS=$(sudo docker inspect --format='{{.State.Health.Status}}' frame-app 2>/dev/null || echo "unknown")
-                          echo "  Attempt $i/36: status=$STATUS"
+                          echo "  Attempt $i/60: status=$STATUS"
                           if [ "$STATUS" = "healthy" ]; then
                               HEALTHY=true
                               break
                           fi
-                          sleep 5
+                          sleep 10
                       done
 
                       if [ "$HEALTHY" = "true" ]; then
                           echo "Deployment successful — container is healthy."
                           sudo docker rmi frame-app:rollback 2>/dev/null || true
                       else
-                          echo "Deployment FAILED — container did not become healthy within 120s."
+                          echo "Deployment FAILED — container did not become healthy within the wait period."
                           echo "Reporting container logs for diagnostics:"
                           sudo docker logs frame-app --tail 100
                           echo "Rolling back to previous image..."
