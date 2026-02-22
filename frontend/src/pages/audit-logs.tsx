@@ -163,7 +163,7 @@ export function AuditLogsPage() {
             </div>
 
             {/* Filters */}
-            <Card>
+            <Card className="glass-card">
                 <CardContent className="pt-6">
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div className="space-y-2">
@@ -224,11 +224,11 @@ export function AuditLogsPage() {
                 </CardContent>
             </Card>
 
-            <Card>
-                <CardHeader>
+            <Card className="glass-card flex flex-col overflow-hidden max-h-[800px]">
+                <CardHeader className="shrink-0">
                     <CardTitle>Recent Activity</CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="flex-1 overflow-auto p-0 px-6 pb-6">
                     {loading ? (
                         <div className="space-y-2">
                             <Skeleton className="h-10 w-full" />
@@ -239,7 +239,7 @@ export function AuditLogsPage() {
                         <>
                             <div className="rounded-md border">
                                 <Table>
-                                    <TableHeader>
+                                    <TableHeader className="sticky top-0 bg-background/40 backdrop-blur-md z-10">
                                         <TableRow>
                                             <TableHead>Time</TableHead>
                                             <TableHead>User</TableHead>
@@ -326,7 +326,7 @@ export function AuditLogsPage() {
 
             {/* Details Sheet */}
             <Sheet open={!!selectedLog} onOpenChange={(open) => !open && setSelectedLog(null)}>
-                <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto">
+                <SheetContent className="w-[400px] sm:w-[540px] overflow-y-auto glass-panel border-l-primary/20">
                     <SheetHeader>
                         <SheetTitle>Audit Log Details</SheetTitle>
                         <SheetDescription>

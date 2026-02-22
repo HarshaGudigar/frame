@@ -63,10 +63,10 @@ export function MetricsChart({ data, title, dataKey, color, unit = '%' }: Metric
                     className="w-full relative h-[200px]"
                     style={{ minHeight: '200px' }}
                 >
-                    {dimensions && (
+                    {dimensions && dimensions.width > 0 && dimensions.height > 0 && (
                         <AreaChart
-                            width={dimensions.width}
-                            height={dimensions.height}
+                            width={Math.max(10, dimensions.width)}
+                            height={Math.max(10, dimensions.height)}
                             data={chartData}
                             margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                             style={{ outline: 'none' }}

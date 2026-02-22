@@ -955,10 +955,20 @@ router.get(
         if (startDate || endDate) {
             query.createdAt = {};
             if (startDate) {
-                query.createdAt.$gte = new Date(startDate);
+                const start = new Date(startDate);
+                if (!isNaN(start.getTime())) {
+                    query.createdAt.$gte = start;
+                }
             }
             if (endDate) {
-                query.createdAt.$lte = new Date(endDate);
+                const end = new Date(endDate);
+                if (!isNaN(end.getTime())) {
+                    query.createdAt.$lte = end;
+                }
+            }
+            // Remove createdAt if empty
+            if (Object.keys(query.createdAt).length === 0) {
+                delete query.createdAt;
             }
         }
 
