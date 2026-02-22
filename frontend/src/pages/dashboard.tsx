@@ -52,14 +52,21 @@ export function DashboardPage() {
                 const targetSlug = selectedTenant || tenantsRes.data.data[0].slug;
                 if (!selectedTenant) setSelectedTenant(targetSlug);
 
-                const historyRes = await api.get(`/admin/metrics/${targetSlug}`);
-                setHistory(historyRes.data.data);
+                try {
+                    const historyRes = await api.get(`/admin/metrics/${targetSlug}`);
+                    setHistory(historyRes.data.data);
+                } catch (historyError: any) {
+                    console.error('Failed to fetch metrics history', historyError);
+                    // Don't show toast here as it's secondary data
+                }
             }
-        } catch (error) {
+        } catch (error: any) {
+            const message =
+                error.response?.data?.message || error.message || 'Failed to fetch dashboard data.';
             toast({
                 variant: 'destructive',
                 title: 'Error',
-                description: 'Failed to fetch dashboard data.',
+                description: message,
             });
         } finally {
             setLoading(false);
