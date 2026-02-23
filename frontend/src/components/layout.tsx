@@ -58,24 +58,27 @@ const navConfig = [{ to: '/settings', icon: Settings, label: 'Settings' }];
 function AppSidebar() {
     const { user, logout, systemInfo } = useAuth();
     const { hasRole } = usePermission();
-    const { isConnected } = useSocket();
     const location = useLocation();
+
+    const isSilo = systemInfo?.mode === 'SILO';
 
     const checkActive = (to: string) => {
         if (to === '/') return location.pathname === '/';
         return location.pathname.startsWith(to);
     };
 
-    const activeTenantSlug =
-        systemInfo?.mode === 'SILO'
-            ? systemInfo.tenant?.slug || 'silo-instance'
-            : user?.tenants?.find((t: any) => t.isActive)?.tenant?.slug || 'hub-control';
-
-    const activeTenantRole =
-        user?.tenants?.find((t: any) => t.isActive)?.role ||
-        (user?.role === 'owner' ? 'Fleet Owner' : 'System');
-
     const runtimeModeText = systemInfo?.mode ? `${systemInfo.mode} MODE` : 'LOADING...';
+
+    // Hub-only items are hidden in Silo mode:
+    // - Tenants: Silo is single-tenant by definition, no fleet to manage.
+    // - Marketplace stays visible: a standalone Silo customer still needs it to manage their modules.
+    const visibleNavCore = navCore.filter((item) => {
+        if (isSilo && item.to === '/tenants') return false;
+        return true;
+    });
+
+    // No Platform items are filtered — Marketplace and Audit Logs are needed in all modes.
+    const visibleNavPlatform = navPlatform;
 
     return (
         <Sidebar variant="inset" collapsible="icon">
@@ -106,33 +109,6 @@ function AppSidebar() {
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
-
-                <div className="mt-4 px-2 group-data-[collapsible=icon]:hidden w-full">
-                    <div className="bg-primary/5 hover:bg-primary/10 transition-colors border border-primary/20 rounded-lg flex items-center justify-between px-3 py-2 cursor-default">
-                        <div className="flex flex-col">
-                            <span className="text-xs font-mono font-medium text-primary tracking-tight truncate max-w-[120px]">
-                                {activeTenantSlug}
-                            </span>
-                            <span className="text-[10px] text-muted-foreground capitalize">
-                                {activeTenantRole}
-                            </span>
-                        </div>
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger>
-                                    <div
-                                        className={`size-2 rounded-full shadow-[0_0_8px] ${isConnected ? 'bg-green-500 shadow-green-500/50 animate-pulse-slow' : 'bg-red-500 shadow-red-500/50'}`}
-                                    />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    {isConnected
-                                        ? 'Real-time WebSocket connected'
-                                        : 'WebSocket disconnected'}
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
-                    </div>
-                </div>
             </SidebarHeader>
             <Separator />
             <SidebarContent className="gap-0">
@@ -143,7 +119,7 @@ function AppSidebar() {
                     </SidebarGroupLabel>
                     <SidebarGroupContent>
                         <SidebarMenu>
-                            {navCore.map((item) => {
+                            {visibleNavCore.map((item) => {
                                 if (item.role && !hasRole(item.role as any)) return null;
                                 return (
                                     <SidebarMenuItem key={item.to}>
@@ -172,7 +148,7 @@ function AppSidebar() {
                     </SidebarGroupLabel>
                     <SidebarGroupContent>
                         <SidebarMenu>
-                            {navPlatform.map((item) => {
+                            {visibleNavPlatform.map((item) => {
                                 if (item.role && !hasRole(item.role as any)) return null;
                                 return (
                                     <SidebarMenuItem key={item.to}>
@@ -280,16 +256,53 @@ function AppSidebar() {
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
+    const { user, systemInfo } = useAuth();
+    const { isConnected } = useSocket();
+
+    const isSilo = systemInfo?.mode === 'SILO';
+
+    const activeTenantSlug = isSilo
+        ? systemInfo?.tenant?.slug || 'silo-instance'
+        : user?.tenants?.find((t: any) => t.isActive)?.tenant?.slug || 'hub-control';
+
+    const activeTenantRole =
+        user?.tenants?.find((t: any) => t.isActive)?.role ||
+        (user?.role === 'owner' ? 'Fleet Owner' : 'System');
+
     return (
         <SidebarProvider>
             <BackgroundDecoration />
             <AppSidebar />
             <SidebarInset className="bg-background/20 dark:bg-background/40">
-                <header className="flex h-16 shrink-0 items-center justify-between px-6 border-b glass-panel sticky top-0 z-10">
+                <header className="flex h-16 shrink-0 items-center justify-between px-6 border-b glass-panel sticky top-0 z-10 transition-all">
                     <div className="flex items-center gap-2">
                         {/* Title or Breadcrumbs could go here */}
                     </div>
                     <div className="flex items-center gap-4">
+                        <div className="bg-primary/5 hover:bg-primary/10 transition-colors border border-primary/20 rounded-lg flex items-center justify-between px-3 py-1.5 cursor-default gap-3 h-9">
+                            <div className="flex flex-col items-end">
+                                <span className="text-xs font-mono font-medium text-primary tracking-tight truncate max-w-[120px] leading-tight mt-0.5">
+                                    {activeTenantSlug}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground capitalize leading-none">
+                                    {activeTenantRole}
+                                </span>
+                            </div>
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger>
+                                        <div
+                                            className={`size-2 rounded-full shadow-[0_0_8px] ${isConnected ? 'bg-green-500 shadow-green-500/50 animate-pulse-slow' : 'bg-red-500 shadow-red-500/50'}`}
+                                        />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        {isConnected
+                                            ? 'Real-time WebSocket connected'
+                                            : 'WebSocket disconnected'}
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        </div>
                         <ModeToggle />
                         <NotificationCenter />
                     </div>
