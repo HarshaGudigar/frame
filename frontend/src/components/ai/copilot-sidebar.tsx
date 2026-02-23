@@ -19,7 +19,7 @@ export function CopilotSidebar() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
-    const { api } = useAuth();
+    const { api, user } = useAuth();
     const { toast } = useToast();
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -68,7 +68,14 @@ export function CopilotSidebar() {
         setIsTyping(true);
 
         try {
-            const res = await api.post('/ai/chat', { message: userMsg });
+            // Attempt to derive the hotel tenant context from the user's logged-in permissions
+            const hotelTenant = user?.tenants?.find((t: any) =>
+                t.tenant?.subscribedModules?.includes('hotel'),
+            )?.tenant?.slug;
+
+            const headers = hotelTenant ? { 'x-tenant-id': hotelTenant } : {};
+
+            const res = await api.post('/ai/chat', { message: userMsg }, { headers });
             if (res.data.success) {
                 setMessages((prev) => [
                     ...prev,

@@ -5,6 +5,7 @@ const { authMiddleware } = require('../middleware/authMiddleware');
 const { errorResponse, successResponse } = require('../utils/responseWrapper');
 const { generateSystemContext } = require('../services/contextInjector');
 const { invokeClaudeMessages } = require('../services/bedrockService');
+const { AI_TOOLS_DEFINITIONS, executeTool } = require('../services/aiTools');
 
 /**
  * @openapi
@@ -40,31 +41,122 @@ router.post('/chat', authMiddleware, async (req, res) => {
             .select('role content -_id'); // Bedrock only needs role and content
 
         // Reverse to get chronological order [oldest, ..., newest]
-        const formattedHistory = history.reverse().map((msg) => ({
-            role: msg.role === 'tool' ? 'user' : msg.role, // Simple mapping for now, actual tool schemas will come later
-            content: msg.content,
-        }));
+        const rawChronological = history.reverse();
+        const formattedHistory = [];
+        let lastRole = null;
+
+        for (const msg of rawChronological) {
+            const currentRole = msg.role === 'tool' ? 'user' : msg.role;
+
+            // Claude strictly requires alternating user/assistant roles.
+            // If we have sequential messages of the same role (e.g. from a past crash),
+            // we must either skip the duplicate or merge them. We will merge them.
+            if (currentRole === lastRole && formattedHistory.length > 0) {
+                const prevMsg = formattedHistory[formattedHistory.length - 1];
+                prevMsg.content += `\n\n[Follow-up]: ${msg.content}`;
+            } else {
+                formattedHistory.push({
+                    role: currentRole,
+                    content: msg.content,
+                });
+                lastRole = currentRole;
+            }
+        }
 
         // 3. Generate the highly-restricted System Context Injector Prompt
         const systemPrompt = generateSystemContext(req);
 
-        // 4. Send the request to AWS Bedrock
-        const aiResponseText = await invokeClaudeMessages(formattedHistory, systemPrompt);
+        // 4. Recursive Tool Use Execution Loop
+        let isFinalResponse = false;
+        let aiFinalText = '';
+        let loopCount = 0;
+        const MAX_TOOL_LOOPS = 5; // Safety fallback
 
-        // 5. Save the AI's response to the DB
+        while (!isFinalResponse && loopCount < MAX_TOOL_LOOPS) {
+            loopCount++;
+
+            // Invoke Bedrock with current history and tool definitions
+            const bedrockPayload = await invokeClaudeMessages(
+                formattedHistory,
+                systemPrompt,
+                AI_TOOLS_DEFINITIONS,
+            );
+
+            // Bedrock returns an array of content blocks. Some may be text, some may be tool_use.
+            const contentBlocks = bedrockPayload.content || [];
+
+            // Find if there's any tool_use requests in this turn
+            const toolUseBlocks = contentBlocks.filter((b) => b.type === 'tool_use');
+            const textBlock = contentBlocks.find((b) => b.type === 'text');
+
+            if (bedrockPayload.stop_reason === 'tool_use' || toolUseBlocks.length > 0) {
+                console.log(
+                    `[AI Controller] AI requested tools: ${toolUseBlocks.map((t) => t.name).join(', ')}`,
+                );
+
+                // We must ALWAYS append the AI's exact request to the history so Claude knows what it asked for
+                // Claude strictly requires alternating user/assistant roles, and tool_results must follow tool_uses.
+                formattedHistory.push({
+                    role: 'assistant',
+                    content: bedrockPayload.content,
+                });
+
+                // We must format the results EXACTLY as Claude 3 expects:
+                // A 'user' message containing an array of 'tool_result' objects
+                const toolResultsContent = [];
+
+                for (const tool of toolUseBlocks) {
+                    const resultText = await executeTool(tool.name, tool.input, {
+                        tenantId,
+                        userId,
+                        userRole: req.user.role,
+                        isSiloMode: process.env.APP_TENANT_ID ? true : false,
+                        tenantName: req.tenant ? req.tenant.name : 'Unknown',
+                    });
+
+                    toolResultsContent.push({
+                        type: 'tool_result',
+                        tool_use_id: tool.id,
+                        content: resultText,
+                    });
+                }
+
+                // Add the tool results to the conversation history as a 'user' turn
+                formattedHistory.push({
+                    role: 'user',
+                    content: toolResultsContent,
+                });
+
+                // The loop iterates, sending this updated history back to Claude...
+            } else {
+                // Stop reason is end_turn (or max_tokens). We are done.
+                isFinalResponse = true;
+                aiFinalText = textBlock
+                    ? textBlock.text
+                    : 'Sorry, I could not generate a response.';
+            }
+        }
+
+        if (loopCount >= MAX_TOOL_LOOPS) {
+            aiFinalText =
+                'I encountered an error or took too long analyzing that request. Please try asking in a different way.';
+        }
+
+        // 5. Save the final finalized AI's text response to the DB
         const assistantMsg = new ChatMessage({
             userId,
             tenantId,
             role: 'assistant',
-            content: aiResponseText,
+            content: aiFinalText,
         });
         await assistantMsg.save();
 
         // 6. Return response to frontend
         return successResponse(res, {
-            reply: aiResponseText,
+            reply: aiFinalText,
         });
     } catch (err) {
+        console.error('[AI CHAT ERROR]', err);
         return errorResponse(res, 'Failed to process AI request', 500, err);
     }
 });

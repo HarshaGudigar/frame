@@ -18,11 +18,12 @@ function getClient() {
  * Sends a conversation to Claude 3 via AWS Bedrock's Messages API
  * @param {Array} formattedMessages - Array of {role: 'user'|'assistant', content: string}
  * @param {String} systemPrompt - The injected system context
- * @param {String} modelId - The Bedrock Model ID (defaults to ENV overriding to Haiku)
+ * @param {Array} tools - Optional array of tools the AI can use
  */
 async function invokeClaudeMessages(
     formattedMessages,
     systemPrompt,
+    tools = [],
     modelId = process.env.BEDROCK_MODEL_ID || 'anthropic.claude-3-haiku-20240307-v1:0',
 ) {
     try {
@@ -33,6 +34,11 @@ async function invokeClaudeMessages(
             messages: formattedMessages,
             temperature: 0.2, // Low temperature for deterministic/tool-calling tasks
         };
+
+        if (tools && tools.length > 0) {
+            payload.tools = tools;
+            // Optionally, toolChoice could be forced, but we let Claude decide
+        }
 
         const command = new InvokeModelCommand({
             modelId: modelId,
@@ -47,11 +53,8 @@ async function invokeClaudeMessages(
         // Bedrock response body is a Uint8Array, we must parse it
         const responseBody = JSON.parse(new TextDecoder().decode(response.body));
 
-        if (responseBody.content && responseBody.content.length > 0) {
-            return responseBody.content[0].text;
-        }
-
-        return 'No response generated.';
+        // Return the full Claude 3 content block so the controller can parse `stop_reason` === 'tool_use'
+        return responseBody;
     } catch (error) {
         logger.error({ err: error, modelId }, 'Failed to invoke AWS Bedrock');
         throw error;
