@@ -1,6 +1,7 @@
 import { ProfileForm } from '@/components/settings/profile-form';
 import { TwoFactorSettings } from '@/components/settings/two-factor-settings';
 import { DatabaseBackups } from '@/components/settings/database-backups';
+import { RoleMatrix } from '@/components/settings/role-matrix';
 import { Can } from '@/hooks/use-permission';
 
 export function SettingsPage() {
@@ -15,7 +16,12 @@ export function SettingsPage() {
 
             <ProfileForm />
             <TwoFactorSettings />
-            <Can role="admin">
+
+            <Can permission="roles:manage">
+                <RoleMatrix />
+            </Can>
+
+            <Can role="owner">
                 <DatabaseBackups />
             </Can>
         </div>

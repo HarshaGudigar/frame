@@ -36,6 +36,7 @@ import { Separator } from '@/components/ui/separator';
 import { BRAND } from '@/config/brand';
 import { BackgroundDecoration } from './ui/background-decoration';
 import { DebugPanel } from '@/components/debug-panel';
+import { CopilotSidebar } from '@/components/ai/copilot-sidebar';
 
 const navCore = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -303,6 +304,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                                 </Tooltip>
                             </TooltipProvider>
                         </div>
+                        <CopilotSidebar />
                         <ModeToggle />
                         <NotificationCenter />
                     </div>

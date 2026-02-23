@@ -116,6 +116,24 @@
 
 ---
 
+## Phase 3.5: Granular RBAC Matrix (Next Priority)
+
+> **Status**: In Progress
+> Upgrading from rigid string-based roles ('admin', 'owner') to a customizable Attribute-Based Access Control (ABAC) matrix, allowing users to define discrete permissions per role.
+
+### 1. Backend RBAC Engine
+
+- [ ] **Role Data Model**: Create a new `Role` MongoDB schema that maps a role name to an array of defined permission strings (e.g., `['users:read', 'users:write']`).
+- [ ] **Middleware Rewrite**: Build and integrate `requirePermission('string')` middleware to replace the legacy `requireRole('string')` guard.
+- [ ] **Global vs. Tenant Matrices**: Ensure support for both Hub-level roles (management) and Silo-level roles (tenant operations).
+
+### 2. Frontend Matrix UI
+
+- [ ] **Permission Hook Update**: Refactor `use-permission.tsx` to check against an array of granted permission strings.
+- [ ] **Interactive Matrix UI**: Build the 'Role Matrix' settings page to allow visual assignment of permissions to roles via an interactive grid format.
+
+---
+
 ## Phase 4: Monetization First (Following 8 Weeks)
 
 > **Status**: In Progress

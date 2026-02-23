@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const { errorResponse } = require('../utils/responseWrapper');
 const { JWT_SECRET } = require('../config');
 const GlobalUser = require('../models/GlobalUser');
+const Role = require('../models/Role');
 const logger = require('../utils/logger');
 
 /**
@@ -19,10 +20,6 @@ const authMiddleware = async (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
-
-        // Fetch full user with role and tenant access
-        // We select '+role' if it was set to select: false, but it's true by default.
-        // We might need to populate references if we used them, but tenants structure is embedded.
         const user = await GlobalUser.findById(decoded.userId || decoded.id);
 
         if (!user) {
@@ -30,11 +27,9 @@ const authMiddleware = async (req, res, next) => {
         }
 
         req.user = user;
+        let queryContext = { tenantId: null };
 
         // Tenant Context Role Override
-        // If x-tenant-id header is present, we check if user belongs to that tenant
-        // and override req.user.role with the tenant-specific role for this request context.
-        // req.tenant is resolved by tenantMiddleware (slug → full Tenant doc) before this runs.
         if (req.tenant?._id && user.tenants) {
             const tenantAccess = user.tenants.find(
                 (t) => t.tenant.toString() === req.tenant._id.toString(),
@@ -42,7 +37,24 @@ const authMiddleware = async (req, res, next) => {
 
             if (tenantAccess) {
                 req.user.role = tenantAccess.role;
+                queryContext.tenantId = req.tenant._id;
             }
+        }
+
+        // Fetch Granular Permissions from Role Matrix
+        const roleDoc = await Role.findOne({ name: req.user.role, ...queryContext });
+
+        if (roleDoc) {
+            req.user.permissions = roleDoc.permissions;
+        } else if (req.user.role === 'owner') {
+            // Absolute bypass for system owners
+            req.user.permissions = ['*'];
+        } else {
+            req.user.permissions = [];
+            logger.warn(
+                { role: req.user.role, tenantId: queryContext.tenantId },
+                'Role document not found, defaulting to zero permissions',
+            );
         }
 
         next();
@@ -52,28 +64,55 @@ const authMiddleware = async (req, res, next) => {
 };
 
 /**
- * Role Guard Factory
+ * Role Guard Factory (Legacy - to be deprecated)
  * Checks if req.user.role matches allowed roles.
  */
 const requireRole = (...allowedRoles) => {
     return (req, res, next) => {
         if (!req.user || !req.user.role) {
-            logger.warn(
-                { hasUser: !!req.user, role: req.user?.role },
-                'Unauthorized: Missing user or role',
-            );
             return errorResponse(res, 'Unauthorized', 403);
         }
 
         const userRole = String(req.user.role);
 
-        // Owner bypass — owner has superuser access to all admin routes
-        if (userRole === 'owner') {
+        if (userRole === 'owner' || allowedRoles.includes(userRole)) {
             return next();
         }
 
-        if (!allowedRoles.includes(userRole)) {
-            return errorResponse(res, `Forbidden. Requires: ${allowedRoles.join(', ')}`, 403);
+        return errorResponse(
+            res,
+            `Forbidden. Requires legacy role: ${allowedRoles.join(', ')}`,
+            403,
+        );
+    };
+};
+
+/**
+ * Permission Guard Factory (New Matrix System)
+ * Checks if req.user.permissions includes the required permission string.
+ */
+const requirePermission = (...requiredPermissions) => {
+    return (req, res, next) => {
+        if (!req.user || !req.user.permissions) {
+            return errorResponse(res, 'Unauthorized', 403);
+        }
+
+        // Owner bypass
+        if (req.user.role === 'owner' || req.user.permissions.includes('*')) {
+            return next();
+        }
+
+        // Check if user has ANY of the required permissions (OR logic)
+        const hasPermission = requiredPermissions.some((perm) =>
+            req.user.permissions.includes(perm),
+        );
+
+        if (!hasPermission) {
+            return errorResponse(
+                res,
+                `Forbidden. Requires permission: ${requiredPermissions.join(' or ')}`,
+                403,
+            );
         }
 
         next();
@@ -90,7 +129,6 @@ const requireVerifiedEmail = (req, res, next) => {
         return errorResponse(res, 'Authentication required', 401);
     }
 
-    // Bypass for development
     if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
         return next();
     }
@@ -106,4 +144,4 @@ const requireVerifiedEmail = (req, res, next) => {
     next();
 };
 
-module.exports = { authMiddleware, requireRole, requireVerifiedEmail };
+module.exports = { authMiddleware, requireRole, requirePermission, requireVerifiedEmail };

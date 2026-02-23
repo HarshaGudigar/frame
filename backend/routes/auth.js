@@ -476,6 +476,35 @@ router.post('/refresh-token', async (req, res) => {
 
 /**
  * @openapi
+ * /api/auth/me:
+ *   get:
+ *     summary: Get current user
+ *     description: Returns the currently authenticated user along with their resolved permissions matrix.
+ *     security:
+ *       - bearerAuth: []
+ */
+router.get('/me', authMiddleware, async (req, res) => {
+    return successResponse(
+        res,
+        {
+            user: {
+                _id: req.user._id,
+                email: req.user.email,
+                firstName: req.user.firstName,
+                lastName: req.user.lastName,
+                role: req.user.role,
+                permissions: req.user.permissions, // Injected by authMiddleware
+                isEmailVerified: req.user.isEmailVerified,
+                isTwoFactorEnabled: req.user.isTwoFactorEnabled,
+                tenants: req.user.tenants,
+            },
+        },
+        'User profile retrieved',
+    );
+});
+
+/**
+ * @openapi
  * /api/auth/profile:
  *   patch:
  *     summary: Update user profile

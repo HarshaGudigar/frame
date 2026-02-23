@@ -11,7 +11,8 @@ export interface User {
     firstName: string;
     lastName: string;
 
-    role: Role;
+    role: Role | string;
+    permissions?: string[];
     isActive?: boolean;
     isEmailVerified?: boolean;
     isTwoFactorEnabled?: boolean;
@@ -71,18 +72,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const api = React.useMemo(() => axios.create({ baseURL: API_BASE }), []);
 
-    // Fetch system info on mount
+    // Fetch system info and latest user permissions on mount
     useEffect(() => {
-        const fetchConfig = async () => {
+        const fetchInitialData = async () => {
             try {
-                const response = await axios.get(`${API_BASE}/health`);
-                setSystemInfo(response.data);
+                // System Info (Platform Config)
+                const configResponse = await axios.get(`${API_BASE}/health`);
+                setSystemInfo(configResponse.data);
+
+                // User Profile & Permissions
+                if (tokenRef.current) {
+                    const userResponse = await api.get('/auth/me');
+                    if (userResponse.data.success && userResponse.data.data.user) {
+                        const freshUser = userResponse.data.data.user;
+                        setUser(freshUser);
+                        localStorage.setItem('user', JSON.stringify(freshUser));
+                    }
+                }
             } catch (err) {
-                console.error('Failed to fetch system info', err);
+                console.error('Failed to fetch initial application data', err);
             }
         };
-        fetchConfig();
-    }, []);
+        fetchInitialData();
+    }, [api]);
 
     const processQueue = (error: any, newToken: string | null = null) => {
         failedQueue.current.forEach((prom) => {

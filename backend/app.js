@@ -126,6 +126,12 @@ function createApp() {
     const adminRoutes = require('./routes/admin');
     app.use('/api/admin', adminRoutes);
 
+    const rolesRoutes = require('./routes/roles');
+    app.use('/api/roles', rolesRoutes);
+
+    const aiRoutes = require('./routes/ai');
+    app.use('/api/ai', aiRoutes);
+
     // ─── Health Check ────────────────────────────────────────────────────────
     app.use('/api/health', healthRoutes);
 

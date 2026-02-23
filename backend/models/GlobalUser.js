@@ -21,7 +21,6 @@ const globalUserSchema = new mongoose.Schema(
         },
         role: {
             type: String,
-            enum: ['owner', 'admin', 'staff', 'user'],
             default: 'user',
         },
         firstName: String,
@@ -35,7 +34,6 @@ const globalUserSchema = new mongoose.Schema(
                 },
                 role: {
                     type: String,
-                    enum: ['owner', 'admin', 'staff', 'user'],
                     default: 'user',
                 },
             },
