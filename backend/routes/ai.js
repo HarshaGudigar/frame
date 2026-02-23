@@ -54,6 +54,10 @@ router.post('/chat', authMiddleware, async (req, res) => {
             if (currentRole === lastRole && formattedHistory.length > 0) {
                 const prevMsg = formattedHistory[formattedHistory.length - 1];
                 prevMsg.content += `\n\n[Follow-up]: ${msg.content}`;
+            } else if (formattedHistory.length === 0 && currentRole !== 'user') {
+                // AWS Bedrock (Claude 3) strictly requires the FIRST message in the history array to be 'user'
+                // If our 20-message slice happens to start with an 'assistant' message, we must skip it.
+                continue;
             } else {
                 formattedHistory.push({
                     role: currentRole,
@@ -182,6 +186,27 @@ router.get('/chat/history', authMiddleware, async (req, res) => {
         return successResponse(res, history.reverse());
     } catch (err) {
         return errorResponse(res, 'Failed to fetch chat history', 500, err);
+    }
+});
+
+/**
+ * @openapi
+ * /api/ai/chat/history:
+ *   delete:
+ *     summary: Clear user's conversation history
+ *     security:
+ *       - bearerAuth: []
+ */
+router.delete('/chat/history', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const tenantId = req.tenant?._id || null;
+
+        await ChatMessage.deleteMany({ userId, tenantId });
+
+        return successResponse(res, { message: 'Chat history cleared.' });
+    } catch (err) {
+        return errorResponse(res, 'Failed to clear chat history', 500, err);
     }
 });
 

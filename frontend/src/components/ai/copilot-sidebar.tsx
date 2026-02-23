@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
-import { MessageSquare, X, Send, Bot, User as UserIcon, Loader2 } from 'lucide-react';
+import { MessageSquare, X, Send, Bot, User as UserIcon, Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -33,9 +33,16 @@ export function CopilotSidebar() {
     // Auto-scroll to bottom
     useEffect(() => {
         if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            const viewport = scrollRef.current.querySelector(
+                '[data-radix-scroll-area-viewport]',
+            ) as HTMLElement;
+            if (viewport) {
+                viewport.scrollTop = viewport.scrollHeight;
+            } else {
+                scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+            }
         }
-    }, [messages, isTyping]);
+    }, [messages, isTyping, input]);
 
     const fetchHistory = async () => {
         try {
@@ -56,6 +63,20 @@ export function CopilotSidebar() {
         } catch (err) {
             console.error('Failed to fetch chat history', err);
         }
+    };
+
+    const handleClear = async () => {
+        try {
+            await api.delete('/ai/chat/history');
+        } catch (err) {
+            console.error('Failed to clear history', err);
+        }
+        setMessages([
+            {
+                role: 'assistant',
+                content: 'Chat history cleared. How can I help you?',
+            },
+        ]);
     };
 
     const handleSend = async (e?: React.FormEvent) => {
@@ -151,14 +172,25 @@ export function CopilotSidebar() {
                                         </div>
                                     </div>
                                 </div>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => setIsOpen(false)}
-                                    className="rounded-full hover:bg-muted/50 hover:text-foreground text-muted-foreground transition-colors relative z-10 size-8"
-                                >
-                                    <X className="size-4" />
-                                </Button>
+                                <div className="flex items-center gap-1 relative z-10">
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={handleClear}
+                                        title="Clear chat history"
+                                        className="rounded-full hover:bg-destructive/10 hover:text-destructive text-muted-foreground transition-colors size-8"
+                                    >
+                                        <Trash2 className="size-3.5" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => setIsOpen(false)}
+                                        className="rounded-full hover:bg-muted/50 hover:text-foreground text-muted-foreground transition-colors size-8"
+                                    >
+                                        <X className="size-4" />
+                                    </Button>
+                                </div>
                             </div>
 
                             {/* Chat Area */}

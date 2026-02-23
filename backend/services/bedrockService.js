@@ -37,7 +37,8 @@ async function invokeClaudeMessages(
 
         if (tools && tools.length > 0) {
             payload.tools = tools;
-            // Optionally, toolChoice could be forced, but we let Claude decide
+            // Tell Claude it can and should use tools when they are relevant
+            payload.tool_choice = { type: 'auto' };
         }
 
         const command = new InvokeModelCommand({
