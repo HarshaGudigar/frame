@@ -45,6 +45,7 @@ router.get('/', (req, res) => {
     const response = {
         success: isHealthy,
         mode: config.RUNTIME_MODE,
+        tenant: req.tenant ? { slug: req.tenant.slug, name: req.tenant.name } : null,
         uptime: `${Math.floor(process.uptime())}s`,
         database: {
             status: dbStatusMap[dbState] || 'unknown',

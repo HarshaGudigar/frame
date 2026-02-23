@@ -26,6 +26,7 @@ interface AuthContextType {
     api: AxiosInstance;
     login: (token: string, refreshToken: string, user: User) => void;
     logout: () => void;
+    systemInfo: { mode: string; tenant?: string; success?: boolean } | null;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -51,6 +52,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     });
 
+    const [systemInfo, setSystemInfo] = useState<{
+        mode: string;
+        tenant?: string;
+        success?: boolean;
+    } | null>(null);
+
     // Refs to hold latest values for interceptors
     const tokenRef = React.useRef(token);
     const refreshTokenRef = React.useRef(refreshToken);
@@ -63,6 +70,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, [token, refreshToken]);
 
     const api = React.useMemo(() => axios.create({ baseURL: API_BASE }), []);
+
+    // Fetch system info on mount
+    useEffect(() => {
+        const fetchConfig = async () => {
+            try {
+                const response = await axios.get(`${API_BASE}/health`);
+                setSystemInfo(response.data);
+            } catch (err) {
+                console.error('Failed to fetch system info', err);
+            }
+        };
+        fetchConfig();
+    }, []);
 
     const processQueue = (error: any, newToken: string | null = null) => {
         failedQueue.current.forEach((prom) => {
@@ -189,7 +209,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, token, api, login, logout }}>
+        <AuthContext.Provider value={{ user, token, api, login, logout, systemInfo }}>
             {children}
         </AuthContext.Provider>
     );

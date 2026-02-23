@@ -56,7 +56,7 @@ const navModules = [
 const navConfig = [{ to: '/settings', icon: Settings, label: 'Settings' }];
 
 function AppSidebar() {
-    const { user, logout } = useAuth();
+    const { user, logout, systemInfo } = useAuth();
     const { hasRole } = usePermission();
     const { isConnected } = useSocket();
     const location = useLocation();
@@ -67,10 +67,15 @@ function AppSidebar() {
     };
 
     const activeTenantSlug =
-        user?.tenants?.find((t: any) => t.isActive)?.tenant?.slug || 'hub-control';
+        systemInfo?.mode === 'SILO'
+            ? systemInfo.tenant?.slug || 'silo-instance'
+            : user?.tenants?.find((t: any) => t.isActive)?.tenant?.slug || 'hub-control';
+
     const activeTenantRole =
         user?.tenants?.find((t: any) => t.isActive)?.role ||
         (user?.role === 'owner' ? 'Fleet Owner' : 'System');
+
+    const runtimeModeText = systemInfo?.mode ? `${systemInfo.mode} MODE` : 'LOADING...';
 
     return (
         <Sidebar variant="inset" collapsible="icon">
@@ -94,7 +99,7 @@ function AppSidebar() {
                                         {BRAND.name}
                                     </span>
                                     <span className="text-[10px] text-muted-foreground/80 font-medium uppercase tracking-wider mt-0.5 leading-none">
-                                        v2.1.0 · HUB MODE
+                                        v2.1.0 · {runtimeModeText}
                                     </span>
                                 </div>
                             </NavLink>
