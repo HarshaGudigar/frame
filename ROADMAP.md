@@ -134,17 +134,15 @@
 > **Status**: Planned
 > Features that make the platform smart, built on a unified architectural layer.
 
-### 1. Unified AI Orchestration
+### 1. Unified AI Orchestration (Hybrid Architecture)
 
-- [ ] **Internal AI Orchestration Service**: Build a central service that abstracts LLM providers, manages prompts, handles context injection, tracks token counts, and meters AI usage per tenant. All AI modules must route through this service.
+- [ ] **AI Gateway Service (Hub)**: Build a central service that abstracts LLM providers (AWS Bedrock, OpenAI, Anthropic), manages prompts, handles context injection, tracks token counts, and meters AI usage per tenant for billing.
+- [ ] **Data & Tool Execution Context (Silo)**: Ensure the actual querying of data and execution of tools happens strictly within the Tenant's Silo boundaries to prevent cross-tenant data leaks.
+- [ ] **Generative Analytics ("Ask Your Data")**: Connect the AI Orchestrator to tenant-scoped Vector databases or robust Mongoose aggregation pipelines to answer natural language questions (e.g., "Revenue trend for standard rooms").
+- [ ] **Task Automation Copilot**: Allow modules to register "Tools" (e.g., `cancel_booking`, `generate_invoice`) with the Event Bus, enabling the AI to execute multi-step workflows securely on behalf of the user.
+- [ ] **Generative UI Components**: Ensure the AI returns interactive React components (charts, forms) directly within the chat interface, rather than just plain text.
 
-### 2. AI Modules
-
-- [ ] **Generative Analytics ("Ask Your Data")**: Text-to-query interface via the AI Orchestration layer.
-- [ ] **AI Sales Rep (SDR Module)**: Outbound lead generation connected to CRM data.
-- [ ] **Smart Copilot**: In-app assistant for platform navigation.
-
-### 3. Real-Time Collaboration
+### 2. Real-Time Collaboration
 
 - [ ] **Global Presence System**: Track and display which users are online and what page they're viewing.
 - [ ] **Contextual Comments**: "Comment anywhere" functionality with @mentions via the new Event Bus. (Live cursors are deferred to Phase 6).
