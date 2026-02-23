@@ -224,10 +224,6 @@ export function MarketplacePage() {
                         Browse and purchase modules for your tenants
                     </p>
                 </div>
-                <Button onClick={() => setShowForm(true)} size="sm">
-                    <Plus className="size-4 mr-2" />
-                    Add Product
-                </Button>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
@@ -253,123 +249,6 @@ export function MarketplacePage() {
                     </Select>
                 </div>
             </div>
-
-            {/* Add Product Dialog */}
-            <Dialog
-                open={showForm}
-                onOpenChange={(open) => {
-                    if (!open) {
-                        setShowForm(false);
-                        setError(null);
-                    }
-                }}
-            >
-                <DialogContent className="sm:max-w-lg">
-                    <DialogHeader>
-                        <DialogTitle>New Product</DialogTitle>
-                    </DialogHeader>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1.5">
-                                <Label htmlFor="prodName">Name</Label>
-                                <Input
-                                    id="prodName"
-                                    required
-                                    value={form.name}
-                                    placeholder="Hospital Module"
-                                    onChange={(e) =>
-                                        setForm((f) => ({ ...f, name: e.target.value }))
-                                    }
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <Label htmlFor="prodSlug">Slug</Label>
-                                <Input
-                                    id="prodSlug"
-                                    required
-                                    value={form.slug}
-                                    placeholder="hospital"
-                                    onChange={(e) =>
-                                        setForm((f) => ({ ...f, slug: e.target.value }))
-                                    }
-                                />
-                            </div>
-                        </div>
-                        <div className="space-y-1.5">
-                            <Label htmlFor="prodDesc">Description</Label>
-                            <Input
-                                id="prodDesc"
-                                value={form.description}
-                                placeholder="Full hospital management suite"
-                                onChange={(e) =>
-                                    setForm((f) => ({ ...f, description: e.target.value }))
-                                }
-                            />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1.5">
-                                <Label htmlFor="prodPrice">Price (USD)</Label>
-                                <Input
-                                    id="prodPrice"
-                                    type="number"
-                                    value={form.amount}
-                                    placeholder="99"
-                                    onChange={(e) =>
-                                        setForm((f) => ({ ...f, amount: e.target.value }))
-                                    }
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <Label>Billing</Label>
-                                <Select
-                                    value={form.interval}
-                                    onValueChange={(val) =>
-                                        setForm((f) => ({ ...f, interval: val }))
-                                    }
-                                >
-                                    <SelectTrigger>
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="monthly">Monthly</SelectItem>
-                                        <SelectItem value="yearly">Yearly</SelectItem>
-                                        <SelectItem value="once">One-time</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                        <div className="space-y-1.5">
-                            <Label htmlFor="prodFeatures">Features (comma-separated)</Label>
-                            <Input
-                                id="prodFeatures"
-                                value={form.features}
-                                placeholder="Patient records, Appointments, Billing"
-                                onChange={(e) =>
-                                    setForm((f) => ({ ...f, features: e.target.value }))
-                                }
-                            />
-                        </div>
-
-                        {error && (
-                            <div className="flex items-center gap-2 text-sm text-destructive">
-                                <AlertCircle className="size-4" />
-                                {error}
-                            </div>
-                        )}
-
-                        <DialogFooter>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => setShowForm(false)}
-                            >
-                                Cancel
-                            </Button>
-                            <Button type="submit">Create Product</Button>
-                        </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
 
             {/* Assign to Tenant Dialog */}
             <Dialog open={!!assigningTo} onOpenChange={() => setAssigningTo(null)}>
@@ -480,9 +359,9 @@ export function MarketplacePage() {
             ) : !loading ? (
                 <Card className="flex flex-col items-center justify-center py-16">
                     <Store className="size-12 text-muted-foreground mb-3" />
-                    <h3 className="text-lg font-semibold">No Products Yet</h3>
+                    <h3 className="text-lg font-semibold">No Modules Available</h3>
                     <p className="text-sm text-muted-foreground">
-                        Click "Add Product" to create your first marketplace module.
+                        There are currently no modules available in the marketplace.
                     </p>
                 </Card>
             ) : null}
