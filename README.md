@@ -59,6 +59,25 @@ graph TD
     end
 ```
 
+## Architecture Checklist: Hub vs Silo
+
+Alyxnet Frame supports two runtime modes for flexible multi-tenant scalability.
+
+### **Hub Mode (Control Plane)**
+
+- **Role**: Central management layer for all tenants.
+- **Identity**: Uses `x-tenant-id` header to route requests to dynamic tenant databases.
+- **Registry**: Manages `GlobalUser` accounts and `Marketplace` products.
+- **Config**: Comment out or remove `APP_TENANT_ID` in `.env`.
+
+### **Silo Mode (Dedicated Instance)**
+
+- **Role**: Standalone instance for a single high-priority tenant.
+- **Identity**: Fixed via `APP_TENANT_ID` env variable.
+- **DB**: Connects directly to a specific tenant MongoDB.
+- **Heartbeat**: Periodically reports health metrics back to the Hub via `backend/scripts/heartbeat-client.js`.
+- **Config**: Set `APP_TENANT_ID`, `APP_TENANT_NAME`, and `APP_SUBSCRIBED_MODULES`.
+
 ### Core Concepts
 
 - **Hub Mode**: Central control plane for global management and multi-tenant routing.
@@ -143,30 +162,39 @@ The application is configured for automated deployment to **AWS Lightsail** usin
 docker compose up -d --build
 ```
 
-#### **Production Deployment (AWS Lightsail)**
+## Production Deployment (AWS Lightsail)
 
-The deployment is automated via **GitHub Actions**.
+The deployment is fully automated via **GitHub Actions** with health-check-based rollback support.
 
-**1. Infrastructure**
+### **1. Required GitHub Secrets**
 
-- **Platform**: AWS Lightsail (Ubuntu 22.04 LTS).
-- **Public IP**: `13.232.95.78`
-- **Orchestration**: Docker Compose with MongoDB volume persistence.
+Set these in **Settings > Secrets and variables > Actions**:
 
-**2. CI/CD Pipeline**
-Pushing to the `main` branch triggers the [.github/workflows/deploy.yml](.github/workflows/deploy.yml) workflow:
+- `LIGHTSAIL_HOST`: Your instance public IP.
+- `LIGHTSAIL_USERNAME`: `ubuntu`.
+- `LIGHTSAIL_SSH_KEY`: Content of your `.pem` private key.
 
-- Connects to the VM via SSH.
-- Installs Docker automatically (if missing).
-- Pulls the latest code.
-- Rebuilds and restarts the container using `docker compose`.
+### **2. Server-Side Configuration**
 
-**3. Required GitHub Secrets**
-To maintain the pipeline, ensure the following secrets are set in your repository:
+SSH into your Lightsail instance and create `~/frame/backend/.env`:
 
-- `LIGHTSAIL_HOST`: `13.232.95.78`
-- `LIGHTSAIL_USERNAME`: `ubuntu`
-- `LIGHTSAIL_SSH_KEY`: Your private SSH key (`.pem` content).
+```env
+PORT=5000
+NODE_ENV=production
+MONGODB_URI=mongodb://localhost:27017/mern-app
+JWT_SECRET=your-secure-64-char-secret
+HEARTBEAT_SECRET=your-secure-32-char-key
+RESEND_API_KEY=re_your-key
+```
+
+### **3. CI/CD Workflow**
+
+Pushing to `main` triggers the [deploy.yml](.github/workflows/deploy.yml) workflow which:
+
+- Snapshots the current image as `:rollback`.
+- Rebuilds and starts the container.
+- Polls `GET /api/health` for 10 minutes.
+- Auto-rolls back if health checks fail.
 
 ## Environment Variables
 
