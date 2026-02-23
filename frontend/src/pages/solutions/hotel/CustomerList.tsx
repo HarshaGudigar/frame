@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,8 +27,9 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Plus, Pencil, Upload, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Plus, Pencil, Upload, Image as ImageIcon, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { getBadgeColor, tableStyles } from '@/lib/module-styles';
 
 interface Customer {
     _id: string;
@@ -78,6 +79,7 @@ export function CustomerList({ hotelTenant }: { hotelTenant?: string }) {
     const [formData, setFormData] = useState(emptyForm);
     const [submitting, setSubmitting] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -136,6 +138,18 @@ export function CustomerList({ hotelTenant }: { hotelTenant?: string }) {
     useEffect(() => {
         fetchCustomers();
     }, [api, hotelTenant]);
+
+    const filteredCustomers = useMemo(() => {
+        const q = searchQuery.toLowerCase().trim();
+        if (!q) return customers;
+        return customers.filter((c) => {
+            const name = `${c.firstName} ${c.lastName}`.toLowerCase();
+            const phone = (c.phone ?? '').toLowerCase();
+            const email = (c.email ?? '').toLowerCase();
+            const city = (c.city ?? '').toLowerCase();
+            return name.includes(q) || phone.includes(q) || email.includes(q) || city.includes(q);
+        });
+    }, [customers, searchQuery]);
 
     const handleOpenCreate = () => {
         setEditingCustomer(null);
@@ -240,10 +254,22 @@ export function CustomerList({ hotelTenant }: { hotelTenant?: string }) {
 
     return (
         <div className="space-y-4">
-            <div className="flex justify-between items-center">
-                <p className="text-sm text-muted-foreground">
-                    {customers.length} customer{customers.length !== 1 ? 's' : ''} registered
-                </p>
+            <div className="flex flex-wrap justify-between items-center gap-3">
+                <div className="flex items-center gap-3">
+                    {/* Search */}
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <input
+                            className="pl-9 h-8 w-56 text-sm border rounded-md bg-background px-3 py-1 focus:outline-none focus:ring-2 focus:ring-ring"
+                            placeholder="Search name, phone, city…"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                        {filteredCustomers.length} guest{filteredCustomers.length !== 1 ? 's' : ''}
+                    </p>
+                </div>
                 <Dialog open={open} onOpenChange={setOpen}>
                     <DialogTrigger asChild>
                         <Button onClick={handleOpenCreate}>
@@ -489,23 +515,31 @@ export function CustomerList({ hotelTenant }: { hotelTenant?: string }) {
                     )}
                 </div>
             ) : (
-                <div className="rounded-md border">
+                <div className={tableStyles.wrapper}>
                     <Table>
                         <TableHeader>
-                            <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Phone</TableHead>
-                                <TableHead>Email</TableHead>
-                                <TableHead>City</TableHead>
-                                <TableHead>ID Proof</TableHead>
+                            <TableRow className={tableStyles.headerRow}>
+                                <TableHead className={tableStyles.headerCell}>Guest</TableHead>
+                                <TableHead className={tableStyles.headerCell}>Phone</TableHead>
+                                <TableHead className={tableStyles.headerCell}>Email</TableHead>
+                                <TableHead className={tableStyles.headerCell}>City</TableHead>
+                                <TableHead className={tableStyles.headerCell}>ID Proof</TableHead>
                                 <TableHead className="w-[60px]"></TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {customers.map((customer) => (
-                                <TableRow key={customer._id}>
+                            {filteredCustomers.map((customer) => (
+                                <TableRow key={customer._id} className={tableStyles.row}>
                                     <TableCell className="font-medium">
-                                        {customer.firstName} {customer.lastName}
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-xs">
+                                                {customer.firstName?.[0]}
+                                                {customer.lastName?.[0]}
+                                            </div>
+                                            <span>
+                                                {customer.firstName} {customer.lastName}
+                                            </span>
+                                        </div>
                                     </TableCell>
                                     <TableCell>{customer.phone}</TableCell>
                                     <TableCell>{customer.email || '-'}</TableCell>

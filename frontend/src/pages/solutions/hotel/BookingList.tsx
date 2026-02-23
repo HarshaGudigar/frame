@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { getBadgeColor, tableStyles } from '@/lib/module-styles';
+import { Search } from 'lucide-react';
 import {
     Table,
     TableBody,
@@ -98,19 +100,7 @@ interface Booking {
     createdAt: string;
 }
 
-const statusColors: Record<string, string> = {
-    Confirmed: 'bg-blue-100 text-blue-800 border-blue-200',
-    CheckedIn: 'bg-green-100 text-green-800 border-green-200',
-    CheckedOut: 'bg-gray-100 text-gray-800 border-gray-200',
-    Cancelled: 'bg-red-100 text-red-800 border-red-200',
-    NoShow: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-};
-
-const paymentColors: Record<string, string> = {
-    Pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    Partial: 'bg-orange-100 text-orange-800 border-orange-200',
-    Paid: 'bg-green-100 text-green-800 border-green-200',
-};
+// Status colors come from shared module-styles via getBadgeColor()
 
 export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
     const { api } = useAuth();
@@ -123,6 +113,7 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
     const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
     const [open, setOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const [formData, setFormData] = useState({
         customerId: '',
@@ -311,6 +302,19 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
         });
     };
 
+    const filteredBookings = useMemo(() => {
+        const q = searchQuery.toLowerCase().trim();
+        if (!q) return bookings;
+        return bookings.filter((b) => {
+            const guest =
+                `${b.customer?.firstName ?? ''} ${b.customer?.lastName ?? ''}`.toLowerCase();
+            const room = `room ${b.room?.number ?? ''}`.toLowerCase();
+            const status = b.status.toLowerCase();
+            const num = (b.checkInNumber ?? '').toLowerCase();
+            return guest.includes(q) || room.includes(q) || status.includes(q) || num.includes(q);
+        });
+    }, [bookings, searchQuery]);
+
     if (loading) {
         return (
             <div className="flex items-center justify-center py-10">
@@ -321,8 +325,8 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
 
     return (
         <div className="space-y-4">
-            <div className="flex justify-between items-center">
-                <div className="flex items-center gap-2">
+            <div className="flex flex-wrap justify-between items-center gap-3">
+                <div className="flex items-center gap-2 flex-wrap">
                     <div className="flex items-center border rounded-md p-1 bg-muted/50">
                         <Button
                             variant={viewMode === 'list' ? 'secondary' : 'ghost'}
@@ -341,8 +345,18 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
                             <CalendarDays className="h-4 w-4 mr-2" /> Timeline
                         </Button>
                     </div>
+                    {/* Search */}
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input
+                            className="pl-9 h-8 w-52 text-sm"
+                            placeholder="Search guest, room, status…"
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
                     <p className="text-sm text-muted-foreground">
-                        {bookings.length} booking{bookings.length !== 1 ? 's' : ''}
+                        {filteredBookings.length} booking{filteredBookings.length !== 1 ? 's' : ''}
                     </p>
                 </div>
                 <Dialog open={open} onOpenChange={setOpen}>
@@ -630,25 +644,27 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
                     )}
                 </div>
             ) : viewMode === 'calendar' ? (
-                <BookingTapeChart bookings={bookings} rooms={rooms} />
+                <BookingTapeChart bookings={filteredBookings} rooms={rooms} />
             ) : (
-                <div className="rounded-md border">
+                <div className={tableStyles.wrapper}>
                     <Table>
                         <TableHeader>
-                            <TableRow>
-                                <TableHead>Check-in #</TableHead>
-                                <TableHead>Customer</TableHead>
-                                <TableHead>Room</TableHead>
-                                <TableHead>Check-in</TableHead>
-                                <TableHead>Days</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Payment</TableHead>
-                                <TableHead className="text-right">Amount</TableHead>
+                            <TableRow className={tableStyles.headerRow}>
+                                <TableHead className={tableStyles.headerCell}>Check-in #</TableHead>
+                                <TableHead className={tableStyles.headerCell}>Customer</TableHead>
+                                <TableHead className={tableStyles.headerCell}>Room</TableHead>
+                                <TableHead className={tableStyles.headerCell}>Check-in</TableHead>
+                                <TableHead className={tableStyles.headerCell}>Days</TableHead>
+                                <TableHead className={tableStyles.headerCell}>Status</TableHead>
+                                <TableHead className={tableStyles.headerCell}>Payment</TableHead>
+                                <TableHead className={`${tableStyles.headerCell} text-right`}>
+                                    Amount
+                                </TableHead>
                                 <TableHead className="w-[60px]"></TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {bookings.map((booking) => (
+                            {filteredBookings.map((booking) => (
                                 <TableRow key={booking._id}>
                                     <TableCell className="font-mono text-xs">
                                         {booking.checkInNumber}
@@ -664,7 +680,7 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
                                     <TableCell>
                                         <Badge
                                             variant="outline"
-                                            className={statusColors[booking.status] || ''}
+                                            className={getBadgeColor(booking.status)}
                                         >
                                             {booking.status}
                                         </Badge>
@@ -672,7 +688,7 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
                                     <TableCell>
                                         <Badge
                                             variant="outline"
-                                            className={paymentColors[booking.paymentStatus] || ''}
+                                            className={getBadgeColor(booking.paymentStatus)}
                                         >
                                             {booking.paymentStatus}
                                         </Badge>

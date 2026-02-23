@@ -2,24 +2,42 @@ import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, RefreshCcw, CheckCircle2, AlertCircle, Hammer, Brush } from 'lucide-react';
+import {
+    Loader2,
+    RefreshCcw,
+    BedDouble,
+    Brush,
+    Wrench,
+    CheckCircle2,
+    Plus,
+    ChevronRight,
+    AlertCircle,
+} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+    getBadgeColor,
+    kanbanColumns,
+    KanbanStatus,
+    priorityConfig,
+    roomBorderColors,
+    iconBg,
+} from '@/lib/module-styles';
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 
 interface Room {
     _id: string;
@@ -33,17 +51,59 @@ interface HousekeepingTask {
     _id: string;
     room: any;
     staffName?: string;
-    status: 'Pending' | 'In Progress' | 'Completed' | 'Delayed';
+    status: KanbanStatus;
     type: string;
     priority: string;
+    notes?: string;
 }
 
-const statusConfig = {
-    Available: { color: 'bg-green-100 text-green-800 border-green-200', icon: CheckCircle2 },
-    Occupied: { color: 'bg-blue-100 text-blue-800 border-blue-200', icon: AlertCircle },
-    Dirty: { color: 'bg-red-100 text-red-800 border-red-200', icon: Brush },
-    Maintenance: { color: 'bg-yellow-100 text-yellow-800 border-yellow-200', icon: Hammer },
-    Cleaning: { color: 'bg-sky-100 text-sky-800 border-sky-200', icon: RefreshCcw },
+const STATUS_FLOW: Record<KanbanStatus, KanbanStatus | null> = {
+    Pending: 'In Progress',
+    'In Progress': 'Completed',
+    Completed: null,
+    Delayed: 'In Progress',
+};
+
+const TASK_TYPES = [
+    'Checkout Clean',
+    'Daily Clean',
+    'Deep Clean',
+    'Turndown',
+    'Maintenance',
+    'Inspection',
+];
+
+const roomStatusMeta: Record<string, { label: string; icon: any; color: string; bg: string }> = {
+    Available: {
+        label: 'Available',
+        icon: CheckCircle2,
+        color: 'text-green-600 dark:text-green-400',
+        bg: iconBg.green,
+    },
+    Occupied: {
+        label: 'Occupied',
+        icon: BedDouble,
+        color: 'text-blue-600 dark:text-blue-400',
+        bg: iconBg.blue,
+    },
+    Dirty: {
+        label: 'Dirty',
+        icon: Brush,
+        color: 'text-yellow-600 dark:text-yellow-400',
+        bg: iconBg.yellow,
+    },
+    Maintenance: {
+        label: 'Maintenance',
+        icon: Wrench,
+        color: 'text-red-600 dark:text-red-400',
+        bg: iconBg.red,
+    },
+    Cleaning: {
+        label: 'Cleaning',
+        icon: RefreshCcw,
+        color: 'text-sky-600 dark:text-sky-400',
+        bg: iconBg.teal,
+    },
 };
 
 export default function Housekeeping({ hotelTenant: propTenant }: { hotelTenant?: string }) {
@@ -54,6 +114,15 @@ export default function Housekeeping({ hotelTenant: propTenant }: { hotelTenant?
     const [loading, setLoading] = useState(true);
     const [updatingId, setUpdatingId] = useState<string | null>(null);
     const [hotelTenant, setHotelTenant] = useState<string | undefined>(propTenant);
+    const [createOpen, setCreateOpen] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
+    const [newTask, setNewTask] = useState({
+        roomId: '',
+        type: 'Daily Clean',
+        priority: 'Medium',
+        staffName: '',
+        notes: '',
+    });
 
     useEffect(() => {
         const findTenant = async () => {
@@ -61,23 +130,19 @@ export default function Housekeeping({ hotelTenant: propTenant }: { hotelTenant?
             const userTenant = user?.tenants?.find((t: any) =>
                 t.tenant?.subscribedModules?.includes('hotel'),
             )?.tenant?.slug;
-
             if (userTenant) {
                 setHotelTenant(userTenant);
                 return;
             }
-
             if (user?.role === 'owner') {
                 try {
                     const res = await api.get('/admin/tenants');
-                    const hotelTenants = res.data.data.filter((t: any) =>
+                    const ht = res.data.data.filter((t: any) =>
                         t.subscribedModules?.includes('hotel'),
                     );
-                    if (hotelTenants.length > 0) {
-                        setHotelTenant(hotelTenants[0].slug);
-                    }
-                } catch (err) {
-                    console.error('Failed to fetch fallback hotel tenant', err);
+                    if (ht.length > 0) setHotelTenant(ht[0].slug);
+                } catch (e) {
+                    console.error('Failed to find tenant', e);
                 }
             }
         };
@@ -105,12 +170,10 @@ export default function Housekeeping({ hotelTenant: propTenant }: { hotelTenant?
     };
 
     useEffect(() => {
-        if (hotelTenant) {
-            fetchData();
-        }
+        if (hotelTenant) fetchData();
     }, [api, hotelTenant]);
 
-    const handleRoomStatusUpdate = async (roomId: string, newStatus: string) => {
+    const handleRoomStatus = async (roomId: string, newStatus: string) => {
         setUpdatingId(roomId);
         try {
             const res = await api.patch(
@@ -118,10 +181,11 @@ export default function Housekeeping({ hotelTenant: propTenant }: { hotelTenant?
                 { status: newStatus },
                 { headers: { 'x-tenant-id': hotelTenant } },
             );
-
             if (res.data.success) {
-                toast({ title: 'Success', description: 'Room status updated' });
-                setRooms(rooms.map((r) => (r._id === roomId ? res.data.data : r)));
+                toast({ title: 'Updated', description: `Marked as ${newStatus}` });
+                setRooms(
+                    rooms.map((r) => (r._id === roomId ? { ...r, status: newStatus as any } : r)),
+                );
             }
         } catch (error: any) {
             toast({
@@ -134,7 +198,8 @@ export default function Housekeeping({ hotelTenant: propTenant }: { hotelTenant?
         }
     };
 
-    const handleTaskStatusUpdate = async (taskId: string, newStatus: string) => {
+    const handleTaskStatus = async (taskId: string, newStatus: KanbanStatus) => {
+        setUpdatingId(taskId);
         try {
             const res = await api.patch(
                 `/m/hotel/housekeeping/${taskId}/status`,
@@ -142,22 +207,60 @@ export default function Housekeeping({ hotelTenant: propTenant }: { hotelTenant?
                 { headers: { 'x-tenant-id': hotelTenant } },
             );
             if (res.data.success) {
-                toast({ title: 'Success', description: 'Task status updated' });
+                toast({ title: 'Task updated', description: `Moved to ${newStatus}` });
+                setTasks(tasks.map((t) => (t._id === taskId ? { ...t, status: newStatus } : t)));
+            }
+        } catch {
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to update task' });
+        } finally {
+            setUpdatingId(null);
+        }
+    };
+
+    const handleCreateTask = async () => {
+        if (!newTask.roomId) {
+            toast({
+                variant: 'destructive',
+                title: 'Required',
+                description: 'Please select a room.',
+            });
+            return;
+        }
+        setSubmitting(true);
+        try {
+            const res = await api.post('/m/hotel/housekeeping', newTask, {
+                headers: { 'x-tenant-id': hotelTenant },
+            });
+            if (res.data.success) {
+                toast({
+                    title: 'Task Created',
+                    description: 'Housekeeping task has been assigned.',
+                });
+                setCreateOpen(false);
+                setNewTask({
+                    roomId: '',
+                    type: 'Daily Clean',
+                    priority: 'Medium',
+                    staffName: '',
+                    notes: '',
+                });
                 fetchData();
             }
-        } catch (error: any) {
+        } catch (err: any) {
             toast({
                 variant: 'destructive',
                 title: 'Error',
-                description: 'Failed to update task',
+                description: err.response?.data?.message || 'Failed to create task.',
             });
+        } finally {
+            setSubmitting(false);
         }
     };
 
     if (loading) {
         return (
             <div className="flex items-center justify-center py-20">
-                <Loader2 className="h-8 w-8 animate-spin" />
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
         );
     }
@@ -166,228 +269,364 @@ export default function Housekeeping({ hotelTenant: propTenant }: { hotelTenant?
         total: rooms.length,
         dirty: rooms.filter((r) => r.status === 'Dirty').length,
         available: rooms.filter((r) => r.status === 'Available').length,
+        maintenance: rooms.filter((r) => r.status === 'Maintenance').length,
         pendingTasks: tasks.filter((t) => t.status !== 'Completed').length,
     };
 
+    const tasksByStatus = Object.keys(kanbanColumns).reduce(
+        (acc, key) => {
+            acc[key as KanbanStatus] = tasks.filter((t) => t.status === key);
+            return acc;
+        },
+        {} as Record<KanbanStatus, HousekeepingTask[]>,
+    );
+
     return (
-        <div className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <Card className="bg-muted/50 border-primary/10 transition-all">
-                    <CardHeader className="pb-2">
-                        <CardDescription>Total Rooms</CardDescription>
-                        <CardTitle className="text-2xl font-bold text-foreground">
-                            {stats.total}
-                        </CardTitle>
-                    </CardHeader>
-                </Card>
-                <Card className="bg-red-500/10 border-red-500/20 dark:border-red-500/30 transition-all">
-                    <CardHeader className="pb-2">
-                        <CardDescription className="text-red-600 dark:text-red-400 font-medium">
-                            Dirty Rooms
-                        </CardDescription>
-                        <CardTitle className="text-2xl font-bold text-red-700 dark:text-red-500">
-                            {stats.dirty}
-                        </CardTitle>
-                    </CardHeader>
-                </Card>
-                <Card className="bg-green-500/10 border-green-500/20 dark:border-green-500/30 transition-all">
-                    <CardHeader className="pb-2">
-                        <CardDescription className="text-green-600 dark:text-green-400 font-medium">
-                            Available
-                        </CardDescription>
-                        <CardTitle className="text-2xl font-bold text-green-700 dark:text-green-500">
-                            {stats.available}
-                        </CardTitle>
-                    </CardHeader>
-                </Card>
-                <Card className="bg-blue-500/10 border-blue-500/20 dark:border-blue-500/30 transition-all">
-                    <CardHeader className="pb-2">
-                        <CardDescription className="text-blue-600 dark:text-blue-400 font-medium">
-                            Pending Tasks
-                        </CardDescription>
-                        <CardTitle className="text-2xl font-bold text-blue-700 dark:text-blue-500">
-                            {stats.pendingTasks}
-                        </CardTitle>
-                    </CardHeader>
-                </Card>
+        <div className="space-y-6 animate-in fade-in duration-300">
+            {/* ─── Stats Row ─────────────────────────── */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {[
+                    {
+                        label: 'Total Rooms',
+                        value: stats.total,
+                        icon: BedDouble,
+                        color: iconBg.slate,
+                    },
+                    {
+                        label: 'Need Cleaning',
+                        value: stats.dirty,
+                        icon: Brush,
+                        color: iconBg.yellow,
+                    },
+                    {
+                        label: 'Available',
+                        value: stats.available,
+                        icon: CheckCircle2,
+                        color: iconBg.green,
+                    },
+                    {
+                        label: 'Pending Tasks',
+                        value: stats.pendingTasks,
+                        icon: AlertCircle,
+                        color: iconBg.blue,
+                    },
+                ].map(({ label, value, icon: Icon, color }) => (
+                    <div
+                        key={label}
+                        className="flex items-center gap-3 rounded-xl border bg-card p-4 shadow-sm"
+                    >
+                        <div
+                            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${color}`}
+                        >
+                            <Icon className="h-4 w-4" />
+                        </div>
+                        <div>
+                            <p className="text-xs text-muted-foreground font-medium">{label}</p>
+                            <p className="text-xl font-black text-foreground">{value}</p>
+                        </div>
+                    </div>
+                ))}
             </div>
 
-            <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                    <h2 className="text-xl font-bold">Room Status Quick-Change</h2>
-                    <Button variant="outline" size="sm" onClick={fetchData}>
-                        <RefreshCcw className="h-4 w-4 mr-2" /> Refresh
+            {/* ─── Room Quick-Status ───────────────────── */}
+            <div className="rounded-2xl border bg-card shadow-sm p-5">
+                <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <h3 className="text-base font-bold text-foreground">Room Status</h3>
+                        <p className="text-xs text-muted-foreground">
+                            Quickly mark rooms clean or send to maintenance
+                        </p>
+                    </div>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={fetchData}
+                        className="gap-2 rounded-xl"
+                    >
+                        <RefreshCcw className="h-4 w-4" /> Refresh
                     </Button>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {rooms.map((room) => {
-                        const Config = (statusConfig as any)[room.status] || statusConfig.Available;
-                        const StatusIcon = Config.icon;
-                        return (
-                            <Card
-                                key={room._id}
-                                className="overflow-hidden border-l-4 bg-muted/30 hover:bg-muted/50 transition-all border-primary/10"
-                                style={{
-                                    borderLeftColor:
-                                        room.status === 'Dirty'
-                                            ? '#ef4444'
-                                            : room.status === 'Available'
-                                              ? '#10b981'
-                                              : room.status === 'Maintenance'
-                                                ? '#f59e0b'
-                                                : '#0ea5e9',
-                                }}
-                            >
-                                <CardHeader className="pb-2">
-                                    <div className="flex justify-between items-center">
-                                        <span className="font-bold text-lg">
+                {rooms.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                        No rooms found.
+                    </p>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        {rooms.map((room) => {
+                            const meta = roomStatusMeta[room.status] || roomStatusMeta.Available;
+                            const Icon = meta.icon;
+                            return (
+                                <div
+                                    key={room._id}
+                                    className="relative overflow-hidden rounded-xl border-l-4 bg-muted/30 hover:bg-muted/50 transition-all p-4 border border-border/50"
+                                    style={{
+                                        borderLeftColor: roomBorderColors[room.status] || '#94a3b8',
+                                    }}
+                                >
+                                    <div className="flex items-center justify-between mb-2">
+                                        <span className="font-bold text-base text-foreground">
                                             Room {room.number}
                                         </span>
-                                        <Badge variant="outline">F{room.floor}</Badge>
+                                        <Badge variant="outline" className="text-[10px]">
+                                            F{room.floor}
+                                        </Badge>
                                     </div>
-                                    <div className="flex items-center gap-1 text-xs font-medium uppercase tracking-wider text-muted-foreground mt-1">
-                                        <StatusIcon className="h-3 w-3" />
+                                    <div
+                                        className={`flex items-center gap-1 text-xs font-semibold mb-3 ${meta.color}`}
+                                    >
+                                        <Icon className="h-3 w-3" />
                                         {room.status}
                                     </div>
-                                </CardHeader>
-                                <CardFooter className="pt-2 gap-1 flex-wrap">
-                                    <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-7 px-2 text-[10px]"
-                                        disabled={
-                                            room.status === 'Dirty' || updatingId === room._id
-                                        }
-                                        onClick={() => handleRoomStatusUpdate(room._id, 'Dirty')}
+                                    <div className="flex gap-1 flex-wrap">
+                                        {room.status !== 'Available' && (
+                                            <button
+                                                className="text-[10px] font-bold px-2 py-1 rounded-md bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 transition-colors disabled:opacity-50"
+                                                disabled={updatingId === room._id}
+                                                onClick={() =>
+                                                    handleRoomStatus(room._id, 'Available')
+                                                }
+                                            >
+                                                ✓ Ready
+                                            </button>
+                                        )}
+                                        {room.status !== 'Dirty' && room.status !== 'Occupied' && (
+                                            <button
+                                                className="text-[10px] font-bold px-2 py-1 rounded-md bg-yellow-100 text-yellow-700 hover:bg-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-300 transition-colors disabled:opacity-50"
+                                                disabled={updatingId === room._id}
+                                                onClick={() => handleRoomStatus(room._id, 'Dirty')}
+                                            >
+                                                Dirty
+                                            </button>
+                                        )}
+                                        {room.status !== 'Maintenance' && (
+                                            <button
+                                                className="text-[10px] font-bold px-2 py-1 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400 transition-colors disabled:opacity-50"
+                                                disabled={updatingId === room._id}
+                                                onClick={() =>
+                                                    handleRoomStatus(room._id, 'Maintenance')
+                                                }
+                                            >
+                                                Maint.
+                                            </button>
+                                        )}
+                                        {updatingId === room._id && (
+                                            <Loader2 className="h-3 w-3 animate-spin text-muted-foreground mt-1" />
+                                        )}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
+            </div>
+
+            {/* ─── Kanban Board ────────────────────────── */}
+            <div className="rounded-2xl border bg-card shadow-sm p-5">
+                <div className="flex items-center justify-between mb-5">
+                    <div>
+                        <h3 className="text-base font-bold text-foreground">Task Board</h3>
+                        <p className="text-xs text-muted-foreground">
+                            Drag-free Kanban — click tasks to advance them
+                        </p>
+                    </div>
+                    <Button
+                        size="sm"
+                        className="gap-2 rounded-xl"
+                        onClick={() => setCreateOpen(true)}
+                    >
+                        <Plus className="h-4 w-4" /> New Task
+                    </Button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                    {(Object.keys(kanbanColumns) as KanbanStatus[]).map((status) => {
+                        const col = kanbanColumns[status];
+                        const colTasks = tasksByStatus[status] || [];
+                        return (
+                            <div key={status} className="space-y-3">
+                                {/* Column Header */}
+                                <div
+                                    className={`flex items-center justify-between px-3 py-2 rounded-xl border ${col.header}`}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <span className={`h-2 w-2 rounded-full ${col.dot}`} />
+                                        <span className="text-xs font-bold text-foreground">
+                                            {col.label}
+                                        </span>
+                                    </div>
+                                    <span
+                                        className={`text-xs font-black px-2 py-0.5 rounded-full ${col.count}`}
                                     >
-                                        Dirty
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-7 px-2 text-[10px]"
-                                        disabled={
-                                            room.status === 'Available' || updatingId === room._id
-                                        }
-                                        onClick={() =>
-                                            handleRoomStatusUpdate(room._id, 'Available')
-                                        }
-                                    >
-                                        Ready
-                                    </Button>
-                                    <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-7 px-2 text-[10px]"
-                                        disabled={
-                                            room.status === 'Maintenance' || updatingId === room._id
-                                        }
-                                        onClick={() =>
-                                            handleRoomStatusUpdate(room._id, 'Maintenance')
-                                        }
-                                    >
-                                        Maint.
-                                    </Button>
-                                </CardFooter>
-                            </Card>
+                                        {colTasks.length}
+                                    </span>
+                                </div>
+
+                                {/* Task Cards */}
+                                <div className="space-y-2 min-h-[120px]">
+                                    {colTasks.length === 0 ? (
+                                        <div className="flex items-center justify-center h-20 rounded-xl border-2 border-dashed border-border/40 text-xs text-muted-foreground">
+                                            No tasks
+                                        </div>
+                                    ) : (
+                                        colTasks.map((task) => {
+                                            const priority =
+                                                priorityConfig[task.priority] || priorityConfig.Low;
+                                            const nextStatus = STATUS_FLOW[status];
+                                            return (
+                                                <div
+                                                    key={task._id}
+                                                    className="group rounded-xl border bg-card p-3 shadow-sm hover:shadow-md transition-all"
+                                                    style={{
+                                                        borderLeftWidth: 3,
+                                                        borderLeftColor: priority.dot
+                                                            .replace('bg-', '')
+                                                            .includes('animate')
+                                                            ? '#ef4444'
+                                                            : undefined,
+                                                    }}
+                                                >
+                                                    <div className="flex items-start justify-between gap-2 mb-2">
+                                                        <div className="font-bold text-sm text-foreground">
+                                                            Room {task.room?.number || '—'}
+                                                        </div>
+                                                        <Badge
+                                                            variant="outline"
+                                                            className={`text-[10px] border ${getBadgeColor(task.priority)}`}
+                                                        >
+                                                            {task.priority}
+                                                        </Badge>
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground mb-1">
+                                                        {task.type}
+                                                    </p>
+                                                    {task.staffName && (
+                                                        <p className="text-[10px] text-muted-foreground/70 font-medium">
+                                                            👤 {task.staffName}
+                                                        </p>
+                                                    )}
+                                                    {nextStatus && (
+                                                        <button
+                                                            disabled={updatingId === task._id}
+                                                            onClick={() =>
+                                                                handleTaskStatus(
+                                                                    task._id,
+                                                                    nextStatus,
+                                                                )
+                                                            }
+                                                            className="mt-2 flex items-center gap-1 text-[10px] font-bold text-primary hover:text-primary/80 disabled:opacity-50 transition-colors"
+                                                        >
+                                                            {updatingId === task._id ? (
+                                                                <Loader2 className="h-3 w-3 animate-spin" />
+                                                            ) : (
+                                                                <ChevronRight className="h-3 w-3" />
+                                                            )}
+                                                            Move to {nextStatus}
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            );
+                                        })
+                                    )}
+                                </div>
+                            </div>
                         );
                     })}
                 </div>
             </div>
 
-            <div className="space-y-4">
-                <h2 className="text-xl font-bold">Cleaning Assignments & Tasks</h2>
-                <div className="rounded-md border">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Room</TableHead>
-                                <TableHead>Type</TableHead>
-                                <TableHead>Staff</TableHead>
-                                <TableHead>Priority</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {tasks.filter((t) => t.status !== 'Completed').length === 0 ? (
-                                <TableRow>
-                                    <TableCell
-                                        colSpan={6}
-                                        className="text-center py-6 text-muted-foreground"
-                                    >
-                                        No pending assignments.
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                tasks
-                                    .filter((t) => t.status !== 'Completed')
-                                    .map((task) => (
-                                        <TableRow key={task._id}>
-                                            <TableCell className="font-bold">
-                                                Room {task.room?.number || 'N/A'}
-                                            </TableCell>
-                                            <TableCell>
-                                                <Badge variant="outline">{task.type}</Badge>
-                                            </TableCell>
-                                            <TableCell>{task.staffName || 'Unassigned'}</TableCell>
-                                            <TableCell>
-                                                <Badge
-                                                    variant={
-                                                        task.priority === 'High' ||
-                                                        task.priority === 'Emergency'
-                                                            ? 'destructive'
-                                                            : 'secondary'
-                                                    }
-                                                >
-                                                    {task.priority}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Badge variant="outline" className="animate-pulse">
-                                                    {task.status}
-                                                </Badge>
-                                            </TableCell>
-                                            <TableCell className="text-right">
-                                                <div className="flex justify-end gap-2">
-                                                    {task.status === 'Pending' && (
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            onClick={() =>
-                                                                handleTaskStatusUpdate(
-                                                                    task._id,
-                                                                    'In Progress',
-                                                                )
-                                                            }
-                                                        >
-                                                            Start
-                                                        </Button>
-                                                    )}
-                                                    {task.status === 'In Progress' && (
-                                                        <Button
-                                                            size="sm"
-                                                            variant="outline"
-                                                            className="bg-green-50 text-green-700 hover:bg-green-100"
-                                                            onClick={() =>
-                                                                handleTaskStatusUpdate(
-                                                                    task._id,
-                                                                    'Completed',
-                                                                )
-                                                            }
-                                                        >
-                                                            Complete
-                                                        </Button>
-                                                    )}
-                                                </div>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
-            </div>
+            {/* ─── Create Task Dialog ──────────────────── */}
+            <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>New Housekeeping Task</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="space-y-2">
+                            <Label>Room *</Label>
+                            <Select
+                                value={newTask.roomId}
+                                onValueChange={(v) => setNewTask({ ...newTask, roomId: v })}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a room" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {rooms.map((r) => (
+                                        <SelectItem key={r._id} value={r._id}>
+                                            Room {r.number} — {r.status}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Task Type</Label>
+                                <Select
+                                    value={newTask.type}
+                                    onValueChange={(v) => setNewTask({ ...newTask, type: v })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {TASK_TYPES.map((t) => (
+                                            <SelectItem key={t} value={t}>
+                                                {t}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Priority</Label>
+                                <Select
+                                    value={newTask.priority}
+                                    onValueChange={(v) => setNewTask({ ...newTask, priority: v })}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {Object.keys(priorityConfig).map((p) => (
+                                            <SelectItem key={p} value={p}>
+                                                {p}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Assign Staff</Label>
+                            <Input
+                                placeholder="Staff member name (optional)"
+                                value={newTask.staffName}
+                                onChange={(e) =>
+                                    setNewTask({ ...newTask, staffName: e.target.value })
+                                }
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Notes</Label>
+                            <Input
+                                placeholder="Any special instructions..."
+                                value={newTask.notes}
+                                onChange={(e) => setNewTask({ ...newTask, notes: e.target.value })}
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setCreateOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button onClick={handleCreateTask} disabled={submitting}>
+                            {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                            Create Task
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

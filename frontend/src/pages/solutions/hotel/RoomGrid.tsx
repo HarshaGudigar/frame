@@ -22,6 +22,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { getRoomStatusStyle, roomBorderColors } from '@/lib/module-styles';
 import {
     Sheet,
     SheetContent,
@@ -271,20 +272,7 @@ export function RoomGrid({
         setSelectedRooms(next);
     };
 
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'Available':
-                return 'bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-400';
-            case 'Occupied':
-                return 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-400';
-            case 'Dirty':
-                return 'bg-yellow-500/10 border-yellow-500/30 text-yellow-700 dark:text-yellow-400';
-            case 'Maintenance':
-                return 'bg-gray-500/10 border-gray-500/30 text-gray-700 dark:text-gray-400';
-            default:
-                return 'bg-gray-500/10 border-gray-500/30 text-gray-700 dark:text-gray-400';
-        }
-    };
+    // Status colors are sourced from shared module-styles (getRoomStatusStyle)
 
     // Simplified loading check handled by skeletons below
 
@@ -312,7 +300,7 @@ export function RoomGrid({
                     <SheetHeader>
                         <SheetTitle className="text-2xl font-bold flex items-center justify-between">
                             Room {peekRoom?.number}
-                            <Badge className={peekRoom ? getStatusColor(peekRoom.status) : ''}>
+                            <Badge className={peekRoom ? getRoomStatusStyle(peekRoom.status) : ''}>
                                 {peekRoom?.status}
                             </Badge>
                         </SheetTitle>
@@ -643,7 +631,7 @@ export function RoomGrid({
                                                 ? toggleRoomSelection(room._id)
                                                 : setPeekRoom(room)
                                         }
-                                        className={`p-4 rounded-xl border-2 ${getStatusColor(room.status)} flex flex-col justify-between h-36 hover:shadow-md transition-all group relative cursor-pointer ${selectedRooms.has(room._id) ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+                                        className={`p-4 rounded-xl border-2 ${getRoomStatusStyle(room.status)} flex flex-col justify-between h-36 hover:shadow-md transition-all group relative cursor-pointer ${selectedRooms.has(room._id) ? 'ring-2 ring-primary ring-offset-2' : ''}`}
                                     >
                                         {isSelectMode && (
                                             <div className="absolute top-2 right-2 z-10">
