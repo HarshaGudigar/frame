@@ -28,7 +28,7 @@ export function DebugPanel() {
     if (!isOpen) {
         return (
             <div
-                className="fixed bottom-4 right-4 z-50 bg-primary/90 text-primary-foreground p-3 rounded-full shadow-lg cursor-pointer hover:scale-105 transition-transform backdrop-blur-sm"
+                className="fixed bottom-4 left-4 z-50 bg-primary/90 text-primary-foreground p-3 rounded-full shadow-lg cursor-pointer hover:scale-105 transition-transform backdrop-blur-sm"
                 onClick={() => setIsOpen(true)}
                 title="Developer Debug Panel"
             >
@@ -39,7 +39,7 @@ export function DebugPanel() {
 
     return (
         <Card
-            className={`fixed bottom-4 right-4 z-50 shadow-2xl border-secondary/20 transition-all duration-300 overflow-hidden backdrop-blur-md bg-background/95 ${isMinimized ? 'w-64 h-14' : 'w-96 h-[32rem]'}`}
+            className={`fixed bottom-4 left-4 z-50 shadow-2xl border-secondary/20 transition-all duration-300 overflow-hidden backdrop-blur-md bg-background/95 ${isMinimized ? 'w-64 h-14' : 'w-96 h-[32rem]'}`}
         >
             <CardHeader className="flex flex-row items-center justify-between py-3 px-4 bg-muted/40 border-b">
                 <CardTitle className="text-sm font-bold flex items-center gap-2 text-primary">
