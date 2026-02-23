@@ -1,0 +1,8 @@
+
+Oops! Something went wrong! :(
+
+ESLint: 9.39.3
+
+No files matching the pattern "frontend/src/lib/module-styles.ts" were found.
+Please check for typing mistakes in the pattern.
+

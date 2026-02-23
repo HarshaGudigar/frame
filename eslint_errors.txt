@@ -1,0 +1,9 @@
+
+G:\Alyxnet\frame\frontend\src\pages\solutions\hotel\Dashboard.tsx
+  331:43  error  'JSX' is not defined  no-undef
+
+G:\Alyxnet\frame\frontend\src\pages\solutions\hotel\Housekeeping.tsx
+  89:25  error  Empty block statement  no-empty
+
+✖ 2 problems (2 errors, 0 warnings)
+

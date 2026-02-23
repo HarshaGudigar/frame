@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useRazorpay } from 'react-razorpay';
 import { useAuth } from '@/contexts/auth-context';
 import { Plus, Store, Package, AlertCircle, UserPlus, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -44,7 +43,6 @@ export function MarketplacePage() {
     const [assigningTo, setAssigningTo] = useState<any>(null);
     const [selectedTenant, setSelectedTenant] = useState('');
     const [assignLoading, setAssignLoading] = useState(false);
-    const { Razorpay } = useRazorpay();
 
     const fetchProducts = async () => {
         try {
@@ -138,80 +136,48 @@ export function MarketplacePage() {
         if (!selectedTenant || !assigningTo) return;
         setAssignLoading(true);
         try {
-            // 1. Create Subscription on Backend
-            const res = await api.post(
-                '/m/billing/checkout',
-                {
-                    tenantId: selectedTenant,
-                    productId: assigningTo._id,
-                },
-                {
-                    headers: { 'x-tenant-id': selectedTenant },
-                },
-            );
-
-            const { subscription_id, key_id } = res.data.data;
-
-            // 2. Open Razorpay Checkou Modal
-            const options = {
-                key: key_id,
-                subscription_id: subscription_id,
-                name: 'Alyxnet Frame',
-                description: `Subscription for ${assigningTo.name}`,
-                handler: async function (response: any) {
-                    try {
-                        // 3. Verify Payment
-                        await api.post(
-                            '/m/billing/verify',
-                            {
-                                razorpay_payment_id: response.razorpay_payment_id,
-                                razorpay_subscription_id: response.razorpay_subscription_id,
-                                razorpay_signature: response.razorpay_signature,
-                            },
-                            {
-                                headers: { 'x-tenant-id': selectedTenant },
-                            },
-                        );
-
-                        toast({
-                            title: 'Checkout Successful!',
-                            description: 'Your subscription is now active.',
-                        });
-                        setAssigningTo(null);
-                        setSelectedTenant('');
-                        fetchProducts();
-                    } catch (err: any) {
-                        toast({
-                            variant: 'destructive',
-                            title: 'Verification Failed',
-                            description: 'Payment was made but verification failed.',
-                        });
-                    }
-                },
-                theme: {
-                    color: '#0f172a', // Tailwind slate-900 or primary
-                },
-            };
-
-            const rzp = new Razorpay(options);
-
-            rzp.on('payment.failed', function (response: any) {
-                toast({
-                    variant: 'destructive',
-                    title: 'Payment Failed',
-                    description: response.error.description,
-                });
+            await api.post('/marketplace/purchase', {
+                tenantId: selectedTenant,
+                productId: assigningTo._id,
             });
 
-            rzp.open();
+            toast({
+                title: 'Provisioning Successful!',
+                description: `${assigningTo.name} has been added to your tenant.`,
+            });
+            setAssigningTo(null);
+            setSelectedTenant('');
+            fetchProducts();
         } catch (err: any) {
             toast({
                 variant: 'destructive',
-                title: 'Checkout Failed',
+                title: 'Provisioning Failed',
                 description:
-                    err.response?.data?.message || err.message || 'Failed to initiate checkout',
+                    err.response?.data?.message || err.message || 'Failed to provision module',
             });
+        } finally {
             setAssignLoading(false);
+        }
+    };
+
+    const handleUnsubscribe = async (productId: string, productName: string, tenantId: string) => {
+        if (!confirm(`Are you sure you want to unsubscribe from ${productName}?`)) return;
+        try {
+            await api.post('/marketplace/unsubscribe', {
+                tenantId,
+                productId,
+            });
+            toast({
+                title: 'Unsubscribed',
+                description: `Successfully removed ${productName} from your tenant.`,
+            });
+            fetchProducts();
+        } catch (err: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Unsubscribe Failed',
+                description: err.response?.data?.message || 'Failed to unsubscribe',
+            });
         }
     };
 
@@ -277,14 +243,41 @@ export function MarketplacePage() {
                         <Button variant="outline" onClick={() => setAssigningTo(null)}>
                             Cancel
                         </Button>
-                        <Button onClick={handleAssign} disabled={assignLoading || !selectedTenant}>
-                            {assignLoading ? (
-                                <RefreshCw className="size-4 animate-spin mr-2" />
-                            ) : (
-                                <UserPlus className="size-4 mr-2" />
-                            )}
-                            Provision Now
-                        </Button>
+                        {selectedTenant &&
+                        tenants
+                            .find((t) => t._id === selectedTenant)
+                            ?.subscribedModules?.includes(assigningTo?.slug) ? (
+                            <Button
+                                variant="destructive"
+                                onClick={() =>
+                                    handleUnsubscribe(
+                                        assigningTo._id,
+                                        assigningTo.name,
+                                        selectedTenant,
+                                    )
+                                }
+                                disabled={assignLoading}
+                            >
+                                {assignLoading ? (
+                                    <RefreshCw className="size-4 animate-spin mr-2" />
+                                ) : (
+                                    <AlertCircle className="size-4 mr-2" />
+                                )}
+                                Unsubscribe
+                            </Button>
+                        ) : (
+                            <Button
+                                onClick={handleAssign}
+                                disabled={assignLoading || !selectedTenant}
+                            >
+                                {assignLoading ? (
+                                    <RefreshCw className="size-4 animate-spin mr-2" />
+                                ) : (
+                                    <UserPlus className="size-4 mr-2" />
+                                )}
+                                Provision Now
+                            </Button>
+                        )}
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -336,22 +329,14 @@ export function MarketplacePage() {
                                 )}
                             </CardContent>
                             <CardFooter className="pt-0 pb-6">
-                                {tenants.length === 1 &&
-                                tenants[0].subscribedModules?.includes(p.slug) ? (
-                                    <Button className="w-full bg-green-600 hover:bg-green-700 cursor-default">
-                                        <RefreshCw className="size-4 mr-2" />
-                                        Active
-                                    </Button>
-                                ) : (
-                                    <Button
-                                        className="w-full"
-                                        variant="outline"
-                                        onClick={() => setAssigningTo(p)}
-                                    >
-                                        <UserPlus className="size-4 mr-2" />
-                                        Assign to Tenant
-                                    </Button>
-                                )}
+                                <Button
+                                    className="w-full"
+                                    variant="outline"
+                                    onClick={() => setAssigningTo(p)}
+                                >
+                                    <UserPlus className="size-4 mr-2" />
+                                    Assign / Manage
+                                </Button>
                             </CardFooter>
                         </Card>
                     ))}

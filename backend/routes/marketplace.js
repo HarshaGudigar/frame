@@ -276,4 +276,105 @@ router.post(
     },
 );
 
+/**
+ * @openapi
+ * /api/marketplace/unsubscribe:
+ *   post:
+ *     tags: [Marketplace]
+ *     summary: Cancel a module subscription
+ *     description: Unsubscribe a tenant from a module.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [tenantId, productId]
+ *             properties:
+ *               tenantId: { type: string }
+ *               productId: { type: string }
+ *     responses:
+ *       200:
+ *         description: Unsubscribed
+ */
+router.post(
+    '/unsubscribe',
+    authMiddleware,
+    requireRole('owner', 'admin'),
+    validate({ body: purchaseSchema }),
+    async (req, res) => {
+        const { tenantId, productId } = req.body;
+
+        try {
+            const tenant = await Tenant.findById(tenantId);
+            const product = await Product.findById(productId);
+
+            if (!tenant || !product) {
+                return errorResponse(res, 'Tenant or Product not found', 404);
+            }
+
+            // Find active or trialing subscription
+            const subscription = await Subscription.findOne({
+                tenant: tenantId,
+                product: productId,
+                status: { $in: ['active', 'trialing'] },
+            });
+
+            if (!subscription) {
+                return errorResponse(res, 'No active subscription found to cancel', 404);
+            }
+
+            // 1. Update subscription status
+            subscription.status = 'canceled';
+            await subscription.save();
+
+            // 2. Remove slug from tenant
+            tenant.subscribedModules = tenant.subscribedModules.filter(
+                (slug) => slug !== product.slug,
+            );
+            await tenant.save();
+
+            // 3. Optional module-specific hook
+            const modules = req.app.locals.modules || [];
+            const moduleManifest = modules.find((m) => m.slug === product.slug);
+            if (moduleManifest && typeof moduleManifest.onUnsubscribe === 'function') {
+                try {
+                    await moduleManifest.onUnsubscribe(tenant, logger);
+                } catch (hookErr) {
+                    logger.error(
+                        { err: hookErr, tenant: tenant.slug, module: product.slug },
+                        'Module onUnsubscribe hook failed',
+                    );
+                }
+            }
+
+            // 4. Notify
+            const notificationData = {
+                tenantId: tenant._id,
+                tenantSlug: tenant.slug,
+                productId: product._id,
+                productName: product.name,
+                productSlug: product.slug,
+                message: `${product.name} module has been removed for ${tenant.name}`,
+            };
+            socketService.emitEvent('module:unsubscribed', notificationData, 'admin');
+            socketService.emitEvent(
+                'module:unsubscribed',
+                notificationData,
+                `user:${req.user._id}`,
+            );
+
+            return successResponse(
+                res,
+                { tenant },
+                `Successfully unsubscribed from ${product.name}`,
+            );
+        } catch (err) {
+            return errorResponse(res, 'Unsubscription failed', 500, err);
+        }
+    },
+);
+
 module.exports = router;
