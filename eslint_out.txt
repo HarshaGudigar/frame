@@ -1,0 +1,27 @@
+
+G:\Alyxnet\frame\frontend\src\pages\dashboard.tsx
+   34:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   35:50  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   36:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   37:54  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   38:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   60:52  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   61:53  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   64:56  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  334:56  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  371:30  warning  'user' is defined but never used          no-unused-vars
+  371:30  warning  'user' is defined but never used          @typescript-eslint/no-unused-vars
+  371:54  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  371:65  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  373:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  374:40  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  375:44  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  382:37  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  398:26  warning  '_' is defined but never used             no-unused-vars
+  398:26  warning  '_' is defined but never used             @typescript-eslint/no-unused-vars
+  398:29  error    Empty block statement                     no-empty
+  400:25  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  415:66  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 22 problems (1 error, 21 warnings)
+
