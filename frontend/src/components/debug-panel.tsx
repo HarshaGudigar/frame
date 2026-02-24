@@ -26,7 +26,7 @@ export function DebugPanel() {
         }
 
         // Only admins/owners should see this panel logic
-        if (!user || !['admin', 'owner'].includes(user.role)) return;
+        if (!user || !['admin', 'superuser'].includes(user.role as string)) return;
 
         const handleDebugContext = (e: any) => {
             setDebugContext(e.detail);
@@ -37,7 +37,7 @@ export function DebugPanel() {
     }, [user]);
 
     // Don't render anything for non-admins
-    if (!user || !['admin', 'owner'].includes(user.role)) return null;
+    if (!user || !['admin', 'superuser'].includes(user.role as string)) return null;
 
     const handleDragStop = (_e: unknown, data: { x: number; y: number }) => {
         const newPos = { x: data.x, y: data.y };
@@ -50,11 +50,12 @@ export function DebugPanel() {
             <Draggable nodeRef={nodeRef1} position={position} onStop={handleDragStop}>
                 <div
                     ref={nodeRef1}
-                    className="fixed bottom-6 left-12 z-[100] bg-primary/95 text-primary-foreground p-3 flex items-center gap-2 rounded-full shadow-lg cursor-move hover:scale-105 transition-colors backdrop-blur-sm border border-primary-foreground/20"
+                    onClick={() => setIsOpen(true)}
+                    className="fixed bottom-6 left-12 z-[100] bg-primary/95 text-primary-foreground p-3 flex items-center gap-2 rounded-full shadow-lg cursor-pointer hover:scale-105 transition-colors backdrop-blur-sm border border-primary-foreground/20"
                     title="Developer Debug Panel (Drag to move)"
                 >
-                    <GripHorizontal className="size-4 opacity-50" />
-                    <Terminal className="size-5" onClick={() => setIsOpen(true)} />
+                    <GripHorizontal className="size-4 opacity-50" title="Drag to move" />
+                    <Terminal className="size-5" />
                 </div>
             </Draggable>
         );
@@ -165,7 +166,7 @@ export function DebugPanel() {
                                         </div>
                                         <pre className="bg-muted p-2.5 rounded-md overflow-x-auto text-[10px] border border-border/50 max-h-32">
                                             {Object.keys(debugContext.featureFlags || {}).length >
-                                            0 ? (
+                                                0 ? (
                                                 JSON.stringify(debugContext.featureFlags, null, 2)
                                             ) : (
                                                 <span className="text-muted-foreground italic">

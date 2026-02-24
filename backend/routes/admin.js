@@ -442,7 +442,7 @@ router.get(
     '/metrics/:id',
     authMiddleware,
     requireVerifiedEmail,
-    requireRole('admin', 'owner', 'user'),
+    requireRole('admin', 'superuser', 'user'),
     asyncHandler(async (req, res) => {
         const { id } = req.params; // slug or id
 
@@ -488,7 +488,7 @@ router.get(
 router.get(
     '/usage/:id',
     authMiddleware,
-    requireRole('admin', 'owner'),
+    requireRole('admin', 'superuser'),
     asyncHandler(async (req, res) => {
         const UsageMeter = require('../models/UsageMeter');
         const usage = await UsageMeter.find({ tenant: req.params.id })
@@ -512,7 +512,7 @@ router.get(
     '/fleet/stats',
     authMiddleware,
     requireVerifiedEmail,
-    requireRole('admin', 'owner'),
+    requireRole('admin', 'superuser'),
     asyncHandler(async (req, res) => {
         const totalTenants = await Tenant.countDocuments();
         const onlineTenants = await Tenant.countDocuments({ status: 'online' });
@@ -549,7 +549,7 @@ router.get(
     '/audit-logs',
     authMiddleware,
     requireVerifiedEmail,
-    requireRole('owner'),
+    requireRole('superuser'),
     asyncHandler(async (req, res) => {
         const { page = 1, limit = 20, action, userId, startDate, endDate } = req.query;
         const AuditLog = require('../models/AuditLog');
@@ -652,7 +652,7 @@ router.get(
     '/backups',
     authMiddleware,
     requireVerifiedEmail,
-    requireRole('admin', 'owner'),
+    requireRole('admin', 'superuser'),
     asyncHandler(async (req, res) => {
         const backups = await listBackups();
 
@@ -687,7 +687,7 @@ router.post(
     '/backups',
     authMiddleware,
     requireVerifiedEmail,
-    requireRole('admin', 'owner'),
+    requireRole('admin', 'superuser'),
     asyncHandler(async (req, res) => {
         await runBackup();
 
@@ -722,7 +722,7 @@ router.get(
     '/backups/:filename/download',
     authMiddleware,
     requireVerifiedEmail,
-    requireRole('admin', 'owner'),
+    requireRole('admin', 'superuser'),
     asyncHandler(async (req, res) => {
         const { filename } = req.params;
 
@@ -769,7 +769,7 @@ router.delete(
     '/backups/:filename',
     authMiddleware,
     requireVerifiedEmail,
-    requireRole('admin', 'owner'),
+    requireRole('admin', 'superuser'),
     asyncHandler(async (req, res) => {
         const { filename } = req.params;
 
@@ -815,7 +815,7 @@ router.post(
     '/backups/restore',
     authMiddleware,
     requireVerifiedEmail,
-    requireRole('owner'),
+    requireRole('superuser'),
     backupUpload.single('file'),
     asyncHandler(async (req, res) => {
         let archivePath;

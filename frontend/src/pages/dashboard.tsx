@@ -531,7 +531,7 @@ function HubDashboard({ api, user, isAdmin }: { api: any; user: any; isAdmin: bo
 // ─── Main Route ───────────────────────────────────────────────────────────────
 export function DashboardPage() {
     const { api, user, systemInfo } = useAuth();
-    const isAdmin = user?.role === 'admin' || user?.role === 'owner';
+    const isAdmin = user?.role === 'admin' || user?.role === 'superuser';
     const isSilo = systemInfo?.mode === 'SILO';
 
     if (isSilo) return <SiloDashboard api={api} />;

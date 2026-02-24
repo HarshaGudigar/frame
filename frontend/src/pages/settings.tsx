@@ -21,7 +21,7 @@ export function SettingsPage() {
                 <RoleMatrix />
             </Can>
 
-            <Can role="owner">
+            <Can role="superuser">
                 <DatabaseBackups />
             </Can>
         </div>

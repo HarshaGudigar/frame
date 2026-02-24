@@ -116,11 +116,11 @@ export default function Users() {
                                     <TableCell>
                                         <Badge
                                             variant={
-                                                user.role === 'owner'
+                                                user.role === 'superuser'
                                                     ? 'default'
                                                     : user.role === 'admin'
-                                                      ? 'secondary'
-                                                      : 'outline'
+                                                        ? 'secondary'
+                                                        : 'outline'
                                             }
                                         >
                                             {user.role}
@@ -147,7 +147,7 @@ export default function Users() {
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                {hasRole('owner') && (
+                                                {hasRole('superuser') && (
                                                     <>
                                                         <DropdownMenuItem
                                                             onClick={() => {

@@ -45,7 +45,7 @@ const navCore = [
 
 const navPlatform = [
     { to: '/marketplace', icon: Store, label: 'Marketplace', role: 'admin' },
-    { to: '/audit-logs', icon: ShieldCheck, label: 'Audit Logs', role: 'owner' },
+    { to: '/audit-logs', icon: ShieldCheck, label: 'Audit Logs', role: 'superuser' },
 ];
 
 const navModules = [

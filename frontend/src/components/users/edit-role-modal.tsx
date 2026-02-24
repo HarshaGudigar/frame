@@ -75,7 +75,7 @@ export function EditRoleModal({ user, open, onOpenChange, onRoleUpdated }: EditR
                                     <SelectValue placeholder="Select a role" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="owner">Owner</SelectItem>
+                                    <SelectItem value="superuser">Superuser</SelectItem>
                                     <SelectItem value="admin">Admin</SelectItem>
                                     <SelectItem value="staff">Staff</SelectItem>
                                     <SelectItem value="user">User</SelectItem>

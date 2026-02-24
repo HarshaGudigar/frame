@@ -18,7 +18,7 @@ export interface User {
     isTwoFactorEnabled?: boolean;
 }
 
-export type Role = 'owner' | 'admin' | 'staff' | 'user';
+export type Role = 'superuser' | 'admin' | 'staff' | 'user';
 
 interface AuthContextType {
     user: User | null;

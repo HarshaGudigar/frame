@@ -179,7 +179,7 @@ export function RoleMatrix() {
                                                     checked={hasPerm}
                                                     disabled={
                                                         isLocked ||
-                                                        (role.isSystem && role.name === 'owner')
+                                                        (role.isSystem && role.name === 'superuser')
                                                     }
                                                     onCheckedChange={(checked) =>
                                                         handleTogglePermission(
