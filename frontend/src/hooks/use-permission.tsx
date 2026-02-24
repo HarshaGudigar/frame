@@ -7,6 +7,7 @@ export const usePermission = () => {
     // LEGACY: Keeping this around temporarily to prevent breaking existing UI
     // before we migrate every single component.
     const ROLE_HIERARCHY: Record<string, number> = {
+        superuser: 5,
         owner: 4,
         admin: 3,
         staff: 2,
@@ -16,8 +17,8 @@ export const usePermission = () => {
     const hasRole = (requiredRole: Role | string) => {
         if (!user || !user.role) return false;
 
-        // Owner bypass
-        if (user.role === 'owner') return true;
+        // Owner/Superuser bypass
+        if (user.role === 'owner' || user.role === 'superuser') return true;
 
         const userLevel = ROLE_HIERARCHY[user.role as string] || 0;
         const requiredLevel = ROLE_HIERARCHY[requiredRole as string] || 0;
@@ -31,8 +32,8 @@ export const usePermission = () => {
     const hasPermission = (permission: string) => {
         if (!user) return false;
 
-        // Owner bypass
-        if (user.role === 'owner') return true;
+        // Owner/Superuser bypass
+        if (user.role === 'owner' || user.role === 'superuser') return true;
 
         if (!user.permissions || !Array.isArray(user.permissions)) return false;
 
