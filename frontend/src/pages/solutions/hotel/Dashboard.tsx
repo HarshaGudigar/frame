@@ -273,7 +273,9 @@ export function HotelDashboard() {
             const rooms = roomsRes.data?.data || [];
             const bookings = bookingsRes.data?.data || [];
             const hkTasks = hkRes.data?.data || [];
-            const today = new Date().toISOString().split('T')[0];
+            // Use local date for better matching with user expectation
+            const now = new Date();
+            const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
             setStats({
                 totalRooms: rooms.length,
@@ -282,7 +284,9 @@ export function HotelDashboard() {
                 dirty: rooms.filter((r: any) => r.status === 'Dirty').length,
                 maintenance: rooms.filter((r: any) => r.status === 'Maintenance').length,
                 todayCheckIns: bookings.filter(
-                    (b: any) => b.checkInDate?.startsWith(today) && b.status === 'Confirmed',
+                    (b: any) =>
+                        b.checkInDate?.startsWith(today) &&
+                        ['Confirmed', 'CheckedIn'].includes(b.status),
                 ).length,
             });
 
