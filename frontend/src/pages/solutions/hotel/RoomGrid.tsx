@@ -96,15 +96,23 @@ export function RoomGrid({ bookings = [] }: { bookings?: Booking[] }) {
 
     const fetchRoomTypes = async () => {
         try {
-            const res = await api.get('/m/hotel/settings/roomType');
-            if (res.data.success && res.data.data?.options) {
-                const activeTypes = res.data.data.options
-                    .filter((o: RoomTypeOption) => o.isActive)
-                    .map((o: RoomTypeOption) => o.value);
-                if (activeTypes.length > 0) setRoomTypes(activeTypes);
+            // First try fetching the specific slug
+            const res = await api.get('/m/hotel/settings');
+            if (res.data.success && Array.isArray(res.data.data)) {
+                // Look for 'roomType' or 'Room Type'
+                const setting = res.data.data.find(
+                    (s: any) => s.type === 'roomType' || s.type === 'Room Type',
+                );
+
+                if (setting && setting.options) {
+                    const activeTypes = setting.options
+                        .filter((o: any) => o.isActive)
+                        .map((o: any) => o.value);
+                    if (activeTypes.length > 0) setRoomTypes(activeTypes);
+                }
             }
         } catch {
-            // Fallback to defaults
+            // silent fallback
         }
     };
 
