@@ -5,7 +5,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 const multer = require('multer');
 const router = express.Router();
-const Tenant = require('../models/Tenant');
+const AppConfig = require('../models/AppConfig');
 const { successResponse, errorResponse } = require('../utils/responseWrapper');
 const { logAction } = require('../middleware/auditLogger');
 const socketService = require('../utils/socket');
@@ -19,19 +19,12 @@ const { HEARTBEAT_SECRET } = config;
 const { validate } = require('../middleware/validate');
 const { z } = require('zod');
 const logger = require('../utils/logger');
-const GlobalUser = require('../models/GlobalUser');
-const {
-    provisionTenantDatabase,
-    closeTenantConnection,
-    dropTenantDatabase,
-} = require('../utils/tenantDBCache');
+const User = require('../models/User');
+// Tenant DB cache removed
 const VerificationToken = require('../models/VerificationToken');
 const emailService = require('../services/email');
 const Metric = require('../models/Metric');
 const {
-    createTenantSchema,
-    updateTenantSchema,
-    heartbeatSchema,
     mongoIdParam,
     updateUserRoleSchema,
     adminChangePasswordSchema,
@@ -42,395 +35,69 @@ const { list: listBackups } = require('../jobs/backup-providers/local');
 // Async route wrapper
 const asyncHandler = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
-// ─── Heartbeat (Machine-to-Machine) ──────────────────────────────────────────
+// ─── App Settings (Single Instance) ──────────────────────────────────────────
 
 /**
  * @openapi
- * /api/admin/heartbeat:
- *   post:
- *     tags: [Admin]
- *     summary: Silo heartbeat
- *     description: Machine-to-machine endpoint for tenant silo instances to report their status and metrics.
- *     security:
- *       - apiKey: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [tenantId]
- *             properties:
- *               tenantId: { type: string, example: "acme-corp" }
- *               metrics:
- *                 type: object
- *                 properties:
- *                   cpu: { type: number, example: 45.2 }
- *                   ram: { type: number, example: 68.1 }
- *                   uptime: { type: number, example: 86400 }
- *                   version: { type: string, example: "1.0.0" }
- *     responses:
- *       200:
- *         description: Heartbeat processed
- *       401:
- *         description: Invalid or missing API key
- *       404:
- *         description: Tenant not found
- */
-router.post(
-    '/heartbeat',
-    (req, res, next) => {
-        const apiKey = req.headers['x-api-key'];
-        if (!apiKey || apiKey !== HEARTBEAT_SECRET) {
-            return errorResponse(res, 'Invalid or missing API key', 401);
-        }
-        next();
-    },
-    validate({ body: heartbeatSchema }),
-    asyncHandler(async (req, res) => {
-        const { tenantId, metrics } = req.body;
-
-        const tenant = await Tenant.findOne({ slug: tenantId });
-        if (!tenant) {
-            return errorResponse(res, 'Tenant not found', 404);
-        }
-
-        // Save history
-        await Metric.create({
-            tenantId,
-            metrics,
-        });
-
-        // Update latest status in Tenant document
-        tenant.lastHeartbeat = new Date();
-        if (metrics) {
-            tenant.metrics = {
-                ...tenant.metrics,
-                ...metrics,
-            };
-        }
-        tenant.status = 'online';
-        await tenant.save();
-
-        res.json({ success: true, message: 'Heartbeat processed' });
-    }),
-);
-
-// ─── Tenant CRUD ─────────────────────────────────────────────────────────────
-
-/**
- * @openapi
- * /api/admin/tenants:
+ * /api/admin/app-config:
  *   get:
  *     tags: [Admin]
- *     summary: List all tenants
- *     description: Returns all tenants sorted by last seen (most recent first).
+ *     summary: Get instance configuration
+ *     description: Returns the single AppConfig document for this instance.
  *     security:
  *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: List of tenants
- *       401:
- *         description: Authentication required
- *   post:
- *     tags: [Admin]
- *     summary: Create a new tenant
- *     security:
- *       - bearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [name, slug]
- *             properties:
- *               name: { type: string, example: "Acme Corporation" }
- *               slug: { type: string, pattern: "^[a-z0-9-]+$", example: "acme-corp" }
- *               vmIpAddress: { type: string, example: "10.0.1.5" }
- *               subscribedModules: { type: array, items: { type: string }, example: ["hotel", "billing"] }
- *     responses:
- *       201:
- *         description: Tenant created
- *       400:
- *         description: Validation error
- *       409:
- *         description: Slug already exists
  */
 router.get(
-    '/tenants',
+    '/app-config',
     authMiddleware,
     requireVerifiedEmail,
-    requireRole('admin', 'staff', 'owner', 'user'),
+    requireRole('superuser', 'admin', 'staff'),
     asyncHandler(async (req, res) => {
-        let query = {};
-
-        // If not owner, filter tenants to only those assigned to the user
-        if (req.user.role !== 'owner') {
-            const assignedTenantIds = req.user.tenants.map((t) => t.tenant);
-            query._id = { $in: assignedTenantIds };
-        }
-
-        const tenants = await Tenant.find(query).sort({ lastSeen: -1 });
-        return successResponse(res, tenants, 'Tenants retrieved');
-    }),
-);
-
-router.post(
-    '/tenants',
-    authMiddleware,
-    requireVerifiedEmail,
-    requireRole('admin', 'owner'),
-    validate({ body: createTenantSchema }),
-    asyncHandler(async (req, res) => {
-        const { name, slug, vmIpAddress, subscribedModules } = req.body;
-
-        // Check for duplicate slug
-        const existing = await Tenant.findOne({ slug });
-        if (existing) {
-            return errorResponse(res, `Tenant with slug "${slug}" already exists`, 409);
-        }
-
-        const tenant = await Tenant.create({
-            name,
-            slug,
-            vmIpAddress: vmIpAddress || '',
-            subscribedModules: subscribedModules || [],
-            status: 'offline',
-            deploymentStatus: 'pending',
-            createdBy: req.user.id,
-        });
-
-        // Provision a dedicated database for the tenant
-        try {
-            const dbUri = await provisionTenantDatabase(slug);
-            tenant.dbUri = dbUri;
-            await tenant.save();
-        } catch (provisionErr) {
-            logger.error({ err: provisionErr, slug }, 'Failed to provision tenant database');
-            tenant.deploymentStatus = 'failed';
-            await tenant.save();
-        }
-
-        // Audit Log
-        await logAction(req, 'TENANT_CREATED', tenant.id, {
-            name: tenant.name,
-            slug: tenant.slug,
-        });
-
-        // Real-time notification
-        socketService.emitEvent('tenant:created', {
-            id: tenant.id,
-            name: tenant.name,
-            owner: req.user.id,
-        });
-
-        return successResponse(res, tenant, 'Tenant created', 201);
+        const config = await AppConfig.getInstance();
+        return successResponse(res, config, 'App config retrieved');
     }),
 );
 
 /**
  * @openapi
- * /api/admin/tenants/{id}:
- *   get:
+ * /api/admin/app-config:
+ *   patch:
  *     tags: [Admin]
- *     summary: Get a tenant by ID
+ *     summary: Update instance configuration
+ *     description: Update branding, modules, and billing settings.
  *     security:
  *       - bearerAuth: []
- *     parameters:
- *       - name: id
- *         in: path
- *         required: true
- *         schema: { type: string }
- *     responses:
- *       200:
- *         description: Tenant details
- *       404:
- *         description: Tenant not found
- *   put:
- *     tags: [Admin]
- *     summary: Update a tenant
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - name: id
- *         in: path
- *         required: true
- *         schema: { type: string }
- *     requestBody:
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               name: { type: string }
- *               vmIpAddress: { type: string }
- *               subscribedModules: { type: array, items: { type: string } }
- *               isActive: { type: boolean }
- *     responses:
- *       200:
- *         description: Tenant updated
- *       404:
- *         description: Tenant not found
- *   delete:
- *     tags: [Admin]
- *     summary: Delete a tenant
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - name: id
- *         in: path
- *         required: true
- *         schema: { type: string }
- *     responses:
- *       200:
- *         description: Tenant deleted
- *       404:
- *         description: Tenant not found
  */
-router.get(
-    '/tenants/:id',
+router.patch(
+    '/app-config',
     authMiddleware,
     requireVerifiedEmail,
-    requireRole('admin', 'staff', 'owner'),
-    validate({ params: mongoIdParam }),
+    requireRole('superuser', 'admin'),
     asyncHandler(async (req, res) => {
-        const tenant = await Tenant.findById(req.params.id);
-        if (!tenant) {
-            return errorResponse(res, 'Tenant not found', 404);
-        }
-        return successResponse(res, tenant, 'Tenant retrieved');
-    }),
-);
+        const { instanceName, slug, branding, enabledModules, billingStatus } = req.body;
 
-router.put(
-    '/tenants/:id',
-    authMiddleware,
-    requireVerifiedEmail,
-    requireRole('admin', 'owner'),
-    validate({ params: mongoIdParam, body: updateTenantSchema }),
-    asyncHandler(async (req, res) => {
-        const {
-            name,
-            vmIpAddress,
-            subscribedModules,
-            isActive,
-            status,
-            branding,
-            onboardingProgress,
-        } = req.body;
+        const config = await AppConfig.getInstance();
 
-        const tenant = await Tenant.findById(req.params.id);
-        if (!tenant) {
-            return errorResponse(res, 'Tenant not found', 404);
-        }
+        if (instanceName !== undefined) config.instanceName = instanceName;
+        if (slug !== undefined) config.slug = slug;
+        if (branding !== undefined) config.branding = { ...config.branding, ...branding };
+        if (enabledModules !== undefined) config.enabledModules = enabledModules;
+        if (billingStatus !== undefined) config.billingStatus = billingStatus;
 
-        if (name !== undefined) tenant.name = name;
-        if (vmIpAddress !== undefined) tenant.vmIpAddress = vmIpAddress;
-        if (subscribedModules !== undefined) tenant.subscribedModules = subscribedModules;
-        if (isActive !== undefined) tenant.isActive = isActive;
-        if (status !== undefined) tenant.status = status;
-        if (branding !== undefined) tenant.branding = { ...tenant.branding, ...branding };
-        if (onboardingProgress !== undefined) tenant.onboardingProgress = onboardingProgress;
-
-        await tenant.save();
+        await config.save();
 
         // Audit Log
-        await logAction(req, 'TENANT_UPDATED', tenant.id, {
+        await logAction(req, 'APP_CONFIG_UPDATED', config.id, {
             updates: req.body,
         });
 
-        // Real-time notification for status change
-        if (isActive !== undefined || status !== undefined) {
-            socketService.emitEvent('tenant:status_change', {
-                id: tenant.id,
-                name: tenant.name,
-                isActive: tenant.isActive,
-                status: tenant.status,
-            });
-        }
-
-        return successResponse(res, tenant, 'Tenant updated');
-    }),
-);
-
-router.delete(
-    '/tenants/:id',
-    authMiddleware,
-    requireVerifiedEmail,
-    requireRole('admin', 'owner'),
-    validate({ params: mongoIdParam }),
-    asyncHandler(async (req, res) => {
-        const tenant = await Tenant.findById(req.params.id);
-        if (!tenant) {
-            return errorResponse(res, 'Tenant not found', 404);
-        }
-
-        // Clean up tenant database and cached connection
-        if (tenant.dbUri) {
-            try {
-                await closeTenantConnection(tenant.slug);
-                await dropTenantDatabase(tenant.dbUri);
-            } catch (cleanupErr) {
-                logger.error(
-                    { err: cleanupErr, slug: tenant.slug },
-                    'Failed to clean up tenant database',
-                );
-            }
-        }
-
-        await Tenant.findByIdAndDelete(req.params.id);
-
-        // Audit Log
-        await logAction(req, 'TENANT_DELETED', tenant.id, {
-            name: tenant.name,
-            slug: tenant.slug,
+        // Real-time notification
+        socketService.emitEvent('appConfig:updated', {
+            id: config.id,
+            instanceName: config.instanceName,
         });
 
-        return successResponse(res, { id: req.params.id }, 'Tenant deleted');
-    }),
-);
-
-/**
- * @openapi
- * /api/admin/tenants/{id}/export:
- *   get:
- *     tags: [Admin]
- *     summary: Export tenant data
- *     description: Generates a JSON dump of all tenant data (metadata, subscriptions, usage).
- *     security:
- *       - bearerAuth: []
- */
-router.get(
-    '/tenants/:id/export',
-    authMiddleware,
-    requireRole('owner'),
-    validate({ params: mongoIdParam }),
-    asyncHandler(async (req, res) => {
-        const Subscription = require('../models/Subscription');
-        const UsageMeter = require('../models/UsageMeter');
-
-        const tenant = await Tenant.findById(req.params.id);
-        if (!tenant) return errorResponse(res, 'Tenant not found', 404);
-
-        const [subscriptions, usage] = await Promise.all([
-            Subscription.find({ tenant: tenant._id }),
-            UsageMeter.find({ tenant: tenant._id }),
-        ]);
-
-        const exportData = {
-            tenant,
-            subscriptions,
-            usage,
-            exportedAt: new Date(),
-        };
-
-        res.setHeader('Content-Type', 'application/json');
-        res.setHeader(
-            'Content-Disposition',
-            `attachment; filename=tenant-export-${tenant.slug}.json`,
-        );
-        return res.json(exportData);
+        return successResponse(res, config, 'App config updated successfully');
     }),
 );
 
@@ -450,21 +117,13 @@ router.get(
     '/users',
     authMiddleware,
     requireVerifiedEmail,
-    requireRole('owner', 'admin'),
+    requireRole('superuser', 'admin'),
     async (req, res) => {
         try {
-            let query = {};
-
-            // If not owner, filter users to only those sharing a tenant with the requester
-            if (req.user.role !== 'owner') {
-                const tenantIds = req.user.tenants.map((t) => t.tenant);
-                query['tenants.tenant'] = { $in: tenantIds };
-            }
-
-            const users = await GlobalUser.find(
-                query,
-                'firstName lastName email role isActive createdAt tenants',
-            ).populate('tenants.tenant');
+            const users = await User.find(
+                {},
+                'firstName lastName email role isActive createdAt',
+            );
 
             res.json({ success: true, count: users.length, data: users });
         } catch (error) {
@@ -500,58 +159,30 @@ router.post(
     '/users/invite',
     authMiddleware,
     requireVerifiedEmail,
-    requireRole('owner', 'admin'),
+    requireRole('superuser', 'admin'),
     validate({
         body: z.object({
             email: z.string().email(),
             firstName: z.string().min(1),
             lastName: z.string().min(1),
-            role: z.enum(['admin', 'staff', 'user']),
+            role: z.enum(['superuser', 'admin', 'staff', 'user']),
         }),
     }),
     async (req, res) => {
         try {
             const { email, firstName, lastName, role } = req.body;
 
-            const existingUser = await GlobalUser.findOne({ email });
+            const existingUser = await User.findOne({ email });
             if (existingUser) {
                 return errorResponse(res, 'User already exists', 409);
             }
 
-            // Determine tenant context
-            let userTenants = [];
-            let globalRole = role;
-
-            if (req.user.role !== 'owner') {
-                // Silo/Tenant Admins can only invite 'user' or 'staff' to their own tenant
-                if (role === 'owner' || role === 'admin') {
-                    // Technically, a tenant admin MIGHT want to invite another admin for the SAME tenant.
-                    // But they definitely cannot create a Global Owner/Admin.
-                    // Let's assume the 'role' in body is the TENANT role.
-                    // And Global Role is always 'user'.
-                }
-
-                // For simplified Silo flow:
-                // Global Role = 'user'
-                // Tenant Role = req.body.role (e.g. 'user', 'staff', 'admin' of that tenant)
-                globalRole = 'user';
-
-                if (req.user.tenants && req.user.tenants.length > 0) {
-                    // Use the first tenant (Silo case)
-                    userTenants.push({
-                        tenant: req.user.tenants[0].tenant,
-                        role: role, // The role specified in invite is the tenant-level role
-                    });
-                }
-            }
-
             // Create user without password — they'll set it via the invite link
-            const newUser = await GlobalUser.create({
+            const newUser = await User.create({
                 email,
                 firstName,
                 lastName,
-                role: globalRole,
-                tenants: userTenants,
+                role,
                 isActive: false, // User activates by accepting invite
                 isEmailVerified: false,
                 invitedBy: req.user._id,
@@ -625,7 +256,7 @@ router.delete(
     '/users/:id',
     authMiddleware,
     requireVerifiedEmail,
-    requireRole('owner'),
+    requireRole('superuser', 'admin'),
     validate({ params: mongoIdParam }),
     async (req, res) => {
         try {
@@ -635,7 +266,7 @@ router.delete(
                 return errorResponse(res, 'Cannot deactivate yourself', 400);
             }
 
-            const user = await GlobalUser.findByIdAndUpdate(id, { isActive: false }, { new: true });
+            const user = await User.findByIdAndUpdate(id, { isActive: false }, { new: true });
 
             if (!user) {
                 return errorResponse(res, 'User not found', 404);
@@ -684,7 +315,7 @@ router.patch(
     '/users/:id/role',
     authMiddleware,
     requireVerifiedEmail,
-    requireRole('owner'),
+    requireRole('superuser'),
     validate({ params: mongoIdParam, body: updateUserRoleSchema }),
     async (req, res) => {
         try {
@@ -695,7 +326,7 @@ router.patch(
                 return errorResponse(res, 'Cannot change your own role', 400);
             }
 
-            const user = await GlobalUser.findByIdAndUpdate(id, { role }, { new: true });
+            const user = await User.findByIdAndUpdate(id, { role }, { new: true });
 
             if (!user) {
                 return errorResponse(res, 'User not found', 404);
@@ -749,32 +380,16 @@ router.post(
     '/users/:id/password',
     authMiddleware,
     requireVerifiedEmail,
-    requireRole('owner', 'admin'),
+    requireRole('superuser', 'admin'),
     validate({ params: mongoIdParam, body: adminChangePasswordSchema }),
     async (req, res) => {
         try {
             const { id } = req.params;
             const { password } = req.body;
 
-            // Administrative logic:
-            // 1. Owners can change anyone's password.
-            // 2. Tenant Admins can only change passwords of users in their own tenant.
-
-            const targetUser = await GlobalUser.findById(id);
+            const targetUser = await User.findById(id);
             if (!targetUser) {
                 return errorResponse(res, 'User not found', 404);
-            }
-
-            if (req.user.role !== 'owner') {
-                // Check if the admin and target user share at least one tenant
-                const adminTenantIds = req.user.tenants.map((t) => t.tenant.toString());
-                const targetTenantIds = targetUser.tenants.map((t) => t.tenant.toString());
-
-                const hasCommonTenant = adminTenantIds.some((id) => targetTenantIds.includes(id));
-
-                if (!hasCommonTenant) {
-                    return errorResponse(res, 'Access denied: User is not in your tenant', 403);
-                }
             }
 
             // Update password

@@ -41,7 +41,6 @@ interface BusinessInfo {
 export default function InvoicePrintView() {
     const { id } = useParams();
     const [searchParams] = useSearchParams();
-    const tenantId = searchParams.get('tenantId');
     const { api } = useAuth();
     const [booking, setBooking] = useState<Booking | null>(null);
     const [businessInfo, setBusinessInfo] = useState<BusinessInfo | null>(null);
@@ -49,15 +48,11 @@ export default function InvoicePrintView() {
 
     useEffect(() => {
         const fetchData = async () => {
-            if (!id || !tenantId) return;
+            if (!id) return;
             try {
                 const [bookingRes, businessRes] = await Promise.all([
-                    api.get(`/m/hotel/bookings/${id}`, {
-                        headers: { 'x-tenant-id': tenantId },
-                    }),
-                    api.get('/m/hotel/business-info', {
-                        headers: { 'x-tenant-id': tenantId },
-                    }),
+                    api.get(`/m/hotel/bookings/${id}`),
+                    api.get('/m/hotel/business-info'),
                 ]);
 
                 if (bookingRes.data.success) setBooking(bookingRes.data.data);
@@ -70,7 +65,7 @@ export default function InvoicePrintView() {
         };
 
         fetchData();
-    }, [id, tenantId, api]);
+    }, [id, api]);
 
     const handlePrint = () => {
         window.print();

@@ -40,7 +40,6 @@ import { CopilotSidebar } from '@/components/ai/copilot-sidebar';
 
 const navCore = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/tenants', icon: Building2, label: 'Tenants', role: 'owner' },
     { to: '/users', icon: UsersIcon, label: 'Users', role: 'admin' },
 ];
 
@@ -61,22 +60,12 @@ function AppSidebar() {
     const { hasRole } = usePermission();
     const location = useLocation();
 
-    const isSilo = systemInfo?.mode === 'SILO';
-
     const checkActive = (to: string) => {
         if (to === '/') return location.pathname === '/';
         return location.pathname.startsWith(to);
     };
 
-    const runtimeModeText = systemInfo?.mode ? `${systemInfo.mode} MODE` : 'LOADING...';
-
-    // Hub-only items are hidden in Silo mode:
-    // - Tenants: Silo is single-tenant by definition, no fleet to manage.
-    // - Marketplace stays visible: a standalone Silo customer still needs it to manage their modules.
-    const visibleNavCore = navCore.filter((item) => {
-        if (isSilo && item.to === '/tenants') return false;
-        return true;
-    });
+    const visibleNavCore = navCore;
 
     // No Platform items are filtered — Marketplace and Audit Logs are needed in all modes.
     const visibleNavPlatform = navPlatform;
@@ -100,10 +89,10 @@ function AppSidebar() {
                                 </div>
                                 <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                                     <span className="truncate font-bold tracking-tight text-base leading-none">
-                                        {BRAND.name}
+                                        {systemInfo?.instanceName || BRAND.name}
                                     </span>
                                     <span className="text-[10px] text-muted-foreground/80 font-medium uppercase tracking-wider mt-0.5 leading-none">
-                                        v2.1.0 · {runtimeModeText}
+                                        v2.1.0 · {systemInfo?.mode || 'LOCAL'}
                                     </span>
                                 </div>
                             </NavLink>
@@ -180,10 +169,13 @@ function AppSidebar() {
                         <SidebarMenu>
                             {navModules.map((item) => {
                                 const moduleSlug = (item as any).module;
-                                const hasModuleAccess = user?.tenants?.some((t: any) =>
-                                    t.tenant?.subscribedModules?.includes(moduleSlug),
-                                );
-                                if (!hasModuleAccess && user?.role !== 'owner') return null;
+                                const hasModuleAccess =
+                                    systemInfo?.enabledModules?.some(
+                                        (m: any) => m === moduleSlug || m.slug === moduleSlug
+                                    ) || systemInfo?.modules?.some(
+                                        (m: any) => m.slug === moduleSlug || m.name === moduleSlug
+                                    );
+                                if (!hasModuleAccess && user?.role !== 'superuser') return null;
 
                                 return (
                                     <SidebarMenuItem key={item.to}>
@@ -260,15 +252,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
     const { user, systemInfo } = useAuth();
     const { isConnected } = useSocket();
 
-    const isSilo = systemInfo?.mode === 'SILO';
+    const activeTenantSlug = systemInfo?.instanceName || 'Local Instance';
 
-    const activeTenantSlug = isSilo
-        ? systemInfo?.tenant?.slug || 'silo-instance'
-        : user?.tenants?.find((t: any) => t.isActive)?.tenant?.slug || 'hub-control';
-
-    const activeTenantRole =
-        user?.tenants?.find((t: any) => t.isActive)?.role ||
-        (user?.role === 'owner' ? 'Fleet Owner' : 'System');
+    const activeTenantRole = user?.role === 'superuser' ? 'Superuser' : (user?.role || 'User');
 
     return (
         <SidebarProvider>

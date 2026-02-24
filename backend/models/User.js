@@ -2,10 +2,10 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 /**
- * GlobalUser Schema
- * Centrally manages users across all tenant instances.
+ * User Schema
+ * Centrally manages users.
  */
-const globalUserSchema = new mongoose.Schema(
+const userSchema = new mongoose.Schema(
     {
         email: {
             type: String,
@@ -21,23 +21,12 @@ const globalUserSchema = new mongoose.Schema(
         },
         role: {
             type: String,
+            enum: ['superuser', 'admin', 'staff', 'user'],
             default: 'user',
         },
         firstName: String,
         lastName: String,
-        // Links to tenants this user has access to
-        tenants: [
-            {
-                tenant: {
-                    type: mongoose.Schema.Types.ObjectId,
-                    ref: 'Tenant',
-                },
-                role: {
-                    type: String,
-                    default: 'user',
-                },
-            },
-        ],
+
         isActive: {
             type: Boolean,
             default: true,
@@ -48,7 +37,7 @@ const globalUserSchema = new mongoose.Schema(
         },
         invitedBy: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'GlobalUser',
+            ref: 'User',
             default: null,
         },
         twoFactorSecret: {
@@ -66,15 +55,15 @@ const globalUserSchema = new mongoose.Schema(
 );
 
 // Hash password before saving
-globalUserSchema.pre('save', async function () {
+userSchema.pre('save', async function () {
     if (!this.isModified('password') || !this.password) return;
     const salt = await bcrypt.genSalt(12);
     this.password = await bcrypt.hash(this.password, salt);
 });
 
 // Compare password method
-globalUserSchema.methods.comparePassword = async function (candidatePassword) {
+userSchema.methods.comparePassword = async function (candidatePassword) {
     return bcrypt.compare(candidatePassword, this.password);
 };
 
-module.exports = mongoose.model('GlobalUser', globalUserSchema);
+module.exports = mongoose.model('User', userSchema);

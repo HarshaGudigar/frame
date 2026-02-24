@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/dialog';
 
 export function MarketplacePage() {
-    const { api } = useAuth();
+    const { api, refreshUser, systemInfo } = useAuth();
     const { toast } = useToast();
     const [products, setProducts] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -39,9 +39,7 @@ export function MarketplacePage() {
     const [error, setError] = useState<string | null>(null);
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState('all');
-    const [tenants, setTenants] = useState<any[]>([]);
     const [assigningTo, setAssigningTo] = useState<any>(null);
-    const [selectedTenant, setSelectedTenant] = useState('');
     const [assignLoading, setAssignLoading] = useState(false);
 
     const fetchProducts = async () => {
@@ -51,12 +49,8 @@ export function MarketplacePage() {
             if (search) params.append('search', search);
             if (category && category !== 'all') params.append('category', category);
 
-            const [prodRes, tenantRes] = await Promise.all([
-                api.get(`/marketplace/products?${params.toString()}`),
-                api.get('/admin/tenants'),
-            ]);
+            const prodRes = await api.get(`/marketplace/products?${params.toString()}`);
             setProducts(prodRes.data.data || []);
-            setTenants(tenantRes.data.data || []);
         } catch {
             toast({
                 variant: 'destructive',
@@ -133,20 +127,20 @@ export function MarketplacePage() {
     };
 
     const handleAssign = async () => {
-        if (!selectedTenant || !assigningTo) return;
+        if (!assigningTo) return;
         setAssignLoading(true);
         try {
             await api.post('/marketplace/purchase', {
-                tenantId: selectedTenant,
                 productId: assigningTo._id,
             });
 
             toast({
                 title: 'Provisioning Successful!',
-                description: `${assigningTo.name} has been added to your tenant.`,
+                description: `${assigningTo.name} has been enabled.`,
             });
+            await refreshUser();
+            window.location.reload(); // Refresh systemInfo
             setAssigningTo(null);
-            setSelectedTenant('');
             fetchProducts();
         } catch (err: any) {
             toast({
@@ -160,18 +154,20 @@ export function MarketplacePage() {
         }
     };
 
-    const handleUnsubscribe = async (productId: string, productName: string, tenantId: string) => {
-        if (!confirm(`Are you sure you want to unsubscribe from ${productName}?`)) return;
+    const handleUnsubscribe = async (productId: string, productName: string) => {
+        if (!confirm(`Are you sure you want to disable ${productName}?`)) return;
         try {
             await api.post('/marketplace/unsubscribe', {
-                tenantId,
                 productId,
             });
             toast({
                 title: 'Unsubscribed',
-                description: `Successfully removed ${productName} from your tenant.`,
+                description: `Successfully disabled ${productName}.`,
             });
+            await refreshUser();
+            window.location.reload(); // Refresh systemInfo
             fetchProducts();
+            setAssigningTo(null);
         } catch (err: any) {
             toast({
                 variant: 'destructive',
@@ -187,7 +183,7 @@ export function MarketplacePage() {
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Marketplace</h1>
                     <p className="text-sm text-muted-foreground">
-                        Browse and purchase modules for your tenants
+                        Browse and enable modules for this instance
                     </p>
                 </div>
             </div>
@@ -216,44 +212,30 @@ export function MarketplacePage() {
                 </div>
             </div>
 
-            {/* Assign to Tenant Dialog */}
+            {/* Enable/Disable Dialog */}
             <Dialog open={!!assigningTo} onOpenChange={() => setAssigningTo(null)}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Assign {assigningTo?.name}</DialogTitle>
+                        <DialogTitle>Manage {assigningTo?.name}</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
-                        <div className="space-y-2">
-                            <Label>Select Tenant</Label>
-                            <Select value={selectedTenant} onValueChange={setSelectedTenant}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Choose a tenant..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {tenants.map((t) => (
-                                        <SelectItem key={t._id} value={t._id}>
-                                            {t.name} ({t.slug})
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
+                        <p className="text-sm text-muted-foreground">
+                            {systemInfo?.enabledModules?.includes(assigningTo?.slug)
+                                ? 'This module is currently enabled for this instance. If you disable it, all users will lose access to its features.'
+                                : 'Enable this module to activate its features for this instance.'}
+                        </p>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setAssigningTo(null)}>
                             Cancel
                         </Button>
-                        {selectedTenant &&
-                        tenants
-                            .find((t) => t._id === selectedTenant)
-                            ?.subscribedModules?.includes(assigningTo?.slug) ? (
+                        {systemInfo?.enabledModules?.includes(assigningTo?.slug) ? (
                             <Button
                                 variant="destructive"
                                 onClick={() =>
                                     handleUnsubscribe(
                                         assigningTo._id,
-                                        assigningTo.name,
-                                        selectedTenant,
+                                        assigningTo.name
                                     )
                                 }
                                 disabled={assignLoading}
@@ -263,19 +245,19 @@ export function MarketplacePage() {
                                 ) : (
                                     <AlertCircle className="size-4 mr-2" />
                                 )}
-                                Unsubscribe
+                                Disable Module
                             </Button>
                         ) : (
                             <Button
                                 onClick={handleAssign}
-                                disabled={assignLoading || !selectedTenant}
+                                disabled={assignLoading}
                             >
                                 {assignLoading ? (
                                     <RefreshCw className="size-4 animate-spin mr-2" />
                                 ) : (
                                     <UserPlus className="size-4 mr-2" />
                                 )}
-                                Provision Now
+                                Enable Module
                             </Button>
                         )}
                     </DialogFooter>
@@ -335,7 +317,7 @@ export function MarketplacePage() {
                                     onClick={() => setAssigningTo(p)}
                                 >
                                     <UserPlus className="size-4 mr-2" />
-                                    Assign / Manage
+                                    {systemInfo?.enabledModules?.includes(p.slug) ? 'Manage' : 'Enable'}
                                 </Button>
                             </CardFooter>
                         </Card>

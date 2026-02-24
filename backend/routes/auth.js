@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const { generateSecret, verifySync, generateURI } = require('otplib');
 const QRCode = require('qrcode');
 const router = express.Router();
-const GlobalUser = require('../models/GlobalUser');
+const User = require('../models/User');
 const RefreshToken = require('../models/RefreshToken');
 const VerificationToken = require('../models/VerificationToken');
 const { successResponse, errorResponse } = require('../utils/responseWrapper');
@@ -36,7 +36,7 @@ const {
 const generateTokens = async (user, ipAddress) => {
     // 1. Access Token (JWT) - Short lived
     const accessToken = jwt.sign(
-        { userId: user._id, email: user.email, role: user.role, tenants: user.tenants },
+        { userId: user._id, email: user.email, role: user.role },
         JWT_SECRET,
         { expiresIn: JWT_EXPIRY },
     );
@@ -69,12 +69,12 @@ router.post('/register', registerLimiter, validate({ body: registerSchema }), as
     const ipAddress = req.ip;
 
     try {
-        const existingUser = await GlobalUser.findOne({ email });
+        const existingUser = await User.findOne({ email });
         if (existingUser) {
             return errorResponse(res, 'Email already registered', 409);
         }
 
-        const user = new GlobalUser({
+        const user = new User({
             email,
             password,
             firstName,
@@ -135,9 +135,8 @@ router.post('/login', loginLimiter, validate({ body: loginSchema }), async (req,
     const ipAddress = req.ip;
 
     try {
-        const user = await GlobalUser.findOne({ email })
-            .select('+password')
-            .populate('tenants.tenant');
+        const user = await User.findOne({ email })
+            .select('+password');
 
         if (!user || !user.isActive) {
             return errorResponse(res, 'Invalid credentials', 401);
@@ -207,7 +206,7 @@ router.post('/accept-invite', validate({ body: acceptInviteSchema }), async (req
             return errorResponse(res, 'Invalid or expired invitation token', 400);
         }
 
-        const user = await GlobalUser.findById(tokenDoc.user);
+        const user = await User.findById(tokenDoc.user);
         if (!user) {
             return errorResponse(res, 'User not found', 404);
         }
@@ -261,7 +260,7 @@ router.post('/verify-email', validate({ body: verifyEmailSchema }), async (req, 
             return errorResponse(res, 'Invalid or expired verification token', 400);
         }
 
-        const user = await GlobalUser.findById(tokenDoc.user);
+        const user = await User.findById(tokenDoc.user);
         if (!user) {
             return errorResponse(res, 'User not found', 404);
         }
@@ -330,7 +329,7 @@ router.post(
 
         try {
             // Always return success to prevent email enumeration
-            const user = await GlobalUser.findOne({ email });
+            const user = await User.findOne({ email });
 
             if (user && user.isActive) {
                 const resetToken = await VerificationToken.createToken(
@@ -379,7 +378,7 @@ router.post('/reset-password', validate({ body: resetPasswordSchema }), async (r
             return errorResponse(res, 'Invalid or expired reset token', 400);
         }
 
-        const user = await GlobalUser.findById(tokenDoc.user);
+        const user = await User.findById(tokenDoc.user);
         if (!user) {
             return errorResponse(res, 'User not found', 404);
         }
@@ -445,7 +444,7 @@ router.post('/refresh-token', async (req, res) => {
         }
 
         // Token Rotation: Revoke old token, issue new one
-        const user = await GlobalUser.findById(tokenDoc.user);
+        const user = await User.findById(tokenDoc.user);
         if (!user) {
             return errorResponse(res, 'User not found', 401);
         }
@@ -521,7 +520,7 @@ router.patch(
         const userId = req.user.id;
 
         try {
-            const user = await GlobalUser.findById(userId).select('+password');
+            const user = await User.findById(userId).select('+password');
             if (!user) {
                 return errorResponse(res, 'User not found', 404);
             }
@@ -612,7 +611,7 @@ router.post(
                 return errorResponse(res, 'Invalid two-factor token', 401);
             }
 
-            const user = await GlobalUser.findById(decoded.userId).select('+twoFactorSecret');
+            const user = await User.findById(decoded.userId).select('+twoFactorSecret');
             if (!user || !user.isActive) {
                 return errorResponse(res, 'User not found', 404);
             }
@@ -656,7 +655,7 @@ router.post(
  */
 router.post('/2fa/setup', authMiddleware, async (req, res) => {
     try {
-        const user = await GlobalUser.findById(req.user.id);
+        const user = await User.findById(req.user.id);
         if (!user) {
             return errorResponse(res, 'User not found', 404);
         }
@@ -692,7 +691,7 @@ router.post(
         const { code } = req.body;
 
         try {
-            const user = await GlobalUser.findById(req.user.id).select('+twoFactorSecret');
+            const user = await User.findById(req.user.id).select('+twoFactorSecret');
             if (!user) {
                 return errorResponse(res, 'User not found', 404);
             }
@@ -732,7 +731,7 @@ router.post(
         const { code } = req.body;
 
         try {
-            const user = await GlobalUser.findById(req.user.id).select('+twoFactorSecret');
+            const user = await User.findById(req.user.id).select('+twoFactorSecret');
             if (!user) {
                 return errorResponse(res, 'User not found', 404);
             }
@@ -763,7 +762,7 @@ router.post(
  */
 router.get('/2fa/status', authMiddleware, async (req, res) => {
     try {
-        const user = await GlobalUser.findById(req.user.id);
+        const user = await User.findById(req.user.id);
         if (!user) {
             return errorResponse(res, 'User not found', 404);
         }

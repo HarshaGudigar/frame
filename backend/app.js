@@ -5,9 +5,7 @@ if (process.env.NODE_ENV !== 'test') {
 const express = require('express');
 const mongoose = require('mongoose');
 
-// Register global Mongoose plugins
-const tenantPlugin = require('./plugins/tenantPlugin');
-mongoose.plugin(tenantPlugin);
+// Legacy Mongoose plugins removed
 
 const cors = require('cors');
 const helmet = require('helmet');
@@ -62,7 +60,7 @@ function createApp() {
     });
 
     // ─── Razorpay Webhooks (Raw Body Required) ─────────────────────────────────
-    app.use('/api/m/billing/webhooks', require('./modules/billing/webhooks'));
+    // Route removed due to single-instance transition
 
     // Parse JSON with size limit
     app.use(express.json({ limit: config.BODY_SIZE_LIMIT }));
@@ -90,9 +88,7 @@ function createApp() {
         next();
     });
 
-    // ─── Multi-Tenancy ───────────────────────────────────────────────────────
-    const tenantMiddleware = require('./middleware/tenantMiddleware');
-    app.use(tenantMiddleware);
+    // Legacy multi-tenancy middleware removed
 
     // ─── Developer Debug Panel ───────────────────────────────────────────────
     const debugMiddleware = require('./middleware/debugMiddleware');

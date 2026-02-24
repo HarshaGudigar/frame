@@ -69,7 +69,7 @@ const emptyForm = {
     notes: '',
 };
 
-export function CustomerList({ hotelTenant }: { hotelTenant?: string }) {
+export function CustomerList() {
     const { api } = useAuth();
     const { toast } = useToast();
     const [customers, setCustomers] = useState<Customer[]>([]);
@@ -83,7 +83,7 @@ export function CustomerList({ hotelTenant }: { hotelTenant?: string }) {
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file || !hotelTenant) return;
+        if (!file) return;
 
         setUploading(true);
         const formDataUpload = new FormData();
@@ -93,7 +93,6 @@ export function CustomerList({ hotelTenant }: { hotelTenant?: string }) {
             const res = await api.post('/m/hotel/uploads/id-proof', formDataUpload, {
                 headers: {
                     'Content-Type': 'multipart/form-data',
-                    'x-tenant-id': hotelTenant,
                 },
             });
 
@@ -119,14 +118,8 @@ export function CustomerList({ hotelTenant }: { hotelTenant?: string }) {
     };
 
     const fetchCustomers = async () => {
-        if (!hotelTenant) {
-            setLoading(false);
-            return;
-        }
         try {
-            const res = await api.get('/m/hotel/customers', {
-                headers: { 'x-tenant-id': hotelTenant },
-            });
+            const res = await api.get('/m/hotel/customers');
             if (res.data.success) setCustomers(res.data.data);
         } catch (error) {
             console.error('Failed to fetch customers', error);
@@ -137,7 +130,7 @@ export function CustomerList({ hotelTenant }: { hotelTenant?: string }) {
 
     useEffect(() => {
         fetchCustomers();
-    }, [api, hotelTenant]);
+    }, [api]);
 
     const filteredCustomers = useMemo(() => {
         const q = searchQuery.toLowerCase().trim();
@@ -180,14 +173,6 @@ export function CustomerList({ hotelTenant }: { hotelTenant?: string }) {
     };
 
     const handleSubmit = async () => {
-        if (!hotelTenant) {
-            toast({
-                variant: 'destructive',
-                title: 'No Tenant Context',
-                description: 'Please ensure you are viewing a valid hotel tenant instance.',
-            });
-            return;
-        }
         setSubmitting(true);
         try {
             const isEdit = !!editingCustomer;
@@ -220,7 +205,6 @@ export function CustomerList({ hotelTenant }: { hotelTenant?: string }) {
                 method: isEdit ? 'patch' : 'post',
                 url,
                 data: payload,
-                headers: { 'x-tenant-id': hotelTenant },
             });
 
             if (res.data.success) {
@@ -502,17 +486,7 @@ export function CustomerList({ hotelTenant }: { hotelTenant?: string }) {
 
             {customers.length === 0 ? (
                 <div className="text-center py-10 text-muted-foreground">
-                    {!hotelTenant ? (
-                        <div className="space-y-2">
-                            <p className="font-semibold text-foreground">No Tenant Selected</p>
-                            <p className="text-sm">
-                                You are viewing the hotel module in global context. Please select or
-                                be assigned to a hotel tenant.
-                            </p>
-                        </div>
-                    ) : (
-                        'No customers registered yet. Add one to get started.'
-                    )}
+                    No customers registered yet. Add one to get started.
                 </div>
             ) : (
                 <div className={tableStyles.wrapper}>

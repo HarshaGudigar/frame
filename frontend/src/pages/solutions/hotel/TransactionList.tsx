@@ -61,7 +61,7 @@ const emptyForm = {
     remarks: '',
 };
 
-export function TransactionList({ hotelTenant }: { hotelTenant?: string }) {
+export function TransactionList() {
     const { api } = useAuth();
     const { toast } = useToast();
     const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -74,19 +74,12 @@ export function TransactionList({ hotelTenant }: { hotelTenant?: string }) {
     const [filterType, setFilterType] = useState<string>('all');
 
     const fetchData = async () => {
-        if (!hotelTenant) {
-            setLoading(false);
-            return;
-        }
+        setLoading(true);
         try {
             const params = filterType !== 'all' ? `?type=${filterType}` : '';
             const [txRes, catRes] = await Promise.all([
-                api.get(`/m/hotel/transactions${params}`, {
-                    headers: { 'x-tenant-id': hotelTenant },
-                }),
-                api.get('/m/hotel/transaction-categories', {
-                    headers: { 'x-tenant-id': hotelTenant },
-                }),
+                api.get(`/m/hotel/transactions${params}`),
+                api.get('/m/hotel/transaction-categories'),
             ]);
             if (txRes.data.success) setTransactions(txRes.data.data);
             if (catRes.data.success) setCategories(catRes.data.data);
@@ -99,7 +92,7 @@ export function TransactionList({ hotelTenant }: { hotelTenant?: string }) {
 
     useEffect(() => {
         fetchData();
-    }, [api, hotelTenant, filterType]);
+    }, [api, filterType]);
 
     const handleOpenCreate = () => {
         setEditing(null);
@@ -124,14 +117,6 @@ export function TransactionList({ hotelTenant }: { hotelTenant?: string }) {
     };
 
     const handleSubmit = async () => {
-        if (!hotelTenant) {
-            toast({
-                variant: 'destructive',
-                title: 'No Tenant Context',
-                description: 'Please ensure you are viewing a valid hotel tenant instance.',
-            });
-            return;
-        }
         setSubmitting(true);
         try {
             const isEdit = !!editing;
@@ -150,7 +135,6 @@ export function TransactionList({ hotelTenant }: { hotelTenant?: string }) {
                 method: isEdit ? 'patch' : 'post',
                 url,
                 data: payload,
-                headers: { 'x-tenant-id': hotelTenant },
             });
 
             if (res.data.success) {
@@ -175,19 +159,9 @@ export function TransactionList({ hotelTenant }: { hotelTenant?: string }) {
     };
 
     const handleDelete = async (tx: Transaction) => {
-        if (!hotelTenant) {
-            toast({
-                variant: 'destructive',
-                title: 'No Tenant Context',
-                description: 'Please ensure you are viewing a valid hotel tenant instance.',
-            });
-            return;
-        }
         if (!confirm('Delete this transaction?')) return;
         try {
-            const res = await api.delete(`/m/hotel/transactions/${tx._id}`, {
-                headers: { 'x-tenant-id': hotelTenant },
-            });
+            const res = await api.delete(`/m/hotel/transactions/${tx._id}`);
             if (res.data.success) {
                 toast({ title: 'Success', description: res.data.message });
                 fetchData();
@@ -394,17 +368,7 @@ export function TransactionList({ hotelTenant }: { hotelTenant?: string }) {
 
             {transactions.length === 0 ? (
                 <div className="text-center py-10 text-muted-foreground">
-                    {!hotelTenant ? (
-                        <div className="space-y-2">
-                            <p className="font-semibold text-foreground">No Tenant Selected</p>
-                            <p className="text-sm">
-                                You are viewing the hotel module in global context. Please select or
-                                be assigned to a hotel tenant.
-                            </p>
-                        </div>
-                    ) : (
-                        'No transactions yet.'
-                    )}
+                    No transactions yet.
                 </div>
             ) : (
                 <div className="rounded-md border">

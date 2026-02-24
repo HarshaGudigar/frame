@@ -1,61 +1,89 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { CreditCard, ExternalLink, Package, ShieldCheck, Info } from 'lucide-react';
+import { CreditCard, ExternalLink, Package, ShieldCheck, Info, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import { getBadgeColor } from '@/lib/module-styles';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+} from '@/components/ui/dialog';
 
 export function BillingPage() {
-    const { api } = useAuth();
+    const { api, user, refreshUser, systemInfo } = useAuth();
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
-    const [subscriptions, setSubscriptions] = useState<any[]>([]);
+    const [subscriptions, setSubscriptions] = useState<{ product: any }[]>([]);
     const [products, setProducts] = useState<any[]>([]);
 
+    // Unsubscribe UI state
+    const [unsubProcessing, setUnsubProcessing] = useState(false);
+    const [moduleToCancel, setModuleToCancel] = useState<{ id: string; name: string } | null>(null);
+
+    const fetchBillingData = async () => {
+        try {
+            setLoading(true);
+            const prodRes = await api.get('/marketplace/products');
+            const marketProducts = prodRes.data.data || [];
+            setProducts(marketProducts);
+
+            if (systemInfo?.enabledModules) {
+                const subSlugs = systemInfo.enabledModules;
+                // Only show modules that exist as products in the marketplace
+                const filteredSubs = subSlugs.map((slug: string) =>
+                    marketProducts.find((p: any) => p.slug === slug),
+                ).filter(Boolean).map((p: any) => ({ product: p }));
+                setSubscriptions(filteredSubs);
+            } else {
+                setSubscriptions([]);
+            }
+        } catch (err: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'Failed to load billing information.',
+            });
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const fetchBillingData = async () => {
-            try {
-                const [tenantRes, prodRes] = await Promise.all([
-                    api.get('/admin/tenants'),
-                    api.get('/marketplace/products'),
-                ]);
+        if (user && systemInfo) {
+            fetchBillingData();
+        }
+    }, [api, toast, user, systemInfo]);
 
-                const activeTenants = tenantRes.data.data;
-                const marketProducts = prodRes.data.data || [];
-                setProducts(marketProducts);
-
-                if (activeTenants.length > 0) {
-                    const subSlugs = activeTenants[0].subscribedModules || [];
-                    // Only show modules that exist as products in the marketplace
-                    const filteredSubs = subSlugs.filter((slug: string) =>
-                        marketProducts.find((p: any) => p.slug === slug),
-                    );
-                    setSubscriptions(filteredSubs);
-                }
-            } catch (err: any) {
-                toast({
-                    variant: 'destructive',
-                    title: 'Error',
-                    description: 'Failed to load billing information.',
-                });
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchBillingData();
-    }, [api, toast]);
-
-    const getProductDetails = (slug: string) => {
-        return (
-            products.find((p) => p.slug === slug) || {
-                name: slug,
-                description: 'Module subscription.',
-            }
-        );
+    const handleUnsubscribe = async () => {
+        if (!moduleToCancel) return;
+        setUnsubProcessing(true);
+        try {
+            await api.post('/marketplace/unsubscribe', {
+                productId: moduleToCancel.id,
+            });
+            toast({
+                title: 'Subscription Canceled',
+                description: `Successfully removed ${moduleToCancel.name} from the instance.`,
+            });
+            // Need a hard refresh of the page to trigger new system health fetch
+            window.location.reload();
+            setModuleToCancel(null);
+        } catch (err: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Cancellation Failed',
+                description: err.response?.data?.message || 'Failed to cancel subscription',
+            });
+        } finally {
+            setUnsubProcessing(false);
+        }
     };
 
     return (
@@ -101,13 +129,13 @@ export function BillingPage() {
                         <Skeleton className="h-32 w-full" />
                     </div>
                 ) : subscriptions.length > 0 ? (
-                    <div className="grid gap-4 sm:grid-cols-2">
-                        {subscriptions.map((modSlug, i) => {
-                            const details = getProductDetails(modSlug);
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {subscriptions.map((sub, i) => {
+                            const details = sub.product;
                             return (
                                 <Card
                                     key={i}
-                                    className="group hover:border-primary/50 transition-colors"
+                                    className="group hover:border-primary/50 transition-colors flex flex-col"
                                 >
                                     <CardHeader className="pb-3 flex flex-row items-start justify-between">
                                         <div className="flex items-center gap-3">
@@ -119,18 +147,30 @@ export function BillingPage() {
                                                     {details.name}
                                                 </CardTitle>
                                                 <CardDescription className="text-xs">
-                                                    Slot {i + 1}
+                                                    {systemInfo?.instanceName || 'Local Instance'}
                                                 </CardDescription>
                                             </div>
                                         </div>
                                         <Badge className={getBadgeColor('Paid')}>Active</Badge>
                                     </CardHeader>
-                                    <CardContent>
+                                    <CardContent className="flex-1">
+                                        <p className="text-sm text-foreground font-semibold mb-1">
+                                            {details.price?.amount ? `$${details.price.amount}/${details.price.interval || 'mo'}` : 'Free'}
+                                        </p>
                                         <p className="text-sm text-muted-foreground line-clamp-2">
                                             {details.description ||
                                                 'Included in your organization plan.'}
                                         </p>
                                     </CardContent>
+                                    <div className="p-6 pt-0 mt-auto">
+                                        <Button
+                                            variant="outline"
+                                            className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300 transition-colors dark:border-red-900/50 dark:hover:bg-red-900/20"
+                                            onClick={() => setModuleToCancel({ id: details._id, name: details.name })}
+                                        >
+                                            Cancel Plan
+                                        </Button>
+                                    </div>
                                 </Card>
                             );
                         })}
@@ -149,6 +189,37 @@ export function BillingPage() {
                     </Card>
                 )}
             </div>
+
+            {/* Cancel Confirmation Dialog */}
+            <Dialog open={!!moduleToCancel} onOpenChange={(open) => !open && setModuleToCancel(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle className="text-red-600 flex items-center gap-2">
+                            <AlertCircle className="size-5" />
+                            Cancel Subscription
+                        </DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to cancel your subscription for <strong>{moduleToCancel?.name}</strong>?
+                            This action will immediately disable access to the module.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="mt-4">
+                        <Button variant="outline" onClick={() => setModuleToCancel(null)} disabled={unsubProcessing}>
+                            Keep Subscription
+                        </Button>
+                        <Button variant="destructive" onClick={handleUnsubscribe} disabled={unsubProcessing}>
+                            {unsubProcessing ? (
+                                <>
+                                    <RefreshCw className="size-4 animate-spin mr-2" />
+                                    Canceling...
+                                </>
+                            ) : (
+                                'Yes, Cancel Plan'
+                            )}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

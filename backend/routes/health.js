@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const config = require('../config');
 const { getModuleSummary } = require('../gateway/moduleLoader');
+const AppConfig = require('../models/AppConfig');
 
 const router = express.Router();
 
@@ -18,7 +19,7 @@ const router = express.Router();
  *       503:
  *         description: System unhealthy (e.g., DB disconnected)
  */
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
     // Determine overall health
     const dbState = mongoose.connection.readyState;
     // 0=disconnected, 1=connected, 2=connecting, 3=disconnecting
@@ -35,32 +36,40 @@ router.get('/', (req, res) => {
 
     const status = isHealthy ? 200 : 503;
 
-    // Optional: You might want to pass modules in req.app.locals or similar if needed,
-    // but for now we'll assume basic health doesn't strictly need dynamic module list
-    // OR we pass it in if we convert this to a factory function.
-    // For simplicity, let's keep it static or use what we can access.
-    // The previous implementation used `modules` variable from closure scope in `createApp`.
-    // To keep it pure, we can attach modules to `req.app.locals.modules` in server.js.
+    try {
+        const appConfig = await AppConfig.getInstance();
 
-    const response = {
-        success: isHealthy,
-        mode: config.RUNTIME_MODE,
-        tenant: req.tenant ? { slug: req.tenant.slug, name: req.tenant.name } : null,
-        uptime: `${Math.floor(process.uptime())}s`,
-        database: {
-            status: dbStatusMap[dbState] || 'unknown',
-            host: mongoose.connection.host,
-        },
-        memory: process.memoryUsage(),
-        timestamp: new Date().toISOString(),
-    };
+        const response = {
+            success: isHealthy,
+            mode: config.RUNTIME_MODE,
+            instanceName: appConfig.instanceName,
+            branding: appConfig.branding,
+            enabledModules: appConfig.enabledModules,
+            uptime: `${Math.floor(process.uptime())}s`,
+            database: {
+                status: dbStatusMap[dbState] || 'unknown',
+            },
+            memory: process.memoryUsage(),
+            timestamp: new Date().toISOString(),
+        };
 
-    // If modules are available in app locals, include summary
-    if (req.app.locals.modules) {
-        response.modules = getModuleSummary(req.app.locals.modules);
+        if (req.app.locals.modules) {
+            response.modules = getModuleSummary(req.app.locals.modules);
+        }
+
+        res.status(status).json(response);
+    } catch (err) {
+        // Fallback if db is fundamentally broken
+        res.status(status).json({
+            success: isHealthy,
+            mode: config.RUNTIME_MODE,
+            uptime: `${Math.floor(process.uptime())}s`,
+            database: {
+                status: dbStatusMap[dbState] || 'unknown',
+            },
+            timestamp: new Date().toISOString(),
+        });
     }
-
-    res.status(status).json(response);
 });
 
 module.exports = router;

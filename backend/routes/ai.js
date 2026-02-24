@@ -27,15 +27,14 @@ router.post('/chat', authMiddleware, async (req, res) => {
 
         // 1. Save the user's incoming message to the DB for history
         const userMsg = new ChatMessage({
-            userId,
-            tenantId,
+            user: userId,
             role: 'user',
             content: message,
         });
         await userMsg.save();
 
         // 2. Fetch recent conversation history (last 20 messages for this user/tenant context)
-        const history = await ChatMessage.find({ userId, tenantId })
+        const history = await ChatMessage.find({ user: userId })
             .sort({ createdAt: -1 })
             .limit(20) // Keep context window reasonable
             .select('role content -_id'); // Bedrock only needs role and content
@@ -148,8 +147,7 @@ router.post('/chat', authMiddleware, async (req, res) => {
 
         // 5. Save the final finalized AI's text response to the DB
         const assistantMsg = new ChatMessage({
-            userId,
-            tenantId,
+            user: userId,
             role: 'assistant',
             content: aiFinalText,
         });
@@ -179,7 +177,7 @@ router.get('/chat/history', authMiddleware, async (req, res) => {
         const tenantId = req.tenant?._id || null;
 
         // Fetch last 50 messages, ordered newest to oldest, but send oldest to newest
-        const history = await ChatMessage.find({ userId, tenantId })
+        const history = await ChatMessage.find({ user: userId })
             .sort({ createdAt: -1 })
             .limit(50);
 
@@ -202,7 +200,7 @@ router.delete('/chat/history', authMiddleware, async (req, res) => {
         const userId = req.user._id;
         const tenantId = req.tenant?._id || null;
 
-        await ChatMessage.deleteMany({ userId, tenantId });
+        await ChatMessage.deleteMany({ user: userId });
 
         return successResponse(res, { message: 'Chat history cleared.' });
     } catch (err) {

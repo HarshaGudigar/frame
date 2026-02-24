@@ -61,13 +61,7 @@ interface RoomTypeOption {
 
 const fallbackTypes = ['Single', 'Double', 'Suite', 'Deluxe'];
 
-export function RoomGrid({
-    hotelTenant,
-    bookings = [],
-}: {
-    hotelTenant?: string;
-    bookings?: Booking[];
-}) {
+export function RoomGrid({ bookings = [] }: { bookings?: Booking[] }) {
     const { api } = useAuth();
     const { toast } = useToast();
     const [rooms, setRooms] = useState<Room[]>([]);
@@ -87,14 +81,9 @@ export function RoomGrid({
     const [peekRoom, setPeekRoom] = useState<Room | null>(null);
 
     const fetchRooms = async () => {
-        if (!hotelTenant) {
-            setLoading(false);
-            return;
-        }
+        setLoading(true);
         try {
-            const res = await api.get('/m/hotel/rooms', {
-                headers: { 'x-tenant-id': hotelTenant },
-            });
+            const res = await api.get('/m/hotel/rooms');
             if (res.data.success) setRooms(res.data.data);
         } catch (error) {
             console.error('Failed to fetch rooms', error);
@@ -104,11 +93,8 @@ export function RoomGrid({
     };
 
     const fetchRoomTypes = async () => {
-        if (!hotelTenant) return;
         try {
-            const res = await api.get('/m/hotel/settings/roomType', {
-                headers: { 'x-tenant-id': hotelTenant },
-            });
+            const res = await api.get('/m/hotel/settings/roomType');
             if (res.data.success && res.data.data?.options) {
                 const activeTypes = res.data.data.options
                     .filter((o: RoomTypeOption) => o.isActive)
@@ -123,7 +109,7 @@ export function RoomGrid({
     useEffect(() => {
         fetchRooms();
         fetchRoomTypes();
-    }, [api, hotelTenant]);
+    }, [api]);
 
     const handleOpenCreate = () => {
         setEditingRoom(null);
@@ -143,14 +129,6 @@ export function RoomGrid({
     };
 
     const handleSubmit = async () => {
-        if (!hotelTenant) {
-            toast({
-                variant: 'destructive',
-                title: 'No Tenant Context',
-                description: 'Please ensure you are viewing a valid hotel tenant instance.',
-            });
-            return;
-        }
         setSubmitting(true);
         try {
             const isEdit = !!editingRoom;
@@ -159,7 +137,6 @@ export function RoomGrid({
                 method: isEdit ? 'patch' : 'post',
                 url,
                 data: formData,
-                headers: { 'x-tenant-id': hotelTenant },
             });
 
             if (res.data.success) {
@@ -184,11 +161,9 @@ export function RoomGrid({
     };
 
     const handleDelete = async (room: Room) => {
-        if (!hotelTenant || !confirm(`Delete room ${room.number}?`)) return;
+        if (!confirm(`Delete room ${room.number}?`)) return;
         try {
-            const res = await api.delete(`/m/hotel/rooms/${room._id}`, {
-                headers: { 'x-tenant-id': hotelTenant },
-            });
+            const res = await api.delete(`/m/hotel/rooms/${room._id}`);
             if (res.data.success) {
                 toast({ title: 'Success', description: res.data.message });
                 fetchRooms();
@@ -209,13 +184,8 @@ export function RoomGrid({
     };
 
     const handleStatusChange = async (room: Room, status: string) => {
-        if (!hotelTenant) return;
         try {
-            const res = await api.patch(
-                `/m/hotel/rooms/${room._id}`,
-                { status },
-                { headers: { 'x-tenant-id': hotelTenant } },
-            );
+            const res = await api.patch(`/m/hotel/rooms/${room._id}`, { status });
             if (res.data.success) {
                 toast({ title: 'Success', description: `Room ${room.number} marked as ${status}` });
                 fetchRooms();
@@ -236,15 +206,11 @@ export function RoomGrid({
     };
 
     const handleBulkStatusChange = async (status: string) => {
-        if (!hotelTenant || selectedRooms.size === 0) return;
+        if (selectedRooms.size === 0) return;
         try {
             setSubmitting(true);
             const promises = Array.from(selectedRooms).map((id) =>
-                api.patch(
-                    `/m/hotel/rooms/${id}`,
-                    { status },
-                    { headers: { 'x-tenant-id': hotelTenant } },
-                ),
+                api.patch(`/m/hotel/rooms/${id}`, { status }),
             );
             await Promise.all(promises);
             toast({
@@ -598,19 +564,7 @@ export function RoomGrid({
                     if (rooms.length === 0)
                         return (
                             <div className="text-center py-10 text-muted-foreground border-2 border-dashed rounded-lg">
-                                {!hotelTenant ? (
-                                    <div className="space-y-2">
-                                        <p className="font-semibold text-foreground">
-                                            No Tenant Selected
-                                        </p>
-                                        <p className="text-sm">
-                                            You are viewing the hotel module in global context.
-                                            Please select or be assigned to a hotel tenant.
-                                        </p>
-                                    </div>
-                                ) : (
-                                    'No rooms found. Create one to get started.'
-                                )}
+                                No rooms found. Create one to get started.
                             </div>
                         );
 

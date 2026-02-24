@@ -16,7 +16,6 @@ export interface User {
     isActive?: boolean;
     isEmailVerified?: boolean;
     isTwoFactorEnabled?: boolean;
-    tenants?: any[];
 }
 
 export type Role = 'owner' | 'admin' | 'staff' | 'user';
@@ -27,7 +26,8 @@ interface AuthContextType {
     api: AxiosInstance;
     login: (token: string, refreshToken: string, user: User) => void;
     logout: () => void;
-    systemInfo: { mode: string; tenant?: string; success?: boolean } | null;
+    systemInfo: { mode: string; instanceName?: string; branding?: any; enabledModules?: string[]; success?: boolean } | null;
+    refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -55,7 +55,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const [systemInfo, setSystemInfo] = useState<{
         mode: string;
-        tenant?: string;
+        instanceName?: string;
+        branding?: any;
+        enabledModules?: string[];
         success?: boolean;
     } | null>(null);
 
@@ -95,6 +97,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
         fetchInitialData();
     }, [api]);
+
+    const refreshUser = async () => {
+        if (!tokenRef.current) return;
+        try {
+            const userResponse = await api.get('/auth/me');
+            if (userResponse.data.success && userResponse.data.data.user) {
+                const freshUser = userResponse.data.data.user;
+                setUser(freshUser);
+                localStorage.setItem('user', JSON.stringify(freshUser));
+            }
+        } catch (err) {
+            console.error('Failed to refresh user profile', err);
+        }
+    };
 
     const processQueue = (error: any, newToken: string | null = null) => {
         failedQueue.current.forEach((prom) => {
@@ -209,7 +225,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (refreshTokenRef.current) {
             axios
                 .post(`${API_BASE}/auth/logout`, { refreshToken: refreshTokenRef.current })
-                .catch(() => {});
+                .catch(() => { });
         }
 
         setToken(null);
@@ -221,7 +237,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, token, api, login, logout, systemInfo }}>
+        <AuthContext.Provider value={{ user, token, api, login, logout, systemInfo, refreshUser }}>
             {children}
         </AuthContext.Provider>
     );

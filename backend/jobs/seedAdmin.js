@@ -10,7 +10,7 @@
  * Users should change the password immediately after first login.
  */
 
-const GlobalUser = require('../models/GlobalUser');
+const User = require('../models/User');
 const logger = require('../utils/logger');
 const config = require('../config');
 
@@ -19,26 +19,26 @@ const DEFAULT_ADMIN = {
     password: config.DEFAULT_ADMIN_PASSWORD,
     firstName: 'Admin',
     lastName: 'Frame',
-    role: 'owner',
+    role: 'superuser',
     isActive: true,
     isEmailVerified: true,
 };
 
 async function seedDefaultAdmin() {
     try {
-        // Skip if any owner already exists
-        const existingOwner = await GlobalUser.findOne({ role: 'owner' });
+        // Skip if any superuser already exists
+        const existingOwner = await User.findOne({ role: 'superuser' });
         if (existingOwner) {
             return; // Already seeded — nothing to do
         }
 
         // Skip if the default admin email is already taken (e.g., with a different role)
-        const existingUser = await GlobalUser.findOne({ email: DEFAULT_ADMIN.email });
+        const existingUser = await User.findOne({ email: DEFAULT_ADMIN.email });
         if (existingUser) {
             return;
         }
 
-        const admin = new GlobalUser(DEFAULT_ADMIN);
+        const admin = new User(DEFAULT_ADMIN);
         await admin.save();
 
         logger.info('──────────────────────────────────────────────');

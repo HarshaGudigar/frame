@@ -28,7 +28,7 @@ interface SettingsItem {
     options: SettingsOption[];
 }
 
-export function SettingsPage({ hotelTenant }: { hotelTenant?: string }) {
+export function SettingsPage() {
     const { api } = useAuth();
     const { toast } = useToast();
     const [settings, setSettings] = useState<SettingsItem[]>([]);
@@ -42,14 +42,9 @@ export function SettingsPage({ hotelTenant }: { hotelTenant?: string }) {
     const [submitting, setSubmitting] = useState(false);
 
     const fetchSettings = async () => {
-        if (!hotelTenant) {
-            setLoading(false);
-            return;
-        }
+        setLoading(true);
         try {
-            const res = await api.get('/m/hotel/settings', {
-                headers: { 'x-tenant-id': hotelTenant },
-            });
+            const res = await api.get('/m/hotel/settings');
             if (res.data.success) setSettings(res.data.data);
         } catch (error) {
             console.error('Failed to fetch settings', error);
@@ -60,7 +55,7 @@ export function SettingsPage({ hotelTenant }: { hotelTenant?: string }) {
 
     useEffect(() => {
         fetchSettings();
-    }, [api, hotelTenant]);
+    }, [api]);
 
     const handleOpenCreate = () => {
         setEditingType(null);
@@ -96,14 +91,6 @@ export function SettingsPage({ hotelTenant }: { hotelTenant?: string }) {
     };
 
     const handleSubmit = async () => {
-        if (!hotelTenant) {
-            toast({
-                variant: 'destructive',
-                title: 'No Tenant Context',
-                description: 'Please ensure you are viewing a valid hotel tenant instance.',
-            });
-            return;
-        }
         setSubmitting(true);
         try {
             const isEdit = !!editingType;
@@ -122,19 +109,12 @@ export function SettingsPage({ hotelTenant }: { hotelTenant?: string }) {
             if (isEdit) {
                 res = await api.patch(
                     `/m/hotel/settings/${editingType}`,
-                    {
-                        options: validOptions,
-                    },
-                    { headers: { 'x-tenant-id': hotelTenant } },
+                    { options: validOptions }
                 );
             } else {
                 res = await api.post(
                     '/m/hotel/settings',
-                    {
-                        type: formType,
-                        options: validOptions,
-                    },
-                    { headers: { 'x-tenant-id': hotelTenant } },
+                    { type: formType, options: validOptions }
                 );
             }
 
@@ -160,19 +140,9 @@ export function SettingsPage({ hotelTenant }: { hotelTenant?: string }) {
     };
 
     const handleDelete = async (type: string) => {
-        if (!hotelTenant) {
-            toast({
-                variant: 'destructive',
-                title: 'No Tenant Context',
-                description: 'Please ensure you are viewing a valid hotel tenant instance.',
-            });
-            return;
-        }
         if (!confirm(`Delete settings type "${type}"?`)) return;
         try {
-            const res = await api.delete(`/m/hotel/settings/${type}`, {
-                headers: { 'x-tenant-id': hotelTenant },
-            });
+            const res = await api.delete(`/m/hotel/settings/${type}`);
             if (res.data.success) {
                 toast({ title: 'Success', description: res.data.message });
                 fetchSettings();
@@ -288,17 +258,7 @@ export function SettingsPage({ hotelTenant }: { hotelTenant?: string }) {
 
             {settings.length === 0 ? (
                 <div className="text-center py-10 text-muted-foreground">
-                    {!hotelTenant ? (
-                        <div className="space-y-2">
-                            <p className="font-semibold text-foreground">No Tenant Selected</p>
-                            <p className="text-sm">
-                                You are viewing the hotel module in global context. Please select or
-                                be assigned to a hotel tenant.
-                            </p>
-                        </div>
-                    ) : (
-                        'No settings configured yet.'
-                    )}
+                    No settings configured yet.
                 </div>
             ) : (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">

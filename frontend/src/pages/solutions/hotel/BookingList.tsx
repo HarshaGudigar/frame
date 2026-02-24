@@ -102,7 +102,7 @@ interface Booking {
 
 // Status colors come from shared module-styles via getBadgeColor()
 
-export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
+export function BookingList() {
     const { api } = useAuth();
     const { toast } = useToast();
     const [bookings, setBookings] = useState<Booking[]>([]);
@@ -131,16 +131,12 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
     });
 
     const fetchAll = async () => {
-        if (!hotelTenant) {
-            setLoading(false);
-            return;
-        }
         try {
             const [bookingsRes, customersRes, roomsRes, agentsRes] = await Promise.all([
-                api.get('/m/hotel/bookings', { headers: { 'x-tenant-id': hotelTenant } }),
-                api.get('/m/hotel/customers', { headers: { 'x-tenant-id': hotelTenant } }),
-                api.get('/m/hotel/rooms', { headers: { 'x-tenant-id': hotelTenant } }),
-                api.get('/m/hotel/agents', { headers: { 'x-tenant-id': hotelTenant } }),
+                api.get('/m/hotel/bookings'),
+                api.get('/m/hotel/customers'),
+                api.get('/m/hotel/rooms'),
+                api.get('/m/hotel/agents'),
             ]);
 
             if (bookingsRes.data.success) setBookings(bookingsRes.data.data);
@@ -156,7 +152,7 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
 
     useEffect(() => {
         fetchAll();
-    }, [api, hotelTenant]);
+    }, [api]);
 
     const getEstimatedTotal = () => {
         const selectedRooms = rooms.filter((r) => formData.roomIds.includes(r._id));
@@ -183,14 +179,6 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
     };
 
     const handleCreate = async () => {
-        if (!hotelTenant) {
-            toast({
-                variant: 'destructive',
-                title: 'No Tenant Context',
-                description: 'Please ensure you are viewing a valid hotel tenant instance.',
-            });
-            return;
-        }
         if (!formData.customerId || formData.roomIds.length === 0 || !formData.checkInDate) {
             toast({
                 variant: 'destructive',
@@ -216,9 +204,7 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
             if (formData.agentId) payload.agentId = formData.agentId;
             if (formData.purposeOfVisit) payload.purposeOfVisit = formData.purposeOfVisit;
 
-            const res = await api.post('/m/hotel/bookings', payload, {
-                headers: { 'x-tenant-id': hotelTenant },
-            });
+            const res = await api.post('/m/hotel/bookings', payload);
 
             if (res.data.success) {
                 toast({ title: 'Success', description: res.data.message });
@@ -259,21 +245,10 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
         bookingId: string,
         action: 'check-in' | 'check-out' | 'cancel' | 'no-show',
     ) => {
-        if (!hotelTenant) {
-            toast({
-                variant: 'destructive',
-                title: 'No Tenant Context',
-                description: 'Please ensure you are viewing a valid hotel tenant instance.',
-            });
-            return;
-        }
         try {
             const res = await api.post(
                 `/m/hotel/bookings/${bookingId}/${action}`,
-                {},
-                {
-                    headers: { 'x-tenant-id': hotelTenant },
-                },
+                {}
             );
             if (res.data.success) {
                 toast({ title: 'Success', description: res.data.message });
@@ -416,8 +391,8 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
                                                                 formData.roomIds.includes(r._id);
                                                             const newIds = exists
                                                                 ? formData.roomIds.filter(
-                                                                      (id) => id !== r._id,
-                                                                  )
+                                                                    (id) => id !== r._id,
+                                                                )
                                                                 : [...formData.roomIds, r._id];
                                                             setFormData({
                                                                 ...formData,
@@ -429,7 +404,7 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
                                                             checked={formData.roomIds.includes(
                                                                 r._id,
                                                             )}
-                                                            onCheckedChange={() => {}} // Handled by div click
+                                                            onCheckedChange={() => { }} // Handled by div click
                                                         />
                                                         <div className="grid gap-0.5 leading-none">
                                                             <div className="text-sm font-medium">
@@ -631,17 +606,7 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
 
             {bookings.length === 0 ? (
                 <div className="text-center py-10 text-muted-foreground">
-                    {!hotelTenant ? (
-                        <div className="space-y-2">
-                            <p className="font-semibold text-foreground">No Tenant Selected</p>
-                            <p className="text-sm">
-                                You are viewing the hotel module in global context. Please select or
-                                be assigned to a hotel tenant.
-                            </p>
-                        </div>
-                    ) : (
-                        'No bookings yet. Create one to get started.'
-                    )}
+                    No bookings yet. Create one to get started.
                 </div>
             ) : viewMode === 'calendar' ? (
                 <BookingTapeChart bookings={filteredBookings} rooms={rooms} />
@@ -752,7 +717,7 @@ export function BookingList({ hotelTenant }: { hotelTenant?: string }) {
                                                     <DropdownMenuItem
                                                         onClick={() =>
                                                             window.open(
-                                                                `/solutions/hotel/invoice/${booking._id}?tenantId=${hotelTenant}`,
+                                                                `/solutions/hotel/invoice/${booking._id}`,
                                                                 '_blank',
                                                             )
                                                         }

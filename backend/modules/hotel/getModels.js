@@ -1,4 +1,4 @@
-const { getTenantConnection } = require('../../utils/tenantDBCache');
+const mongoose = require('mongoose');
 const RoomSchema = require('./models/Room');
 const CustomerSchema = require('./models/Customer');
 const BookingSchema = require('./models/Booking');
@@ -14,10 +14,10 @@ const HousekeepingTaskSchema = require('./models/HousekeepingTask');
 const InventoryItemSchema = require('./models/InventoryItem');
 
 /**
- * Get all hotel models bound to the current tenant's connection.
+ * Get all hotel models bound to the global Mongoose connection.
  */
 const getModels = async (req) => {
-    const connection = req.db || (await getTenantConnection(req.tenant.slug, req.tenant.dbUri));
+    const connection = mongoose.connection;
 
     return {
         Room: RoomSchema(connection),

@@ -1,6 +1,6 @@
 const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
-const GlobalUser = require('../models/GlobalUser');
+const User = require('../models/User');
 const { JWT_SECRET } = require('../config');
 const logger = require('./logger');
 
@@ -33,7 +33,7 @@ module.exports = {
 
             try {
                 const decoded = jwt.verify(token, JWT_SECRET);
-                const user = await GlobalUser.findById(decoded.userId || decoded.id);
+                const user = await User.findById(decoded.userId || decoded.id);
 
                 if (!user || !user.isActive) {
                     return next(new Error('User not found or inactive'));

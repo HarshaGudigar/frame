@@ -29,9 +29,7 @@ if (require.main === module) {
     const { startBackupJob } = require('./jobs/backup');
     startBackupJob();
 
-    // Start trial cleanup cron job
-    const { startTrialCleanup } = require('./jobs/trialCleanup');
-    startTrialCleanup();
+    // Trial cleanup job removed as part of single-instance refactor
 
     // Database — retry loop for Docker environments where MongoDB starts concurrently
     const connectWithRetry = async (retries = 10, delay = 3000) => {

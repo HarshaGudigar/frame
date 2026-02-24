@@ -39,7 +39,7 @@ interface TransactionCategory {
 
 const emptyForm = { name: '', type: 'Expense' as const };
 
-export function TransactionCategoryList({ hotelTenant }: { hotelTenant?: string }) {
+export function TransactionCategoryList() {
     const { api } = useAuth();
     const { toast } = useToast();
     const [categories, setCategories] = useState<TransactionCategory[]>([]);
@@ -50,14 +50,9 @@ export function TransactionCategoryList({ hotelTenant }: { hotelTenant?: string 
     const [submitting, setSubmitting] = useState(false);
 
     const fetchCategories = async () => {
-        if (!hotelTenant) {
-            setLoading(false);
-            return;
-        }
+        setLoading(true);
         try {
-            const res = await api.get('/m/hotel/transaction-categories', {
-                headers: { 'x-tenant-id': hotelTenant },
-            });
+            const res = await api.get('/m/hotel/transaction-categories');
             if (res.data.success) setCategories(res.data.data);
         } catch (error) {
             console.error('Failed to fetch categories', error);
@@ -68,7 +63,7 @@ export function TransactionCategoryList({ hotelTenant }: { hotelTenant?: string 
 
     useEffect(() => {
         fetchCategories();
-    }, [api, hotelTenant]);
+    }, [api]);
 
     const handleOpenCreate = () => {
         setEditing(null);
@@ -83,14 +78,6 @@ export function TransactionCategoryList({ hotelTenant }: { hotelTenant?: string 
     };
 
     const handleSubmit = async () => {
-        if (!hotelTenant) {
-            toast({
-                variant: 'destructive',
-                title: 'No Tenant Context',
-                description: 'Please ensure you are viewing a valid hotel tenant instance.',
-            });
-            return;
-        }
         setSubmitting(true);
         try {
             const isEdit = !!editing;
@@ -101,7 +88,6 @@ export function TransactionCategoryList({ hotelTenant }: { hotelTenant?: string 
                 method: isEdit ? 'patch' : 'post',
                 url,
                 data: formData,
-                headers: { 'x-tenant-id': hotelTenant },
             });
 
             if (res.data.success) {
@@ -123,19 +109,9 @@ export function TransactionCategoryList({ hotelTenant }: { hotelTenant?: string 
     };
 
     const handleDelete = async (cat: TransactionCategory) => {
-        if (!hotelTenant) {
-            toast({
-                variant: 'destructive',
-                title: 'No Tenant Context',
-                description: 'Please ensure you are viewing a valid hotel tenant instance.',
-            });
-            return;
-        }
         if (!confirm(`Delete category "${cat.name}"?`)) return;
         try {
-            const res = await api.delete(`/m/hotel/transaction-categories/${cat._id}`, {
-                headers: { 'x-tenant-id': hotelTenant },
-            });
+            const res = await api.delete(`/m/hotel/transaction-categories/${cat._id}`);
             if (res.data.success) {
                 toast({ title: 'Success', description: res.data.message });
                 fetchCategories();
@@ -215,17 +191,7 @@ export function TransactionCategoryList({ hotelTenant }: { hotelTenant?: string 
 
             {categories.length === 0 ? (
                 <div className="text-center py-10 text-muted-foreground">
-                    {!hotelTenant ? (
-                        <div className="space-y-2">
-                            <p className="font-semibold text-foreground">No Tenant Selected</p>
-                            <p className="text-sm">
-                                You are viewing the hotel module in global context. Please select or
-                                be assigned to a hotel tenant.
-                            </p>
-                        </div>
-                    ) : (
-                        'No categories yet.'
-                    )}
+                    No categories yet.
                 </div>
             ) : (
                 <div className="rounded-md border">

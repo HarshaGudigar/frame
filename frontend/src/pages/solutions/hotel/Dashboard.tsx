@@ -228,11 +228,10 @@ function ScheduleFeed({
                     <div className="text-right">
                         <Badge
                             variant="outline"
-                            className={`text-[10px] font-bold ${
-                                item.type === 'arrival'
+                            className={`text-[10px] font-bold ${item.type === 'arrival'
                                     ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400'
                                     : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400'
-                            }`}
+                                }`}
                         >
                             {item.type === 'arrival' ? '↓ Arrival' : '↑ Departure'}
                         </Badge>
@@ -246,10 +245,6 @@ function ScheduleFeed({
 
 export function HotelDashboard() {
     const { api, user } = useAuth();
-    const [hotelTenant, setHotelTenant] = useState<string | undefined>(
-        user?.tenants?.find((t: any) => t.tenant?.subscribedModules?.includes('hotel'))?.tenant
-            ?.slug,
-    );
     const [activeTab, setActiveTab] = useState<Tab>('overview');
     const [stats, setStats] = useState({
         totalRooms: 0,
@@ -265,35 +260,15 @@ export function HotelDashboard() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
-    useEffect(() => {
-        const findTenant = async () => {
-            if (hotelTenant) return;
-            if (user?.role === 'owner') {
-                try {
-                    const res = await api.get('/admin/tenants');
-                    const hotelTenants = res.data.data.filter((t: any) =>
-                        t.subscribedModules?.includes('hotel'),
-                    );
-                    if (hotelTenants.length > 0) setHotelTenant(hotelTenants[0].slug);
-                    else setLoading(false);
-                } catch {
-                    setLoading(false);
-                }
-            } else {
-                setLoading(false);
-            }
-        };
-        findTenant();
-    }, [api, hotelTenant, user?.role]);
+
 
     const fetchStats = async (silent = false) => {
-        if (!hotelTenant) return;
         if (!silent) setLoading(true);
         else setRefreshing(true);
         try {
             const [roomsRes, bookingsRes] = await Promise.all([
-                api.get('/m/hotel/rooms', { headers: { 'x-tenant-id': hotelTenant } }),
-                api.get('/m/hotel/bookings', { headers: { 'x-tenant-id': hotelTenant } }),
+                api.get('/m/hotel/rooms'),
+                api.get('/m/hotel/bookings'),
             ]);
             const rooms = roomsRes.data?.data || [];
             const bookings = bookingsRes.data?.data || [];
@@ -372,8 +347,8 @@ export function HotelDashboard() {
     };
 
     useEffect(() => {
-        if (hotelTenant) fetchStats();
-    }, [api, hotelTenant]);
+        fetchStats();
+    }, [api]);
 
     const today = new Date();
     const dateStr = today.toLocaleDateString('en-US', {
@@ -413,21 +388,20 @@ export function HotelDashboard() {
     const tabContent: Partial<Record<Tab, React.ReactElement>> = {
         rooms: (
             <RoomGrid
-                hotelTenant={hotelTenant}
                 bookings={(window as any).__hotelData?.bookings || []}
             />
         ),
-        housekeeping: <Housekeeping hotelTenant={hotelTenant} />,
-        inventory: <InventoryList hotelTenant={hotelTenant} />,
-        customers: <CustomerList hotelTenant={hotelTenant} />,
-        bookings: <BookingList hotelTenant={hotelTenant} />,
-        services: <ServiceList hotelTenant={hotelTenant} />,
-        transactions: <TransactionList hotelTenant={hotelTenant} />,
-        'transaction-categories': <TransactionCategoryList hotelTenant={hotelTenant} />,
-        agents: <AgentList hotelTenant={hotelTenant} />,
-        'business-info': <BusinessInfoPage hotelTenant={hotelTenant} />,
-        settings: <SettingsPage hotelTenant={hotelTenant} />,
-        reports: <Reporting hotelTenant={hotelTenant} />,
+        housekeeping: <Housekeeping />,
+        inventory: <InventoryList />,
+        customers: <CustomerList />,
+        bookings: <BookingList />,
+        services: <ServiceList />,
+        transactions: <TransactionList />,
+        'transaction-categories': <TransactionCategoryList />,
+        agents: <AgentList />,
+        'business-info': <BusinessInfoPage />,
+        settings: <SettingsPage />,
+        reports: <Reporting />,
     };
 
     return (
@@ -471,11 +445,10 @@ export function HotelDashboard() {
                             <button
                                 key={tab.key}
                                 onClick={() => setActiveTab(tab.key)}
-                                className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px whitespace-nowrap rounded-t-sm ${
-                                    activeTab === tab.key
+                                className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px whitespace-nowrap rounded-t-sm ${activeTab === tab.key
                                         ? 'border-primary text-primary bg-primary/5'
                                         : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30 hover:bg-muted/40'
-                                }`}
+                                    }`}
                             >
                                 <tab.icon className="h-3.5 w-3.5" />
                                 {tab.label}
@@ -605,7 +578,6 @@ export function HotelDashboard() {
                                 </div>
                             </div>
                             <RoomGrid
-                                hotelTenant={hotelTenant}
                                 bookings={(window as any).__hotelData?.bookings || []}
                             />
                         </div>
@@ -635,8 +607,8 @@ export function HotelDashboard() {
                                     {occupancyPct >= 80
                                         ? '🔥 High occupancy — consider dynamic pricing'
                                         : occupancyPct >= 50
-                                          ? '📈 Healthy occupancy rate'
-                                          : '📣 Low occupancy — consider promotions'}
+                                            ? '📈 Healthy occupancy rate'
+                                            : '📣 Low occupancy — consider promotions'}
                                 </p>
                             </div>
 

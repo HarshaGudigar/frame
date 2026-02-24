@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { errorResponse } = require('../utils/responseWrapper');
 const { JWT_SECRET } = require('../config');
-const GlobalUser = require('../models/GlobalUser');
+const User = require('../models/User');
 const Role = require('../models/Role');
 const logger = require('../utils/logger');
 
@@ -20,39 +20,26 @@ const authMiddleware = async (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
-        const user = await GlobalUser.findById(decoded.userId || decoded.id);
+        const user = await User.findById(decoded.userId || decoded.id);
 
         if (!user) {
             return errorResponse(res, 'User not found', 401);
         }
 
         req.user = user;
-        let queryContext = { tenantId: null };
-
-        // Tenant Context Role Override
-        if (req.tenant?._id && user.tenants) {
-            const tenantAccess = user.tenants.find(
-                (t) => t.tenant.toString() === req.tenant._id.toString(),
-            );
-
-            if (tenantAccess) {
-                req.user.role = tenantAccess.role;
-                queryContext.tenantId = req.tenant._id;
-            }
-        }
 
         // Fetch Granular Permissions from Role Matrix
-        const roleDoc = await Role.findOne({ name: req.user.role, ...queryContext });
+        const roleDoc = await Role.findOne({ name: req.user.role });
 
         if (roleDoc) {
             req.user.permissions = roleDoc.permissions;
-        } else if (req.user.role === 'owner') {
-            // Absolute bypass for system owners
+        } else if (req.user.role === 'superuser' || req.user.role === 'owner') {
+            // Absolute bypass for system superusers
             req.user.permissions = ['*'];
         } else {
             req.user.permissions = [];
             logger.warn(
-                { role: req.user.role, tenantId: queryContext.tenantId },
+                { role: req.user.role },
                 'Role document not found, defaulting to zero permissions',
             );
         }

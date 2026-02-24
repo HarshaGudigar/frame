@@ -89,14 +89,7 @@ export function CopilotSidebar() {
         setIsTyping(true);
 
         try {
-            // Attempt to derive the hotel tenant context from the user's logged-in permissions
-            const hotelTenant = user?.tenants?.find((t: any) =>
-                t.tenant?.subscribedModules?.includes('hotel'),
-            )?.tenant?.slug;
-
-            const headers = hotelTenant ? { 'x-tenant-id': hotelTenant } : {};
-
-            const res = await api.post('/ai/chat', { message: userMsg }, { headers });
+            const res = await api.post('/ai/chat', { message: userMsg });
             if (res.data.success) {
                 setMessages((prev) => [
                     ...prev,
@@ -214,7 +207,7 @@ export function CopilotSidebar() {
                                                         ? 'bg-muted border border-border/50 text-foreground'
                                                         : 'ring-1 ring-primary/20 bg-primary/10 text-primary shadow-[0_0_10px_rgba(var(--primary),0.2)]',
                                                     msg.role === 'system' &&
-                                                        'bg-destructive/10 text-destructive ring-1 ring-destructive/30',
+                                                    'bg-destructive/10 text-destructive ring-1 ring-destructive/30',
                                                 )}
                                             >
                                                 {msg.role === 'user' ? (
@@ -230,7 +223,7 @@ export function CopilotSidebar() {
                                                         ? 'bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-tr-sm shadow-[0_4px_14px_0_rgba(var(--primary),0.2)] border border-primary/20'
                                                         : 'glass-card rounded-tl-sm text-foreground/90 font-medium',
                                                     msg.role === 'system' &&
-                                                        'bg-destructive/10 border-destructive/20 text-destructive text-[11px] font-mono font-semibold shadow-none',
+                                                    'bg-destructive/10 border-destructive/20 text-destructive text-[11px] font-mono font-semibold shadow-none',
                                                 )}
                                             >
                                                 {msg.content}

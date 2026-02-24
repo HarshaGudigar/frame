@@ -21,9 +21,6 @@ const createProductSchema = z.object({
 });
 
 const purchaseSchema = z.object({
-    tenantId: z
-        .string({ required_error: 'tenantId is required' })
-        .regex(/^[a-f\d]{24}$/i, 'Invalid tenant ID format'),
     productId: z
         .string({ required_error: 'productId is required' })
         .regex(/^[a-f\d]{24}$/i, 'Invalid product ID format'),

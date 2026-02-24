@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const User = require('../models/GlobalUser');
+const User = require('../models/User');
 
 // --- Tool Registry Definitions (Anthropic Claude 3 Format) ---
 // These definitions are sent to the AI so it knows what tools exist and what arguments they require.
@@ -61,13 +61,13 @@ const ToolExecutors = {
         try {
             const { tenantId, isSiloMode } = context;
 
-            // Because the AI gateway is at the root module level, it needs to access
-            // the Hotel models. We dynamically require them to avoid circular dependencies
             let Room;
             try {
                 Room = mongoose.model('Room');
             } catch (e) {
-                Room = require('../modules/hotel/models/Room');
+                const getModels = require('../modules/hotel/getModels');
+                const models = await getModels({});
+                Room = models.Room;
             }
 
             if (!tenantId && !isSiloMode) {

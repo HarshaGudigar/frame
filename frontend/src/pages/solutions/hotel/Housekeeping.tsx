@@ -106,14 +106,13 @@ const roomStatusMeta: Record<string, { label: string; icon: any; color: string; 
     },
 };
 
-export default function Housekeeping({ hotelTenant: propTenant }: { hotelTenant?: string }) {
-    const { api, user } = useAuth();
+export default function Housekeeping() {
+    const { api } = useAuth();
     const { toast } = useToast();
     const [rooms, setRooms] = useState<Room[]>([]);
     const [tasks, setTasks] = useState<HousekeepingTask[]>([]);
     const [loading, setLoading] = useState(true);
     const [updatingId, setUpdatingId] = useState<string | null>(null);
-    const [hotelTenant, setHotelTenant] = useState<string | undefined>(propTenant);
     const [createOpen, setCreateOpen] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [newTask, setNewTask] = useState({
@@ -124,41 +123,12 @@ export default function Housekeeping({ hotelTenant: propTenant }: { hotelTenant?
         notes: '',
     });
 
-    useEffect(() => {
-        const findTenant = async () => {
-            if (hotelTenant) return;
-            const userTenant = user?.tenants?.find((t: any) =>
-                t.tenant?.subscribedModules?.includes('hotel'),
-            )?.tenant?.slug;
-            if (userTenant) {
-                setHotelTenant(userTenant);
-                return;
-            }
-            if (user?.role === 'owner') {
-                try {
-                    const res = await api.get('/admin/tenants');
-                    const ht = res.data.data.filter((t: any) =>
-                        t.subscribedModules?.includes('hotel'),
-                    );
-                    if (ht.length > 0) setHotelTenant(ht[0].slug);
-                } catch (e) {
-                    console.error('Failed to find tenant', e);
-                }
-            }
-        };
-        findTenant();
-    }, [api, user, hotelTenant]);
-
     const fetchData = async () => {
-        if (!hotelTenant) {
-            if (user) setLoading(false);
-            return;
-        }
         setLoading(true);
         try {
             const [roomsRes, tasksRes] = await Promise.all([
-                api.get('/m/hotel/rooms', { headers: { 'x-tenant-id': hotelTenant } }),
-                api.get('/m/hotel/housekeeping', { headers: { 'x-tenant-id': hotelTenant } }),
+                api.get('/m/hotel/rooms'),
+                api.get('/m/hotel/housekeeping'),
             ]);
             if (roomsRes.data.success) setRooms(roomsRes.data.data);
             if (tasksRes.data.success) setTasks(tasksRes.data.data);
@@ -170,16 +140,15 @@ export default function Housekeeping({ hotelTenant: propTenant }: { hotelTenant?
     };
 
     useEffect(() => {
-        if (hotelTenant) fetchData();
-    }, [api, hotelTenant]);
+        fetchData();
+    }, [api]);
 
     const handleRoomStatus = async (roomId: string, newStatus: string) => {
         setUpdatingId(roomId);
         try {
             const res = await api.patch(
                 `/m/hotel/rooms/${roomId}/status`,
-                { status: newStatus },
-                { headers: { 'x-tenant-id': hotelTenant } },
+                { status: newStatus }
             );
             if (res.data.success) {
                 toast({ title: 'Updated', description: `Marked as ${newStatus}` });
@@ -203,8 +172,7 @@ export default function Housekeeping({ hotelTenant: propTenant }: { hotelTenant?
         try {
             const res = await api.patch(
                 `/m/hotel/housekeeping/${taskId}/status`,
-                { status: newStatus },
-                { headers: { 'x-tenant-id': hotelTenant } },
+                { status: newStatus }
             );
             if (res.data.success) {
                 toast({ title: 'Task updated', description: `Moved to ${newStatus}` });
@@ -228,9 +196,7 @@ export default function Housekeeping({ hotelTenant: propTenant }: { hotelTenant?
         }
         setSubmitting(true);
         try {
-            const res = await api.post('/m/hotel/housekeeping', newTask, {
-                headers: { 'x-tenant-id': hotelTenant },
-            });
+            const res = await api.post('/m/hotel/housekeeping', newTask);
             if (res.data.success) {
                 toast({
                     title: 'Task Created',

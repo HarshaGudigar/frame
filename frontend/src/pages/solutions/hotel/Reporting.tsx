@@ -34,22 +34,19 @@ interface TrendData {
     occupancy: number;
 }
 
-export function Reporting({ hotelTenant }: { hotelTenant?: string }) {
+export function Reporting() {
     const { api } = useAuth();
     const [metrics, setMetrics] = useState<Metrics | null>(null);
     const [trends, setTrends] = useState<TrendData[]>([]);
     const [loading, setLoading] = useState(true);
 
     const fetchData = async () => {
-        if (!hotelTenant) {
-            setLoading(false);
-            return;
-        }
+        setLoading(true);
         try {
-            console.log('Fetching reports for tenant:', hotelTenant);
+            console.log('Fetching reports:');
             const [metricsRes, trendsRes] = await Promise.allSettled([
-                api.get('/m/hotel/reports/summary', { headers: { 'x-tenant-id': hotelTenant } }),
-                api.get('/m/hotel/reports/trends', { headers: { 'x-tenant-id': hotelTenant } }),
+                api.get('/m/hotel/reports/summary'),
+                api.get('/m/hotel/reports/trends'),
             ]);
 
             if (metricsRes.status === 'fulfilled' && metricsRes.value.data.success) {
@@ -105,7 +102,7 @@ export function Reporting({ hotelTenant }: { hotelTenant?: string }) {
 
     useEffect(() => {
         fetchData();
-    }, [api, hotelTenant]);
+    }, [api]);
 
     if (loading || !metrics) {
         return (

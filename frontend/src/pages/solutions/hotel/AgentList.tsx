@@ -73,7 +73,7 @@ const emptyForm = {
     profilePic: '',
 };
 
-export function AgentList({ hotelTenant }: { hotelTenant?: string }) {
+export function AgentList() {
     const { api } = useAuth();
     const { toast } = useToast();
     const [agents, setAgents] = useState<Agent[]>([]);
@@ -84,14 +84,8 @@ export function AgentList({ hotelTenant }: { hotelTenant?: string }) {
     const [submitting, setSubmitting] = useState(false);
 
     const fetchAgents = async () => {
-        if (!hotelTenant) {
-            setLoading(false);
-            return;
-        }
         try {
-            const res = await api.get('/m/hotel/agents', {
-                headers: { 'x-tenant-id': hotelTenant },
-            });
+            const res = await api.get('/m/hotel/agents');
             if (res.data.success) setAgents(res.data.data);
         } catch (error) {
             console.error('Failed to fetch agents', error);
@@ -102,7 +96,7 @@ export function AgentList({ hotelTenant }: { hotelTenant?: string }) {
 
     useEffect(() => {
         fetchAgents();
-    }, [api, hotelTenant]);
+    }, [api]);
 
     const handleOpenCreate = () => {
         setEditingAgent(null);
@@ -137,14 +131,6 @@ export function AgentList({ hotelTenant }: { hotelTenant?: string }) {
     };
 
     const handleSubmit = async () => {
-        if (!hotelTenant) {
-            toast({
-                variant: 'destructive',
-                title: 'No Tenant Context',
-                description: 'Please ensure you are viewing a valid hotel tenant instance.',
-            });
-            return;
-        }
         setSubmitting(true);
         try {
             const isEdit = !!editingAgent;
@@ -175,7 +161,6 @@ export function AgentList({ hotelTenant }: { hotelTenant?: string }) {
                 method: isEdit ? 'patch' : 'post',
                 url,
                 data: payload,
-                headers: { 'x-tenant-id': hotelTenant },
             });
 
             if (res.data.success) {
@@ -200,19 +185,9 @@ export function AgentList({ hotelTenant }: { hotelTenant?: string }) {
     };
 
     const handleDelete = async (agent: Agent) => {
-        if (!hotelTenant) {
-            toast({
-                variant: 'destructive',
-                title: 'No Tenant Context',
-                description: 'Please ensure you are viewing a valid hotel tenant instance.',
-            });
-            return;
-        }
         if (!confirm(`Delete agent "${agent.firstName} ${agent.lastName}"?`)) return;
         try {
-            const res = await api.delete(`/m/hotel/agents/${agent._id}`, {
-                headers: { 'x-tenant-id': hotelTenant },
-            });
+            const res = await api.delete(`/m/hotel/agents/${agent._id}`);
             if (res.data.success) {
                 toast({ title: 'Success', description: res.data.message });
                 fetchAgents();
@@ -474,17 +449,7 @@ export function AgentList({ hotelTenant }: { hotelTenant?: string }) {
 
             {agents.length === 0 ? (
                 <div className="text-center py-10 text-muted-foreground">
-                    {!hotelTenant ? (
-                        <div className="space-y-2">
-                            <p className="font-semibold text-foreground">No Tenant Selected</p>
-                            <p className="text-sm">
-                                You are viewing the hotel module in global context. Please select or
-                                be assigned to a hotel tenant.
-                            </p>
-                        </div>
-                    ) : (
-                        'No agents yet. Add one to get started.'
-                    )}
+                    No agents yet. Add one to get started.
                 </div>
             ) : (
                 <div className="rounded-md border">

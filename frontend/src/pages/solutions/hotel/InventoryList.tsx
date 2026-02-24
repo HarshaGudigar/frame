@@ -51,7 +51,7 @@ const emptyForm = {
 
 const categories = ['Linen', 'Toiletries', 'Mini Bar', 'Cleaning Supplies', 'Other'];
 
-export function InventoryList({ hotelTenant }: { hotelTenant?: string }) {
+export function InventoryList() {
     const { api } = useAuth();
     const { toast } = useToast();
     const [items, setItems] = useState<InventoryItem[]>([]);
@@ -62,14 +62,8 @@ export function InventoryList({ hotelTenant }: { hotelTenant?: string }) {
     const [submitting, setSubmitting] = useState(false);
 
     const fetchItems = async () => {
-        if (!hotelTenant) {
-            setLoading(false);
-            return;
-        }
         try {
-            const res = await api.get('/m/hotel/inventory', {
-                headers: { 'x-tenant-id': hotelTenant },
-            });
+            const res = await api.get('/m/hotel/inventory');
             if (res.data.success) setItems(res.data.data);
         } catch (error) {
             console.error('Failed to fetch inventory', error);
@@ -80,7 +74,7 @@ export function InventoryList({ hotelTenant }: { hotelTenant?: string }) {
 
     useEffect(() => {
         fetchItems();
-    }, [api, hotelTenant]);
+    }, [api]);
 
     const handleOpenCreate = () => {
         setEditingItem(null);
@@ -102,14 +96,6 @@ export function InventoryList({ hotelTenant }: { hotelTenant?: string }) {
     };
 
     const handleSubmit = async () => {
-        if (!hotelTenant) {
-            toast({
-                variant: 'destructive',
-                title: 'No Tenant Context',
-                description: 'Please ensure you are viewing a valid hotel tenant instance.',
-            });
-            return;
-        }
         setSubmitting(true);
         try {
             const isEdit = !!editingItem;
@@ -119,7 +105,6 @@ export function InventoryList({ hotelTenant }: { hotelTenant?: string }) {
                 method: isEdit ? 'patch' : 'post',
                 url,
                 data: formData,
-                headers: { 'x-tenant-id': hotelTenant },
             });
 
             if (res.data.success) {
@@ -139,12 +124,9 @@ export function InventoryList({ hotelTenant }: { hotelTenant?: string }) {
     };
 
     const handleDelete = async (item: InventoryItem) => {
-        if (!hotelTenant) return;
         if (!confirm(`Delete inventory item "${item.name}"?`)) return;
         try {
-            const res = await api.delete(`/m/hotel/inventory/${item._id}`, {
-                headers: { 'x-tenant-id': hotelTenant },
-            });
+            const res = await api.delete(`/m/hotel/inventory/${item._id}`);
             if (res.data.success) {
                 toast({ title: 'Success', description: res.data.message });
                 fetchItems();

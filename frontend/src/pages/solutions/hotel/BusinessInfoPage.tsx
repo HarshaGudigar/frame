@@ -23,7 +23,7 @@ const emptyForm = {
     extraInfo: [] as { key: string; value: string }[],
 };
 
-export function BusinessInfoPage({ hotelTenant }: { hotelTenant?: string }) {
+export function BusinessInfoPage() {
     const { api } = useAuth();
     const { toast } = useToast();
     const [formData, setFormData] = useState(emptyForm);
@@ -32,14 +32,8 @@ export function BusinessInfoPage({ hotelTenant }: { hotelTenant?: string }) {
 
     useEffect(() => {
         const fetchInfo = async () => {
-            if (!hotelTenant) {
-                setLoading(false);
-                return;
-            }
             try {
-                const res = await api.get('/m/hotel/business-info', {
-                    headers: { 'x-tenant-id': hotelTenant },
-                });
+                const res = await api.get('/m/hotel/business-info');
                 if (res.data.success && res.data.data) {
                     const d = res.data.data;
                     setFormData({
@@ -66,17 +60,9 @@ export function BusinessInfoPage({ hotelTenant }: { hotelTenant?: string }) {
             }
         };
         fetchInfo();
-    }, [api, hotelTenant]);
+    }, [api]);
 
     const handleSubmit = async () => {
-        if (!hotelTenant) {
-            toast({
-                variant: 'destructive',
-                title: 'No Tenant Context',
-                description: 'Please ensure you are viewing a valid hotel tenant instance.',
-            });
-            return;
-        }
         setSubmitting(true);
         try {
             const payload: any = { ...formData };
@@ -98,9 +84,7 @@ export function BusinessInfoPage({ hotelTenant }: { hotelTenant?: string }) {
                 if (!payload[key]) delete payload[key];
             }
 
-            const res = await api.put('/m/hotel/business-info', payload, {
-                headers: { 'x-tenant-id': hotelTenant },
-            });
+            const res = await api.put('/m/hotel/business-info', payload);
 
             if (res.data.success) {
                 toast({ title: 'Success', description: res.data.message });
@@ -141,20 +125,6 @@ export function BusinessInfoPage({ hotelTenant }: { hotelTenant?: string }) {
         return (
             <div className="flex items-center justify-center py-10">
                 <Loader2 className="h-8 w-8 animate-spin" />
-            </div>
-        );
-    }
-
-    if (!hotelTenant) {
-        return (
-            <div className="text-center py-10 text-muted-foreground">
-                <div className="space-y-2">
-                    <p className="font-semibold text-foreground">No Tenant Selected</p>
-                    <p className="text-sm">
-                        You are viewing the hotel module in global context. Please select or be
-                        assigned to a hotel tenant.
-                    </p>
-                </div>
             </div>
         );
     }

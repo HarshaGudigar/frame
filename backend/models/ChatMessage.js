@@ -2,18 +2,13 @@ const mongoose = require('mongoose');
 
 const chatMessageSchema = new mongoose.Schema(
     {
-        userId: {
+        user: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'GlobalUser',
+            ref: 'User',
             required: true,
             index: true,
         },
-        tenantId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Tenant',
-            default: null,
-            index: true,
-        },
+
         role: {
             type: String,
             enum: ['user', 'assistant', 'system', 'tool'],
