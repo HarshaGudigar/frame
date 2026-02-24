@@ -535,11 +535,30 @@ export function RoomGrid({ bookings = [] }: { bookings?: Booking[] }) {
                                 />
                             </div>
                         </div>
-                        <DialogFooter>
-                            <Button onClick={handleSubmit} disabled={submitting}>
-                                {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                                {editingRoom ? 'Update Room' : 'Save Room'}
-                            </Button>
+                        <DialogFooter className="flex justify-between items-center sm:justify-between w-full">
+                            {editingRoom && (
+                                <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => {
+                                        handleDelete(editingRoom);
+                                        setOpen(false);
+                                    }}
+                                    disabled={submitting}
+                                >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete Room
+                                </Button>
+                            )}
+                            <div className="flex gap-2 ml-auto">
+                                <Button onClick={handleSubmit} disabled={submitting}>
+                                    {submitting && (
+                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    )}
+                                    {editingRoom ? 'Update Room' : 'Save Room'}
+                                </Button>
+                            </div>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>

@@ -122,19 +122,19 @@ function StatCard({
 }) {
     return (
         <div
-            className={`relative overflow-hidden rounded-2xl border p-5 flex items-center gap-4 bg-card shadow-sm hover:shadow-md transition-all duration-200 group`}
+            className={`relative overflow-hidden rounded-2xl border p-4 flex items-center gap-3 bg-card shadow-sm hover:shadow-md transition-all duration-200 group`}
         >
             <div
-                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl ${color} transition-transform duration-200 group-hover:scale-110`}
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${color} transition-transform duration-200 group-hover:scale-110`}
             >
-                <Icon className="h-5 w-5" />
+                <Icon className="h-4.5 w-4.5" />
             </div>
             <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                     {label}
                 </p>
-                <p className="text-2xl font-black tracking-tight text-foreground mt-0.5">{value}</p>
-                {sub && <p className="text-xs text-muted-foreground mt-0.5">{sub}</p>}
+                <p className="text-xl font-black tracking-tight text-foreground mt-0.5">{value}</p>
+                {sub && <p className="text-[10px] text-muted-foreground mt-0.5 truncate">{sub}</p>}
             </div>
         </div>
     );
@@ -228,10 +228,11 @@ function ScheduleFeed({
                     <div className="text-right">
                         <Badge
                             variant="outline"
-                            className={`text-[10px] font-bold ${item.type === 'arrival'
+                            className={`text-[10px] font-bold ${
+                                item.type === 'arrival'
                                     ? 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400'
                                     : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400'
-                                }`}
+                            }`}
                         >
                             {item.type === 'arrival' ? '↓ Arrival' : '↑ Departure'}
                         </Badge>
@@ -260,18 +261,18 @@ export function HotelDashboard() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
-
-
     const fetchStats = async (silent = false) => {
         if (!silent) setLoading(true);
         else setRefreshing(true);
         try {
-            const [roomsRes, bookingsRes] = await Promise.all([
+            const [roomsRes, bookingsRes, hkRes] = await Promise.all([
                 api.get('/m/hotel/rooms'),
                 api.get('/m/hotel/bookings'),
+                api.get('/m/hotel/housekeeping'),
             ]);
             const rooms = roomsRes.data?.data || [];
             const bookings = bookingsRes.data?.data || [];
+            const hkTasks = hkRes.data?.data || [];
             const today = new Date().toISOString().split('T')[0];
 
             setStats({
@@ -285,6 +286,7 @@ export function HotelDashboard() {
                 ).length,
             });
 
+            // Schedule: Only pending arrivals/departures
             const todayArrivals: ScheduleItem[] = bookings
                 .filter((b: any) => b.checkInDate?.startsWith(today) && b.status === 'Confirmed')
                 .map((b: any) => ({
@@ -316,26 +318,70 @@ export function HotelDashboard() {
             setArrivals(todayArrivals);
             setDepartures(todayDepartures);
 
+            // Activity Feed: Everything that happened or is happening today
             const acts: Activity[] = [
-                ...todayArrivals.map((a) => ({
-                    id: `arr-${a.id}`,
-                    type: 'check-in' as const,
-                    title: 'Guest Arriving',
-                    description: `${a.guestName} → Room ${a.roomNumber}`,
-                    time: a.time,
-                    status: 'pending' as const,
-                })),
-                ...todayDepartures.map((d) => ({
-                    id: `dep-${d.id}`,
-                    type: 'check-out' as const,
-                    title: 'Guest Departing',
-                    description: `${d.guestName} ← Room ${d.roomNumber}`,
-                    time: d.time,
-                    status: 'pending' as const,
-                })),
+                // Arrivals
+                ...bookings
+                    .filter((b: any) => b.checkInDate?.startsWith(today))
+                    .map((b: any) => ({
+                        id: `arr-${b._id}`,
+                        type: 'check-in' as const,
+                        title: b.status === 'CheckedIn' ? 'Guest Checked In' : 'Expected Arrival',
+                        description: `${b.customer?.firstName || 'Guest'} → Room ${b.room?.number || 'TBD'}`,
+                        time: new Date(b.checkInDate).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                        }),
+                        status: (b.status === 'CheckedIn' ? 'done' : 'pending') as any,
+                    })),
+                // Departures
+                ...bookings
+                    .filter((b: any) => b.checkOutDate?.startsWith(today))
+                    .map((b: any) => ({
+                        id: `dep-${b._id}`,
+                        type: 'check-out' as const,
+                        title:
+                            b.status === 'CheckedOut' ? 'Guest Checked Out' : 'Expected Departure',
+                        description: `${b.customer?.firstName || 'Guest'} ← Room ${b.room?.number || 'TBD'}`,
+                        time: new Date(b.checkOutDate).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                        }),
+                        status: (b.status === 'CheckedOut' ? 'done' : 'pending') as any,
+                    })),
+                // New Bookings created today
+                ...bookings
+                    .filter((b: any) => b.createdAt?.startsWith(today))
+                    .map((b: any) => ({
+                        id: `new-${b._id}`,
+                        type: 'booking' as const,
+                        title: 'New Booking Created',
+                        description: `${b.customer?.firstName || 'Guest'} · ${b.numberOfDays} nights`,
+                        time: new Date(b.createdAt).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                        }),
+                        status: 'done' as any,
+                    })),
+                // Housekeeping tasks for today
+                ...hkTasks
+                    .filter((t: any) => t.createdAt?.startsWith(today))
+                    .map((t: any) => ({
+                        id: `hk-${t._id}`,
+                        type: 'housekeeping' as const,
+                        title: `Housekeeping: ${t.room?.number || 'Room'}`,
+                        description: `${t.type} · ${t.status}`,
+                        time: new Date(t.createdAt).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                        }),
+                        status: (t.status === 'Completed' ? 'done' : 'pending') as any,
+                    })),
             ]
                 .sort((a, b) => b.time.localeCompare(a.time))
-                .slice(0, 8);
+                .filter((v, i, a) => a.findIndex((t) => t.id === v.id) === i) // Deduplicate
+                .slice(0, 15);
+
             setActivities(acts);
             (window as any).__hotelData = { bookings };
         } catch (err) {
@@ -386,11 +432,7 @@ export function HotelDashboard() {
         stats.totalRooms > 0 ? Math.round((stats.occupied / stats.totalRooms) * 100) : 0;
 
     const tabContent: Partial<Record<Tab, React.ReactElement>> = {
-        rooms: (
-            <RoomGrid
-                bookings={(window as any).__hotelData?.bookings || []}
-            />
-        ),
+        rooms: <RoomGrid bookings={(window as any).__hotelData?.bookings || []} />,
         housekeeping: <Housekeeping />,
         inventory: <InventoryList />,
         customers: <CustomerList />,
@@ -407,19 +449,19 @@ export function HotelDashboard() {
     return (
         <div className="space-y-0 max-w-[1600px] mx-auto animate-in fade-in duration-300">
             {/* ─── Page Header ─────────────────────────────────────────── */}
-            <div className="rounded-2xl border bg-card shadow-sm p-6 mb-5">
+            <div className="rounded-2xl border bg-card shadow-sm p-4 mb-4">
                 <div className="flex items-center justify-between">
                     <div>
-                        <div className="flex items-center gap-2 mb-1">
-                            <Building2 className="h-5 w-5 text-primary" />
-                            <span className="text-xs font-bold uppercase tracking-wider text-primary">
+                        <div className="flex items-center gap-2 mb-0.5">
+                            <Building2 className="h-4 w-4 text-primary" />
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-primary">
                                 Hotel Management
                             </span>
                         </div>
-                        <h1 className="text-2xl font-black tracking-tight text-foreground">
+                        <h1 className="text-xl font-black tracking-tight text-foreground">
                             {greeting}, {firstName} 👋
                         </h1>
-                        <p className="text-sm text-muted-foreground mt-0.5">
+                        <p className="text-xs text-muted-foreground mt-0.5">
                             {dateStr} · Here's your property at a glance.
                         </p>
                     </div>
@@ -428,9 +470,9 @@ export function HotelDashboard() {
                         size="sm"
                         onClick={() => fetchStats(true)}
                         disabled={refreshing}
-                        className="gap-2 rounded-xl"
+                        className="gap-2 rounded-xl h-8 text-xs"
                     >
-                        <RefreshCcw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                        <RefreshCcw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
                         Refresh
                     </Button>
                 </div>
@@ -445,10 +487,11 @@ export function HotelDashboard() {
                             <button
                                 key={tab.key}
                                 onClick={() => setActiveTab(tab.key)}
-                                className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px whitespace-nowrap rounded-t-sm ${activeTab === tab.key
+                                className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px whitespace-nowrap rounded-t-sm ${
+                                    activeTab === tab.key
                                         ? 'border-primary text-primary bg-primary/5'
                                         : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30 hover:bg-muted/40'
-                                    }`}
+                                }`}
                             >
                                 <tab.icon className="h-3.5 w-3.5" />
                                 {tab.label}
@@ -577,69 +620,59 @@ export function HotelDashboard() {
                                     </span>
                                 </div>
                             </div>
-                            <RoomGrid
-                                bookings={(window as any).__hotelData?.bookings || []}
-                            />
+                            <RoomGrid bookings={(window as any).__hotelData?.bookings || []} />
                         </div>
 
                         {/* Right Panel */}
-                        <div className="lg:col-span-4 space-y-5">
+                        <div className="lg:col-span-4 space-y-4">
                             {/* Occupancy Gauge */}
-                            <div className="rounded-2xl border bg-card shadow-sm p-5">
-                                <h3 className="text-sm font-bold text-foreground mb-3">
+                            <div className="rounded-2xl border bg-card shadow-sm p-4">
+                                <h3 className="text-xs font-bold text-foreground mb-2 flex items-center gap-2">
+                                    <TrendingUp className="h-3.5 w-3.5 text-blue-500" />
                                     Occupancy Rate
                                 </h3>
-                                <div className="flex items-end justify-between mb-2">
-                                    <span className="text-4xl font-black text-foreground">
+                                <div className="flex items-end justify-between mb-1.5">
+                                    <span className="text-3xl font-black text-foreground">
                                         {occupancyPct}%
                                     </span>
-                                    <span className="text-xs text-muted-foreground">
+                                    <span className="text-[10px] text-muted-foreground">
                                         {stats.occupied} / {stats.totalRooms} rooms
                                     </span>
                                 </div>
-                                <div className="h-3 w-full rounded-full bg-muted overflow-hidden">
+                                <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                                     <div
                                         className={`h-full rounded-full transition-all duration-700 ease-out ${occupancyPct >= 80 ? 'bg-green-500' : occupancyPct >= 50 ? 'bg-blue-500' : 'bg-orange-400'}`}
                                         style={{ width: `${occupancyPct}%` }}
                                     />
                                 </div>
-                                <p className="text-xs text-muted-foreground mt-2">
-                                    {occupancyPct >= 80
-                                        ? '🔥 High occupancy — consider dynamic pricing'
-                                        : occupancyPct >= 50
-                                            ? '📈 Healthy occupancy rate'
-                                            : '📣 Low occupancy — consider promotions'}
-                                </p>
                             </div>
 
                             {/* Today's Schedule */}
-                            <div className="rounded-2xl border bg-card shadow-sm p-5">
-                                <h3 className="text-sm font-bold text-foreground mb-4">
+                            <div className="rounded-2xl border bg-card shadow-sm p-4">
+                                <h3 className="text-xs font-bold text-foreground mb-3 flex items-center gap-2">
+                                    <CalendarCheck className="h-3.5 w-3.5 text-purple-500" />
                                     Today's Schedule
                                 </h3>
                                 <ScheduleFeed arrivals={arrivals} departures={departures} />
                             </div>
-                        </div>
-                    </div>
 
-                    {/* Activity Feed */}
-                    <div className="rounded-2xl border bg-card shadow-sm p-5">
-                        <div className="flex items-center justify-between mb-4">
-                            <div>
-                                <h3 className="text-base font-bold text-foreground">
+                            {/* Activity Feed */}
+                            <div className="rounded-2xl border bg-card shadow-sm p-4">
+                                <h3 className="text-xs font-bold text-foreground mb-3 flex items-center gap-2">
+                                    <Clock className="h-3.5 w-3.5 text-orange-500" />
                                     Activity Feed
                                 </h3>
-                                <p className="text-xs text-muted-foreground">
-                                    Today's check-ins and check-outs
-                                </p>
+                                <ActivityFeed items={activities} />
                             </div>
                         </div>
-                        <ActivityFeed items={activities} />
                     </div>
 
                     {/* Quick Actions */}
-                    <div className="rounded-2xl border bg-card shadow-sm p-5">
-                        <h3 className="text-sm font-bold text-foreground mb-3">Quick Actions</h3>
+                    <div className="rounded-2xl border bg-card shadow-sm p-4">
+                        <h3 className="text-xs font-bold text-foreground mb-3 flex items-center gap-2">
+                            <Sparkles className="h-3.5 w-3.5 text-yellow-500" />
+                            Quick Actions
+                        </h3>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                             {[
                                 {
