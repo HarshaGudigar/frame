@@ -272,7 +272,7 @@ router.post('/:id/cancel', authMiddleware, validate({ params: mongoIdParam }), a
         }
 
         if (booking.status === 'CheckedIn') {
-            await Room.findByIdAndUpdate(booking.room, { status: 'Available' });
+            await Room.updateMany({ _id: { $in: booking.rooms } }, { status: 'Available' });
         }
 
         booking.status = 'Cancelled';
@@ -280,7 +280,7 @@ router.post('/:id/cancel', authMiddleware, validate({ params: mongoIdParam }), a
 
         const populated = await Booking.findById(booking._id)
             .populate('customer')
-            .populate('room')
+            .populate('rooms')
             .populate('agent');
 
         return successResponse(res, populated, 'Booking cancelled successfully');
@@ -313,7 +313,7 @@ router.post(
 
             const populated = await Booking.findById(booking._id)
                 .populate('customer')
-                .populate('room')
+                .populate('rooms')
                 .populate('agent');
 
             return successResponse(res, populated, 'Booking marked as No Show');

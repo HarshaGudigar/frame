@@ -13,9 +13,14 @@ const authorize = (allowedRoles = []) => {
             return res.status(401).json({ success: false, message: 'Unauthorized' });
         }
 
-        const userRole = req.user.role || 'user'; // Default to lowest privilege if undefined
+        const userRole = req.user.role || 'user';
+
+        if (req.method === 'DELETE') {
+            console.log(`RBAC DELETE: ${userRole} attempting DELETE on ${req.originalUrl}`);
+        }
 
         if (userRole === 'superuser' || allowedRoles.includes(userRole)) {
+            console.log(`RBAC: Access granted to ${userRole} for ${req.originalUrl}`);
             return next();
         }
 

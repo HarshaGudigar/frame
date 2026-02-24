@@ -293,7 +293,7 @@ export function HotelDashboard() {
                     id: b._id,
                     guestName:
                         `${b.customer?.firstName || ''} ${b.customer?.lastName || ''}`.trim(),
-                    roomNumber: b.room?.number || 'TBD',
+                    roomNumber: b.rooms?.[0]?.number || 'TBD',
                     type: 'arrival' as const,
                     time: new Date(b.checkInDate).toLocaleTimeString([], {
                         hour: '2-digit',
@@ -307,7 +307,7 @@ export function HotelDashboard() {
                     id: b._id,
                     guestName:
                         `${b.customer?.firstName || ''} ${b.customer?.lastName || ''}`.trim(),
-                    roomNumber: b.room?.number || 'TBD',
+                    roomNumber: b.rooms?.[0]?.number || 'TBD',
                     type: 'departure' as const,
                     time: new Date(b.checkOutDate).toLocaleTimeString([], {
                         hour: '2-digit',
@@ -327,7 +327,7 @@ export function HotelDashboard() {
                         id: `arr-${b._id}`,
                         type: 'check-in' as const,
                         title: b.status === 'CheckedIn' ? 'Guest Checked In' : 'Expected Arrival',
-                        description: `${b.customer?.firstName || 'Guest'} → Room ${b.room?.number || 'TBD'}`,
+                        description: `${b.customer?.firstName || 'Guest'} → Room ${b.rooms?.map((r: any) => r.number).join(', ') || 'TBD'}`,
                         time: new Date(b.checkInDate).toLocaleTimeString([], {
                             hour: '2-digit',
                             minute: '2-digit',
@@ -342,7 +342,7 @@ export function HotelDashboard() {
                         type: 'check-out' as const,
                         title:
                             b.status === 'CheckedOut' ? 'Guest Checked Out' : 'Expected Departure',
-                        description: `${b.customer?.firstName || 'Guest'} ← Room ${b.room?.number || 'TBD'}`,
+                        description: `${b.customer?.firstName || 'Guest'} ← Room ${b.rooms?.map((r: any) => r.number).join(', ') || 'TBD'}`,
                         time: new Date(b.checkOutDate).toLocaleTimeString([], {
                             hour: '2-digit',
                             minute: '2-digit',

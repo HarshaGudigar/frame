@@ -76,9 +76,11 @@ export function RoomGrid({ bookings = [] }: { bookings?: Booking[] }) {
         floor: 1,
     });
     const [submitting, setSubmitting] = useState(false);
+    const [deleting, setDeleting] = useState(false);
     const [isSelectMode, setIsSelectMode] = useState(false);
     const [selectedRooms, setSelectedRooms] = useState<Set<string>>(new Set());
     const [peekRoom, setPeekRoom] = useState<Room | null>(null);
+    const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
     const fetchRooms = async () => {
         setLoading(true);
@@ -118,6 +120,10 @@ export function RoomGrid({ bookings = [] }: { bookings?: Booking[] }) {
     };
 
     const handleOpenEdit = (room: Room) => {
+        // First, close peek if open
+        setPeekRoom(null);
+
+        // Prepare data
         setEditingRoom(room);
         setFormData({
             number: room.number,
@@ -125,7 +131,12 @@ export function RoomGrid({ bookings = [] }: { bookings?: Booking[] }) {
             pricePerNight: room.pricePerNight,
             floor: room.floor,
         });
-        setOpen(true);
+
+        // Delay opening the dialog to let the sheet close transition finish
+        // This fixes the "aria-hidden focus conflict" warning
+        setTimeout(() => {
+            setOpen(true);
+        }, 300);
     };
 
     const handleSubmit = async () => {
@@ -160,26 +171,35 @@ export function RoomGrid({ bookings = [] }: { bookings?: Booking[] }) {
         }
     };
 
-    const handleDelete = async (room: Room) => {
-        if (!confirm(`Delete room ${room.number}?`)) return;
+    const handleDelete = () => {
+        setIsConfirmingDelete(true);
+    };
+
+    const confirmAndDeleteRoom = async () => {
+        if (!editingRoom) return;
+
+        console.log('--- DELETE START (Unified) ---');
+        setDeleting(true);
         try {
-            const res = await api.delete(`/m/hotel/rooms/${room._id}`);
+            const url = `/m/hotel/rooms/${editingRoom._id}`;
+            const res = await api.delete(url);
             if (res.data.success) {
-                toast({ title: 'Success', description: res.data.message });
+                toast({ title: 'Success', description: `Room ${editingRoom.number} deleted.` });
                 fetchRooms();
+                setOpen(false);
+                setIsConfirmingDelete(false);
+                return true;
             } else {
-                toast({
-                    variant: 'destructive',
-                    title: 'Error',
-                    description: res.data.message || 'Failed to delete room.',
-                });
+                toast({ variant: 'destructive', title: 'Error', description: res.data.message });
+                return false;
             }
         } catch (error: any) {
-            toast({
-                variant: 'destructive',
-                title: 'Error',
-                description: error.response?.data?.message || 'Failed to delete room',
-            });
+            const msg = error.response?.data?.message || 'Failed to delete room';
+            toast({ variant: 'destructive', title: 'Error', description: msg });
+            return false;
+        } finally {
+            setDeleting(false);
+            console.log('--- DELETE END ---');
         }
     };
 
@@ -449,7 +469,13 @@ export function RoomGrid({ bookings = [] }: { bookings?: Booking[] }) {
                         </div>
                     )}
                 </div>
-                <Dialog open={open} onOpenChange={setOpen}>
+                <Dialog
+                    open={open}
+                    onOpenChange={(val) => {
+                        setOpen(val);
+                        if (!val) setIsConfirmingDelete(false);
+                    }}
+                >
                     <DialogTrigger asChild>
                         <Button onClick={handleOpenCreate}>
                             <Plus className="h-4 w-4 mr-2" /> Add Room
@@ -466,100 +492,145 @@ export function RoomGrid({ bookings = [] }: { bookings?: Booking[] }) {
                                     : 'Fill in the details to create a new room.'}
                             </DialogDescription>
                         </DialogHeader>
-                        <div className="grid gap-4 py-4">
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="number" className="text-right">
-                                    Number
-                                </Label>
-                                <Input
-                                    id="number"
-                                    value={formData.number}
-                                    onChange={(e) =>
-                                        setFormData({ ...formData, number: e.target.value })
-                                    }
-                                    className="col-span-3"
-                                />
+                        {isConfirmingDelete ? (
+                            <div className="py-6 space-y-4">
+                                <p className="text-sm text-muted-foreground">
+                                    Are you sure you want to permanently delete Room{' '}
+                                    <strong>{editingRoom?.number}</strong>? This action cannot be
+                                    undone and will fail if there are active bookings.
+                                </p>
+                                <div className="flex gap-2 justify-end mt-6">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setIsConfirmingDelete(false)}
+                                        disabled={deleting}
+                                    >
+                                        Back
+                                    </Button>
+                                    <Button
+                                        variant="destructive"
+                                        onClick={confirmAndDeleteRoom}
+                                        disabled={deleting}
+                                    >
+                                        {deleting && (
+                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        )}
+                                        Confirm Delete
+                                    </Button>
+                                </div>
                             </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="type" className="text-right">
-                                    Type
-                                </Label>
-                                <Select
-                                    value={formData.type}
-                                    onValueChange={(val) => setFormData({ ...formData, type: val })}
-                                >
-                                    <SelectTrigger id="type" className="col-span-3">
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {roomTypes.map((t) => (
-                                            <SelectItem key={t} value={t}>
-                                                {t}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="price" className="text-right">
-                                    Price
-                                </Label>
-                                <Input
-                                    id="price"
-                                    type="number"
-                                    value={formData.pricePerNight}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            pricePerNight: parseInt(e.target.value) || 0,
-                                        })
-                                    }
-                                    className="col-span-3"
-                                />
-                            </div>
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="floor" className="text-right">
-                                    Floor
-                                </Label>
-                                <Input
-                                    id="floor"
-                                    type="number"
-                                    value={formData.floor}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            floor: parseInt(e.target.value) || 1,
-                                        })
-                                    }
-                                    className="col-span-3"
-                                />
-                            </div>
-                        </div>
-                        <DialogFooter className="flex justify-between items-center sm:justify-between w-full">
-                            {editingRoom && (
-                                <Button
-                                    type="button"
-                                    variant="destructive"
-                                    size="sm"
-                                    onClick={() => {
-                                        handleDelete(editingRoom);
-                                        setOpen(false);
-                                    }}
-                                    disabled={submitting}
-                                >
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete Room
-                                </Button>
-                            )}
-                            <div className="flex gap-2 ml-auto">
-                                <Button onClick={handleSubmit} disabled={submitting}>
-                                    {submitting && (
-                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                            <>
+                                <div className="grid gap-4 py-4">
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="number" className="text-right">
+                                            Number
+                                        </Label>
+                                        <Input
+                                            id="number"
+                                            value={formData.number}
+                                            onChange={(e) =>
+                                                setFormData({ ...formData, number: e.target.value })
+                                            }
+                                            className="col-span-3"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="type" className="text-right">
+                                            Type
+                                        </Label>
+                                        <Select
+                                            value={formData.type}
+                                            onValueChange={(val) =>
+                                                setFormData({ ...formData, type: val })
+                                            }
+                                        >
+                                            <SelectTrigger id="type" className="col-span-3">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {roomTypes.map((t) => (
+                                                    <SelectItem key={t} value={t}>
+                                                        {t}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="price" className="text-right">
+                                            Price
+                                        </Label>
+                                        <Input
+                                            id="price"
+                                            type="number"
+                                            value={formData.pricePerNight}
+                                            onChange={(e) =>
+                                                setFormData({
+                                                    ...formData,
+                                                    pricePerNight: parseInt(e.target.value) || 0,
+                                                })
+                                            }
+                                            className="col-span-3"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-4 items-center gap-4">
+                                        <Label htmlFor="floor" className="text-right">
+                                            Floor
+                                        </Label>
+                                        <Input
+                                            id="floor"
+                                            type="number"
+                                            value={formData.floor}
+                                            onChange={(e) =>
+                                                setFormData({
+                                                    ...formData,
+                                                    floor: parseInt(e.target.value) || 1,
+                                                })
+                                            }
+                                            className="col-span-3"
+                                        />
+                                    </div>
+                                </div>
+                                <DialogFooter className="flex flex-col sm:flex-row gap-3 mt-6">
+                                    {editingRoom && (
+                                        <Button
+                                            type="button"
+                                            variant="destructive"
+                                            size="sm"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                handleDelete();
+                                            }}
+                                            disabled={deleting || submitting}
+                                            className="sm:mr-auto"
+                                        >
+                                            <Trash2 className="h-4 w-4 mr-2" />
+                                            Delete Room
+                                        </Button>
                                     )}
-                                    {editingRoom ? 'Update Room' : 'Save Room'}
-                                </Button>
-                            </div>
-                        </DialogFooter>
+                                    <div className="flex gap-2 justify-end items-center">
+                                        <Button
+                                            variant="outline"
+                                            onClick={() => setOpen(false)}
+                                            type="button"
+                                            disabled={submitting || deleting}
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            onClick={handleSubmit}
+                                            disabled={submitting || deleting}
+                                        >
+                                            {submitting && (
+                                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                            )}
+                                            {editingRoom ? 'Update Room' : 'Save Room'}
+                                        </Button>
+                                    </div>
+                                </DialogFooter>
+                            </>
+                        )}
                     </DialogContent>
                 </Dialog>
             </div>

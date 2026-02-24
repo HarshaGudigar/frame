@@ -107,18 +107,38 @@ router.delete(
     validate({ params: mongoIdParam }),
     async (req, res) => {
         try {
+            const { id } = req.params;
+            console.log(`DELETE Room request for ID: ${id}`);
+
             const { Room, Booking } = await getModels(req);
+            const roomId = new (require('mongoose').Types.ObjectId)(id);
+
+            // 1. Check for active bookings
             const activeBooking = await Booking.findOne({
-                room: req.params.id,
+                rooms: roomId,
                 status: { $in: ['Confirmed', 'CheckedIn'] },
             });
+
             if (activeBooking) {
+                console.log(
+                    `Delete blocked: Active booking found ${activeBooking._id} (status: ${activeBooking.status})`,
+                );
                 return errorResponse(res, 'Cannot delete room with active bookings', 409);
             }
-            const room = await Room.findByIdAndDelete(req.params.id);
-            if (!room) return errorResponse(res, 'Room not found', 404);
+
+            // 2. Perform deletion
+            console.log('No active bookings. Proceeding with deletion...');
+            const room = await Room.findByIdAndDelete(roomId);
+
+            if (!room) {
+                console.log('Room not found in database.');
+                return errorResponse(res, 'Room not found', 404);
+            }
+
+            console.log(`Successfully deleted Room ${room.number}`);
             return successResponse(res, room, 'Room deleted successfully');
         } catch (error) {
+            console.error('Delete Room Error:', error);
             return errorResponse(res, 'Failed to delete room', 500, error);
         }
     },
