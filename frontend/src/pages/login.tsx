@@ -12,7 +12,7 @@ import { BRAND } from '@/config/brand';
 const API_BASE = `${window.location.protocol}//${window.location.hostname}:5000/api`;
 
 export function LoginPage() {
-    const { login } = useAuth();
+    const { login, systemInfo } = useAuth();
     const [form, setForm] = useState({ email: '', password: '', firstName: '', lastName: '' });
     const [isRegister, setIsRegister] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -84,14 +84,24 @@ export function LoginPage() {
         setError(null);
     };
 
+    const displayTitle = systemInfo?.instanceName || BRAND.fullName;
+
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/50">
             <Card className="w-full max-w-md shadow-2xl border-border/50">
                 <CardHeader className="text-center space-y-2 pb-4">
-                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                        <Server className="size-6" />
+                    <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-xl shadow-primary/20 overflow-hidden">
+                        {systemInfo?.branding?.logo ? (
+                            <img
+                                src={systemInfo.branding.logo}
+                                className="size-7 object-contain"
+                                alt="Logo"
+                            />
+                        ) : (
+                            <Server className="size-7" />
+                        )}
                     </div>
-                    <h1 className="text-2xl font-bold tracking-tight">{BRAND.fullName}</h1>
+                    <h1 className="text-2xl font-bold tracking-tight">{displayTitle}</h1>
                     <p className="text-sm text-muted-foreground">{BRAND.description}</p>
                 </CardHeader>
                 <CardContent>

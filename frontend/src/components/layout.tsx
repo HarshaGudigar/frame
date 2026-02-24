@@ -84,12 +84,20 @@ function AppSidebar() {
                                 to="/"
                                 className="flex items-center gap-3 group-data-[collapsible=icon]:justify-center"
                             >
-                                <div className="flex aspect-square size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 shrink-0 transition-all">
-                                    <Server className="size-5" />
+                                <div className="flex aspect-square size-9 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20 shrink-0 transition-all overflow-hidden">
+                                    {systemInfo?.branding?.logo ? (
+                                        <img
+                                            src={systemInfo.branding.logo}
+                                            className="size-6 object-contain"
+                                            alt="Logo"
+                                        />
+                                    ) : (
+                                        <Server className="size-5" />
+                                    )}
                                 </div>
                                 <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                                     <span className="truncate font-bold tracking-tight text-base leading-none">
-                                        {systemInfo?.instanceName || BRAND.name}
+                                        {systemInfo?.instanceName || BRAND.fullName}
                                     </span>
                                     <span className="text-[10px] text-muted-foreground/80 font-medium uppercase tracking-wider mt-0.5 leading-none">
                                         v2.1.0 · {systemInfo?.mode || 'LOCAL'}
@@ -171,9 +179,10 @@ function AppSidebar() {
                                 const moduleSlug = (item as any).module;
                                 const hasModuleAccess =
                                     systemInfo?.enabledModules?.some(
-                                        (m: any) => m === moduleSlug || m.slug === moduleSlug
-                                    ) || systemInfo?.modules?.some(
-                                        (m: any) => m.slug === moduleSlug || m.name === moduleSlug
+                                        (m: any) => m === moduleSlug || m.slug === moduleSlug,
+                                    ) ||
+                                    systemInfo?.modules?.some(
+                                        (m: any) => m.slug === moduleSlug || m.name === moduleSlug,
                                     );
                                 if (!hasModuleAccess && user?.role !== 'superuser') return null;
 
@@ -254,7 +263,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
     const activeTenantSlug = systemInfo?.instanceName || 'Local Instance';
 
-    const activeTenantRole = user?.role === 'superuser' ? 'Superuser' : (user?.role || 'User');
+    const activeTenantRole = user?.role === 'superuser' ? 'Superuser' : user?.role || 'User';
 
     return (
         <SidebarProvider>
@@ -268,9 +277,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     <div className="flex items-center gap-4">
                         <div className="bg-primary/5 hover:bg-primary/10 transition-colors border border-primary/20 rounded-lg flex items-center justify-between px-3 py-1.5 cursor-default gap-3 h-9">
                             <div className="flex flex-col items-end">
-                                <span className="text-xs font-mono font-medium text-primary tracking-tight truncate max-w-[120px] leading-tight mt-0.5">
-                                    {activeTenantSlug}
-                                </span>
                                 <span className="text-[10px] text-muted-foreground capitalize leading-none">
                                     {activeTenantRole}
                                 </span>
