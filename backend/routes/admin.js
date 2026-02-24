@@ -120,10 +120,7 @@ router.get(
     requireRole('superuser', 'admin'),
     async (req, res) => {
         try {
-            const users = await User.find(
-                {},
-                'firstName lastName email role isActive createdAt',
-            );
+            const users = await User.find({}, 'firstName lastName email role isActive createdAt');
 
             res.json({ success: true, count: users.length, data: users });
         } catch (error) {
@@ -424,6 +421,43 @@ router.post(
 // ─── Analytics & Fleet Stats ───────────────────────────────────────────────
 
 /**
+ * @openapi
+ * /api/admin/heartbeat:
+ *   post:
+ *     tags: [Admin]
+ *     summary: Receive telemetry from an instance
+ *     description: Endpoint for instances to report their status and metrics. Re-added as it was missing.
+ *     security:
+ *       - apiKeyAuth: []
+ */
+router.post(
+    '/heartbeat',
+    asyncHandler(async (req, res) => {
+        const apiKey = req.headers['x-api-key'];
+        if (apiKey !== HEARTBEAT_SECRET) {
+            return errorResponse(res, 'Unauthorized: Invalid API Key', 401);
+        }
+
+        const { tenantId, metrics } = req.body;
+        if (!tenantId || !metrics) {
+            return errorResponse(res, 'Missing tenantId or metrics', 400);
+        }
+
+        // Save metric record
+        await Metric.create({
+            tenantId,
+            metrics,
+            timestamp: new Date(),
+        });
+
+        // Migration: We no longer update a Tenant model here as it is removed.
+        // If we want to track 'online' status globally, we can do it via a cache or AppConfig if needed.
+
+        return successResponse(res, null, 'Heartbeat received');
+    }),
+);
+
+/**
  * @swagger
  * /api/admin/metrics/{tenantId}:
  *   get:
@@ -442,31 +476,17 @@ router.get(
     '/metrics/:id',
     authMiddleware,
     requireVerifiedEmail,
-    requireRole('admin', 'superuser', 'user'),
+    requireRole('admin', 'superuser', 'staff'),
     asyncHandler(async (req, res) => {
         const { id } = req.params; // slug or id
 
-        // Find the tenant first to get the formal ID if 'id' is a slug
-        const tenant = await Tenant.findOne({
-            $or: [{ slug: id }, { _id: mongoose.isValidObjectId(id) ? id : null }],
-        });
+        const config = await AppConfig.getInstance();
 
-        if (!tenant) {
-            return errorResponse(res, 'Tenant not found', 404);
-        }
+        // In single-instance mode, we only care about the current instance's metrics.
+        // If the ID provided doesn't match the current instance slug/id, we could return 404,
+        // but for compatibility we'll just return the current instance's history.
 
-        // Security: If role is 'user', verify they belong to this tenant
-        if (req.user.role === 'user') {
-            const hasAccess = req.user.tenants.some(
-                (t) => t.tenant.toString() === tenant._id.toString(),
-            );
-            if (!hasAccess) {
-                return errorResponse(res, 'Access denied: Not a member of this tenant', 403);
-            }
-        }
-
-        // Find last 24 entries using the canonical slug/id
-        const history = await Metric.find({ tenantId: tenant.slug })
+        const history = await Metric.find({ tenantId: config.slug })
             .sort({ timestamp: -1 })
             .limit(24);
 
@@ -514,26 +534,26 @@ router.get(
     requireVerifiedEmail,
     requireRole('admin', 'superuser'),
     asyncHandler(async (req, res) => {
-        const totalTenants = await Tenant.countDocuments();
-        const onlineTenants = await Tenant.countDocuments({ status: 'online' });
-        const offlineTenants = await Tenant.countDocuments({ status: 'offline' });
+        const config = await AppConfig.getInstance();
+        const totalUsers = await User.countDocuments();
 
-        // Calculate average metrics
-        const aggs = await Tenant.aggregate([
-            {
-                $group: {
-                    _id: null,
-                    avgCpu: { $avg: '$metrics.cpu' },
-                    avgRam: { $avg: '$metrics.ram' },
-                },
-            },
-        ]);
+        // Get latest metrics for this instance
+        const latestMetric = await Metric.findOne({ tenantId: config.slug }).sort({
+            timestamp: -1,
+        });
 
         const stats = {
-            total: totalTenants,
-            online: onlineTenants,
-            offline: offlineTenants,
-            averages: aggs[0] || { avgCpu: 0, avgRam: 0 },
+            instanceName: config.instanceName,
+            status: 'online',
+            totalUsers,
+            averages: {
+                avgCpu: latestMetric?.metrics?.cpu || 0,
+                avgRam: latestMetric?.metrics?.ram || 0,
+            },
+            // For dashboard compatibility
+            total: 1,
+            online: 1,
+            offline: 0,
         };
 
         res.json({ success: true, data: stats });

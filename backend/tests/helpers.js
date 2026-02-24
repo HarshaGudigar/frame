@@ -57,7 +57,7 @@ async function clearCollections() {
  * Supports passing a 'role' to override the default 'user' role.
  */
 async function registerAndGetToken(request, userData = {}) {
-    const GlobalUser = require('../models/GlobalUser');
+    const User = require('../models/User');
     const defaults = {
         email: 'test@example.com',
         password: 'Test123!',
@@ -76,7 +76,7 @@ async function registerAndGetToken(request, userData = {}) {
         if (role) {
             updateFields.role = role;
         }
-        await GlobalUser.findByIdAndUpdate(res.body.data.user._id, updateFields);
+        await User.findByIdAndUpdate(res.body.data.user._id, updateFields);
 
         if (role) {
             // Re-calculate token with correct role for test requests

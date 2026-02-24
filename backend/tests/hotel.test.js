@@ -4,11 +4,9 @@ const {
     clearCollections,
     registerAndGetToken,
 } = require('./helpers');
-const Tenant = require('../models/Tenant');
 
 let request;
 let token;
-let tenantSlug = 'hotel-test-tenant';
 
 beforeAll(async () => {
     const ctx = await setupTestApp();
@@ -22,23 +20,11 @@ afterAll(async () => {
 beforeEach(async () => {
     await clearCollections();
     token = await registerAndGetToken(request, { role: 'admin' });
-
-    // Create a tenant for the module context
-    // In test environment, dbUri should point to the in-memory mongo
-    const config = require('../config');
-    await Tenant.create({
-        name: 'Hotel Test Tenant',
-        slug: tenantSlug,
-        isActive: true,
-        subscribedModules: ['hotel'],
-        dbUri: config.MONGODB_URI,
-    });
 });
 
 describe('Hotel Module API', () => {
     const authHeader = () => ({
         Authorization: `Bearer ${token}`,
-        'x-tenant-id': tenantSlug,
     });
 
     describe('Rooms API', () => {
@@ -128,14 +114,9 @@ describe('Hotel Module API', () => {
 
             expect(res.status).toBe(201);
             expect(res.body.success).toBe(true);
-            // Check that the returned booking has our room
-            // The backend likely returns `rooms` array populated, or a single room object if legacy.
-            // Based on earlier code, we expect `rooms` or `room` populated.
-            // Let's assume the backend now returns `rooms` array or we check if the room ID is in the list.
-            const returnedRoomId = res.body.data.rooms
-                ? res.body.data.rooms[0]._id
-                : res.body.data.room._id;
-            expect(returnedRoomId.toString()).toBe(roomId.toString());
+
+            const returnedRooms = res.body.data.rooms || [res.body.data.room];
+            expect(returnedRooms[0]._id.toString()).toBe(roomId.toString());
         });
     });
 

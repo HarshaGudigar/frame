@@ -1,13 +1,14 @@
 const request = require('supertest');
 const { setupTestApp, teardownTestApp } = require('./helpers');
-const Tenant = require('../models/Tenant');
+const AppConfig = require('../models/AppConfig');
 const Metric = require('../models/Metric');
-const GlobalUser = require('../models/GlobalUser');
+const User = require('../models/User');
 const { HEARTBEAT_SECRET } = require('../config');
 
 describe('Analytics & Metrics', () => {
     let app, requestAgent;
     let adminToken;
+    let instanceSlug;
 
     beforeAll(async () => {
         ({ app, request: requestAgent } = await setupTestApp());
@@ -20,17 +21,13 @@ describe('Analytics & Metrics', () => {
             lastName: 'Metrics',
         });
         adminToken = res.body.data.accessToken;
-        await GlobalUser.updateOne(
+        await User.updateOne(
             { email: 'admin-metrics@example.com' },
             { role: 'admin', isEmailVerified: true },
         );
 
-        // Create a test tenant
-        await Tenant.create({
-            name: 'Metrics Test',
-            slug: 'metrics-test',
-            owner: '507f1f77bcf86cd799439011',
-        });
+        const config = await AppConfig.getInstance();
+        instanceSlug = config.slug;
     });
 
     afterAll(async () => {
@@ -39,7 +36,7 @@ describe('Analytics & Metrics', () => {
 
     it('should create a metric record on heartbeat', async () => {
         const payload = {
-            tenantId: 'metrics-test',
+            tenantId: instanceSlug,
             metrics: {
                 cpu: 45,
                 ram: 60,
@@ -56,19 +53,14 @@ describe('Analytics & Metrics', () => {
         expect(res.statusCode).toBe(200);
 
         // Check if Metric record was created
-        const metric = await Metric.findOne({ tenantId: 'metrics-test' });
+        const metric = await Metric.findOne({ tenantId: instanceSlug });
         expect(metric).toBeDefined();
         expect(metric.metrics.cpu).toBe(45);
-
-        // Check if Tenant was updated
-        const tenant = await Tenant.findOne({ slug: 'metrics-test' });
-        expect(tenant.status).toBe('online');
-        expect(tenant.metrics.cpu).toBe(45);
     });
 
     it('should retrieve historical metrics', async () => {
         const res = await requestAgent
-            .get('/api/admin/metrics/metrics-test')
+            .get(`/api/admin/metrics/${instanceSlug}`)
             .set('Authorization', `Bearer ${adminToken}`);
 
         expect(res.statusCode).toBe(200);
@@ -82,7 +74,7 @@ describe('Analytics & Metrics', () => {
             .set('Authorization', `Bearer ${adminToken}`);
 
         expect(res.statusCode).toBe(200);
-        expect(res.body.data.total).toBeGreaterThan(0);
+        expect(res.body.data.total).toBe(1);
         expect(res.body.data.averages.avgCpu).toBe(45);
     });
 });

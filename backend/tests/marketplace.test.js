@@ -84,33 +84,43 @@ describe('POST /api/marketplace/products', () => {
 });
 
 describe('POST /api/marketplace/purchase', () => {
-    // Purchase requires requireRole('owner', 'admin') which checks req.tenant and req.user.tenants.
-    // Without a tenant context header, it returns 400 "Tenant context required".
-    // This is correct behavior — purchases need a tenant scope.
-
     it('should require auth', async () => {
         const res = await request
             .post('/api/marketplace/purchase')
-            .send({ tenantId: '507f1f77bcf86cd799439011', productId: '507f1f77bcf86cd799439011' });
+            .send({ productId: '507f1f77bcf86cd799439011' });
 
         expect(res.status).toBe(401);
     });
 
-    it('should require tenant context for role check', async () => {
-        // We need a 'user' role token specifically for this 403 check
-        const { registerAndGetToken } = require('./helpers');
+    it('should allow admin to purchase', async () => {
+        // 1. Create a product first
+        const product = await require('../models/Product').create({
+            name: 'Billing Module',
+            slug: 'billing',
+            price: 50,
+            isActive: true,
+        });
+
+        const res = await request
+            .post('/api/marketplace/purchase')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ productId: product._id.toString() });
+
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
+    });
+
+    it('should reject non-admin users with 403', async () => {
         const userToken = await registerAndGetToken(request, {
-            email: 'regular@test.com',
-            password: 'Test123!',
+            email: 'regular-market@test.com',
             role: 'user',
         });
 
         const res = await request
             .post('/api/marketplace/purchase')
             .set('Authorization', `Bearer ${userToken}`)
-            .send({ tenantId: '507f1f77bcf86cd799439011', productId: '507f1f77bcf86cd799439011' });
+            .send({ productId: '507f1f77bcf86cd799439011' });
 
-        // Without x-tenant-id header and with 'user' role -> 403
         expect(res.status).toBe(403);
     });
 
@@ -120,8 +130,6 @@ describe('POST /api/marketplace/purchase', () => {
             .set('Authorization', `Bearer ${token}`)
             .send({});
 
-        // Zod runs before or after requireRole — let's just ensure it's a 4xx
-        expect(res.status).toBeGreaterThanOrEqual(400);
-        expect(res.status).toBeLessThan(500);
+        expect(res.status).toBe(400);
     });
 });

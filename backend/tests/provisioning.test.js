@@ -4,7 +4,7 @@ const {
     clearCollections,
     registerAndGetToken,
 } = require('./helpers');
-const Tenant = require('../models/Tenant');
+const AppConfig = require('../models/AppConfig');
 const Product = require('../models/Product');
 const socketService = require('../utils/socket');
 
@@ -36,17 +36,15 @@ beforeEach(async () => {
 
 describe('Provisioning Engine', () => {
     it('should call onProvision hook and emit socket event on purchase', async () => {
-        // 1. Create a dummy tenant
-        const tenant = await Tenant.create({
-            name: 'Test Tenant',
-            slug: 'test-tenant',
-        });
+        // 1. Ensure AppConfig exists
+        const config = await AppConfig.getInstance();
 
         // 2. Create a product that matches a mocked module
         const product = await Product.create({
             name: 'Test Module',
             slug: 'test-module',
             price: 0,
+            isActive: true,
         });
 
         // 3. Inject a dummy module manifest with an onProvision spy into app.locals.modules
@@ -64,9 +62,7 @@ describe('Provisioning Engine', () => {
         const res = await request
             .post('/api/marketplace/purchase')
             .set('Authorization', `Bearer ${token}`)
-            .set('x-tenant-id', 'test-tenant') // Required for requireRole('owner', 'admin') check if it uses tenant context
             .send({
-                tenantId: tenant._id.toString(),
                 productId: product._id.toString(),
             });
 
@@ -74,16 +70,15 @@ describe('Provisioning Engine', () => {
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
 
-        // Verify onProvision was called with the tenant object
+        // Verify onProvision was called with the AppConfig object
         expect(onProvisionSpy).toHaveBeenCalled();
-        const calledTenant = onProvisionSpy.mock.calls[0][0];
-        expect(calledTenant.slug).toBe('test-tenant');
+        const calledConfig = onProvisionSpy.mock.calls[0][0];
+        expect(calledConfig.instanceName).toBe(config.instanceName);
 
         // Verify socket events were emitted
         expect(socketService.emitEvent).toHaveBeenCalledWith(
             'module:provisioned',
             expect.objectContaining({
-                tenantSlug: 'test-tenant',
                 productSlug: 'test-module',
             }),
             'admin',
@@ -91,15 +86,11 @@ describe('Provisioning Engine', () => {
     });
 
     it('should not fail purchase if onProvision hook fails', async () => {
-        const tenant = await Tenant.create({
-            name: 'Faulty Tenant',
-            slug: 'faulty-tenant',
-        });
-
         const product = await Product.create({
             name: 'Faulty Module',
             slug: 'faulty-module',
             price: 0,
+            isActive: true,
         });
 
         const onProvisionSpy = jest.fn().mockRejectedValue(new Error('Provisioning failed!'));
@@ -115,9 +106,7 @@ describe('Provisioning Engine', () => {
         const res = await request
             .post('/api/marketplace/purchase')
             .set('Authorization', `Bearer ${token}`)
-            .set('x-tenant-id', 'faulty-tenant')
             .send({
-                tenantId: tenant._id.toString(),
                 productId: product._id.toString(),
             });
 
