@@ -34,7 +34,7 @@ router.get('/:id', authMiddleware, validate({ params: mongoIdParam }), async (re
 router.post(
     '/',
     authMiddleware,
-    authorize(['owner', 'admin']),
+    authorize(['superuser', 'admin']),
     validate({ body: createServiceSchema }),
     async (req, res) => {
         try {
@@ -51,7 +51,7 @@ router.post(
 router.patch(
     '/:id',
     authMiddleware,
-    authorize(['owner', 'admin']),
+    authorize(['superuser', 'admin']),
     validate({ params: mongoIdParam, body: updateServiceSchema }),
     async (req, res) => {
         try {
@@ -72,7 +72,7 @@ router.patch(
 router.delete(
     '/:id',
     authMiddleware,
-    authorize(['owner', 'admin']),
+    authorize(['superuser', 'admin']),
     validate({ params: mongoIdParam }),
     async (req, res) => {
         try {

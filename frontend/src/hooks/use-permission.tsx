@@ -18,7 +18,7 @@ export const usePermission = () => {
         if (!user || !user.role) return false;
 
         // Owner/Superuser bypass
-        if (user.role === 'owner' || user.role === 'superuser') return true;
+        if (user.role === 'superuser') return true;
 
         const userLevel = ROLE_HIERARCHY[user.role as string] || 0;
         const requiredLevel = ROLE_HIERARCHY[requiredRole as string] || 0;
@@ -33,7 +33,7 @@ export const usePermission = () => {
         if (!user) return false;
 
         // Owner/Superuser bypass
-        if (user.role === 'owner' || user.role === 'superuser') return true;
+        if (user.role === 'superuser') return true;
 
         if (!user.permissions || !Array.isArray(user.permissions)) return false;
 

@@ -61,8 +61,8 @@ module.exports = {
             // Auto-join user-specific room
             socket.join(`user:${socket.user._id}`);
 
-            // Join admin room if owner or admin
-            if (socket.user.role === 'owner' || socket.user.role === 'admin') {
+            // Join admin room if superuser or admin
+            if (socket.user.role === 'superuser' || socket.user.role === 'admin') {
                 socket.join('admin');
             }
 

@@ -101,7 +101,7 @@ router.patch(
 router.delete(
     '/:id',
     authMiddleware,
-    authorize(['owner', 'admin']),
+    authorize(['superuser', 'admin']),
     validate({ params: mongoIdParam }),
     async (req, res) => {
         try {

@@ -15,7 +15,7 @@ const authorize = (allowedRoles = []) => {
 
         const userRole = req.user.role || 'user'; // Default to lowest privilege if undefined
 
-        if (allowedRoles.includes(userRole)) {
+        if (userRole === 'superuser' || allowedRoles.includes(userRole)) {
             return next();
         }
 

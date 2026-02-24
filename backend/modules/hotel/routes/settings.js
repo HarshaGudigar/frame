@@ -45,7 +45,7 @@ router.get('/:type', authMiddleware, validate({ params: settingsTypeParam }), as
 router.post(
     '/',
     authMiddleware,
-    authorize(['owner', 'admin']),
+    authorize(['superuser', 'admin']),
     validate({ body: createSettingsSchema }),
     async (req, res) => {
         try {
@@ -65,7 +65,7 @@ router.post(
 router.patch(
     '/:type',
     authMiddleware,
-    authorize(['owner', 'admin']),
+    authorize(['superuser', 'admin']),
     validate({ params: settingsTypeParam, body: updateSettingsSchema }),
     async (req, res) => {
         try {
@@ -87,7 +87,7 @@ router.patch(
 router.delete(
     '/:type',
     authMiddleware,
-    authorize(['owner', 'admin']),
+    authorize(['superuser', 'admin']),
     validate({ params: settingsTypeParam }),
     async (req, res) => {
         try {

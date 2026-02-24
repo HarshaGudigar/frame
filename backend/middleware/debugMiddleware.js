@@ -16,7 +16,7 @@ const debugMiddleware = (req, res, next) => {
     res.json = function (body) {
         try {
             // Check if user is authenticated and is an admin/owner
-            if (req.user && (req.user.role === 'admin' || req.user.role === 'owner')) {
+            if (req.user && (req.user.role === 'admin' || req.user.role === 'superuser')) {
                 const debugContext = {
                     tenant: req.tenant ? req.tenant.slug : 'GLOBAL',
                     tenantName: req.tenant ? req.tenant.name : 'Control Plane',

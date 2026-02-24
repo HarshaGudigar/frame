@@ -51,7 +51,7 @@ const heartbeatSchema = z.object({
 });
 
 const updateUserRoleSchema = z.object({
-    role: z.enum(['owner', 'admin', 'staff', 'user'], {
+    role: z.enum(['superuser', 'admin', 'staff', 'user'], {
         required_error: 'Role is required',
     }),
 });

@@ -33,7 +33,7 @@ const authMiddleware = async (req, res, next) => {
 
         if (roleDoc) {
             req.user.permissions = roleDoc.permissions;
-        } else if (req.user.role === 'superuser' || req.user.role === 'owner') {
+        } else if (req.user.role === 'superuser') {
             // Absolute bypass for system superusers
             req.user.permissions = ['*'];
         } else {
@@ -62,7 +62,7 @@ const requireRole = (...allowedRoles) => {
 
         const userRole = String(req.user.role);
 
-        if (userRole === 'owner' || allowedRoles.includes(userRole)) {
+        if (userRole === 'superuser' || allowedRoles.includes(userRole)) {
             return next();
         }
 
@@ -84,8 +84,8 @@ const requirePermission = (...requiredPermissions) => {
             return errorResponse(res, 'Unauthorized', 403);
         }
 
-        // Owner bypass
-        if (req.user.role === 'owner' || req.user.permissions.includes('*')) {
+        // Superuser bypass
+        if (req.user.role === 'superuser' || req.user.permissions.includes('*')) {
             return next();
         }
 

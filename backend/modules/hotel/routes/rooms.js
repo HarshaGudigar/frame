@@ -34,7 +34,7 @@ router.get('/:id', authMiddleware, validate({ params: mongoIdParam }), async (re
 router.post(
     '/',
     authMiddleware,
-    authorize(['owner', 'admin']),
+    authorize(['superuser', 'admin']),
     validate({ body: createRoomSchema }),
     async (req, res) => {
         try {
@@ -54,7 +54,7 @@ router.post(
 router.patch(
     '/:id',
     authMiddleware,
-    authorize(['owner', 'admin']),
+    authorize(['superuser', 'admin']),
     validate({ params: mongoIdParam, body: updateRoomSchema }),
     async (req, res) => {
         try {
@@ -78,7 +78,7 @@ router.patch(
 router.patch(
     '/:id/status',
     authMiddleware,
-    authorize(['owner', 'admin', 'user']),
+    authorize(['superuser', 'admin', 'user']),
     async (req, res) => {
         try {
             const { Room } = await getModels(req);
@@ -103,7 +103,7 @@ router.patch(
 router.delete(
     '/:id',
     authMiddleware,
-    authorize(['owner', 'admin']),
+    authorize(['superuser', 'admin']),
     validate({ params: mongoIdParam }),
     async (req, res) => {
         try {

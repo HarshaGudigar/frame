@@ -22,7 +22,7 @@ router.get('/', authMiddleware, async (req, res) => {
 router.put(
     '/',
     authMiddleware,
-    authorize(['owner', 'admin']),
+    authorize(['superuser', 'admin']),
     validate({ body: businessInfoSchema }),
     async (req, res) => {
         try {
