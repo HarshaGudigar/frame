@@ -27,9 +27,18 @@ const appConfigSchema = new mongoose.Schema(
         // e.g. ['hotel', 'billing']
         enabledModules: [
             {
-                type: String,
-                trim: true,
-                lowercase: true,
+                slug: {
+                    type: String,
+                    trim: true,
+                    lowercase: true,
+                },
+                activatedAt: {
+                    type: Date,
+                    default: Date.now,
+                },
+                expiresAt: {
+                    type: Date,
+                },
             },
         ],
         branding: {
@@ -66,9 +75,24 @@ appConfigSchema.statics.getInstance = async function () {
             slug: process.env.INSTANCE_SLUG || 'default',
             enabledModules: (process.env.ENABLED_MODULES || '')
                 .split(',')
-                .map((m) => m.trim().toLowerCase())
-                .filter(Boolean),
+                .map((m) => ({ slug: m.trim().toLowerCase(), activatedAt: new Date() }))
+                .filter((m) => m.slug),
         });
+    } else {
+        // Migration: Ensure all enabledModules are objects
+        let changed = false;
+        config.enabledModules = config.enabledModules.map((m) => {
+            if (typeof m === 'string') {
+                changed = true;
+                const expiresAt = new Date();
+                expiresAt.setMonth(expiresAt.getMonth() + 11);
+                return { slug: m, activatedAt: new Date(), expiresAt };
+            }
+            return m;
+        });
+        if (changed) {
+            await config.save();
+        }
     }
     return config;
 };

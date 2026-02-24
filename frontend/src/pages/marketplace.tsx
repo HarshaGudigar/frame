@@ -220,24 +220,62 @@ export function MarketplacePage() {
                     </DialogHeader>
                     <div className="space-y-4 py-4">
                         <p className="text-sm text-muted-foreground">
-                            {systemInfo?.enabledModules?.includes(assigningTo?.slug)
-                                ? 'This module is currently enabled for this instance. If you disable it, all users will lose access to its features.'
-                                : 'Enable this module to activate its features for this instance.'}
+                            {(() => {
+                                const subscription = systemInfo?.enabledModules?.find(
+                                    (m: any) => (m.slug || m) === assigningTo?.slug,
+                                );
+                                if (subscription && typeof subscription !== 'string') {
+                                    return (
+                                        <div className="bg-muted/50 rounded-xl p-4 border border-border/50 animate-in fade-in slide-in-from-top-2 duration-300">
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <p className="text-[10px] uppercase tracking-wider font-extrabold text-muted-foreground/70 mb-1">
+                                                        Activated On
+                                                    </p>
+                                                    <p className="text-sm font-bold text-foreground">
+                                                        {new Date(
+                                                            subscription.activatedAt,
+                                                        ).toLocaleDateString()}
+                                                    </p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[10px] uppercase tracking-wider font-extrabold text-muted-foreground/70 mb-1">
+                                                        Lease Ends
+                                                    </p>
+                                                    <p className="text-sm font-bold text-foreground">
+                                                        {new Date(
+                                                            subscription.expiresAt,
+                                                        ).toLocaleDateString()}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="mt-4 pt-4 border-t border-border/50">
+                                                <p className="text-xs font-medium text-muted-foreground">
+                                                    This module is currently active. If you disable
+                                                    it, all users will lose access to its features.
+                                                </p>
+                                            </div>
+                                        </div>
+                                    );
+                                }
+                                return systemInfo?.enabledModules?.some(
+                                    (m: any) => (m.slug || m) === assigningTo?.slug,
+                                )
+                                    ? 'This module is currently enabled for this instance. If you disable it, all users will lose access to its features.'
+                                    : 'Enable this module to activate its features for this instance.';
+                            })()}
                         </p>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setAssigningTo(null)}>
                             Cancel
                         </Button>
-                        {systemInfo?.enabledModules?.includes(assigningTo?.slug) ? (
+                        {systemInfo?.enabledModules?.some(
+                            (m: any) => (m.slug || m) === assigningTo?.slug,
+                        ) ? (
                             <Button
                                 variant="destructive"
-                                onClick={() =>
-                                    handleUnsubscribe(
-                                        assigningTo._id,
-                                        assigningTo.name
-                                    )
-                                }
+                                onClick={() => handleUnsubscribe(assigningTo._id, assigningTo.name)}
                                 disabled={assignLoading}
                             >
                                 {assignLoading ? (
@@ -248,10 +286,7 @@ export function MarketplacePage() {
                                 Disable Module
                             </Button>
                         ) : (
-                            <Button
-                                onClick={handleAssign}
-                                disabled={assignLoading}
-                            >
+                            <Button onClick={handleAssign} disabled={assignLoading}>
                                 {assignLoading ? (
                                     <RefreshCw className="size-4 animate-spin mr-2" />
                                 ) : (
@@ -311,14 +346,67 @@ export function MarketplacePage() {
                                 )}
                             </CardContent>
                             <CardFooter className="pt-0 pb-6">
-                                <Button
-                                    className="w-full"
-                                    variant="outline"
-                                    onClick={() => setAssigningTo(p)}
-                                >
-                                    <UserPlus className="size-4 mr-2" />
-                                    {systemInfo?.enabledModules?.includes(p.slug) ? 'Manage' : 'Enable'}
-                                </Button>
+                                {(() => {
+                                    const subscription = systemInfo?.enabledModules?.find(
+                                        (m: any) => (m.slug || m) === p.slug,
+                                    );
+                                    if (subscription) {
+                                        const activatedAt =
+                                            typeof subscription === 'string'
+                                                ? null
+                                                : new Date(subscription.activatedAt);
+                                        const expiresAt =
+                                            typeof subscription === 'string'
+                                                ? null
+                                                : new Date(subscription.expiresAt);
+
+                                        return (
+                                            <div className="space-y-3">
+                                                <div className="flex items-center gap-2 text-xs font-bold text-green-500 bg-green-500/10 px-3 py-1.5 rounded-lg border border-green-500/20">
+                                                    <div className="size-1.5 rounded-full bg-green-500 animate-pulse" />
+                                                    Active
+                                                </div>
+
+                                                {activatedAt && expiresAt && (
+                                                    <div className="grid grid-cols-2 gap-2 text-[10px] uppercase tracking-wider font-bold text-muted-foreground/60">
+                                                        <div>
+                                                            <p className="mb-0.5">Activated</p>
+                                                            <p className="text-foreground">
+                                                                {activatedAt.toLocaleDateString()}
+                                                            </p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="mb-0.5">Expires</p>
+                                                            <p className="text-foreground">
+                                                                {expiresAt.toLocaleDateString()}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                <Button
+                                                    className="w-full text-red-500 hover:text-red-600 hover:bg-red-500/10 border-red-500/20"
+                                                    variant="outline"
+                                                    onClick={() => setAssigningTo(p)}
+                                                >
+                                                    <AlertCircle className="size-4 mr-2" />
+                                                    Disable
+                                                </Button>
+                                            </div>
+                                        );
+                                    }
+
+                                    return (
+                                        <Button
+                                            className="w-full"
+                                            variant="outline"
+                                            onClick={() => setAssigningTo(p)}
+                                        >
+                                            <UserPlus className="size-4 mr-2" />
+                                            Enable
+                                        </Button>
+                                    );
+                                })()}
                             </CardFooter>
                         </Card>
                     ))}

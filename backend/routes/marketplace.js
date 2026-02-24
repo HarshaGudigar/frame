@@ -84,22 +84,27 @@ router.put(
     },
 );
 
-router.delete('/products/:id', authMiddleware, requireRole('superuser', 'admin'), async (req, res) => {
-    try {
-        // Soft delete
-        const product = await Product.findByIdAndUpdate(
-            req.params.id,
-            { isActive: false },
-            { new: true },
-        );
-        if (!product) {
-            return errorResponse(res, 'Product not found', 404);
+router.delete(
+    '/products/:id',
+    authMiddleware,
+    requireRole('superuser', 'admin'),
+    async (req, res) => {
+        try {
+            // Soft delete
+            const product = await Product.findByIdAndUpdate(
+                req.params.id,
+                { isActive: false },
+                { new: true },
+            );
+            if (!product) {
+                return errorResponse(res, 'Product not found', 404);
+            }
+            return successResponse(res, null, 'Product deleted (soft)');
+        } catch (err) {
+            return errorResponse(res, 'Deletion failed', 500, err);
         }
-        return successResponse(res, null, 'Product deleted (soft)');
-    } catch (err) {
-        return errorResponse(res, 'Deletion failed', 500, err);
-    }
-});
+    },
+);
 
 /**
  * @openapi
@@ -125,14 +130,14 @@ router.post(
                 return errorResponse(res, 'Product not found', 404);
             }
 
-            if (appConfig.enabledModules.includes(product.slug)) {
+            if (appConfig.enabledModules.some((m) => m.slug === product.slug)) {
                 return errorResponse(res, `Already enabled ${product.name}`, 409);
             }
 
             // ─── Dependency Validation ──────────────────────────────────────
             if (product.dependencies && product.dependencies.length > 0) {
                 const missing = product.dependencies.filter(
-                    (dep) => !appConfig.enabledModules.includes(dep.toLowerCase()),
+                    (dep) => !appConfig.enabledModules.some((m) => m.slug === dep.toLowerCase()),
                 );
                 if (missing.length > 0) {
                     return errorResponse(
@@ -143,7 +148,15 @@ router.post(
                 }
             }
 
-            appConfig.enabledModules.push(product.slug);
+            const activatedAt = new Date();
+            const expiresAt = new Date();
+            expiresAt.setMonth(expiresAt.getMonth() + 11); // Standard 11-month lease for demo
+
+            appConfig.enabledModules.push({
+                slug: product.slug,
+                activatedAt,
+                expiresAt,
+            });
             await appConfig.save();
 
             // ─── Provisioning Engine Implementation ──────────────────────────
@@ -173,11 +186,7 @@ router.post(
             socketService.emitEvent('module:provisioned', notificationData, 'admin');
             socketService.emitEvent('module:provisioned', notificationData, `user:${req.user._id}`);
 
-            return successResponse(
-                res,
-                { appConfig },
-                `Successfully enabled ${product.name}!`,
-            );
+            return successResponse(res, { appConfig }, `Successfully enabled ${product.name}!`);
         } catch (err) {
             return errorResponse(res, 'Purchase failed', 500, err);
         }
@@ -208,13 +217,13 @@ router.post(
                 return errorResponse(res, 'Product not found', 404);
             }
 
-            if (!appConfig.enabledModules.includes(product.slug)) {
+            if (!appConfig.enabledModules.some((m) => m.slug === product.slug)) {
                 return errorResponse(res, 'Module is not enabled', 404);
             }
 
             // 1. Remove slug from config
             appConfig.enabledModules = appConfig.enabledModules.filter(
-                (slug) => slug !== product.slug,
+                (m) => m.slug !== product.slug,
             );
             await appConfig.save();
 
@@ -246,11 +255,7 @@ router.post(
                 `user:${req.user._id}`,
             );
 
-            return successResponse(
-                res,
-                { appConfig },
-                `Successfully disabled ${product.name}`,
-            );
+            return successResponse(res, { appConfig }, `Successfully disabled ${product.name}`);
         } catch (err) {
             return errorResponse(res, 'Unsubscription failed', 500, err);
         }

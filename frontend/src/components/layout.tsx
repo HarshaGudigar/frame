@@ -197,8 +197,17 @@ function AppSidebar() {
                                             <NavLink to={item.to} end={false}>
                                                 <item.icon className="size-4 transition-transform duration-300 group-hover:scale-110" />
                                                 <span className="font-medium">{item.label}</span>
-                                                {/* Mock indicator for active modules */}
-                                                <div className="ml-auto size-2 rounded-full bg-primary/50 group-hover:bg-primary group-hover:shadow-[0_0_8px] group-hover:shadow-primary/50 transition-all group-data-[collapsible=icon]:hidden" />
+                                                {/* Subscription indicator for active modules */}
+                                                <div
+                                                    className={`ml-auto size-2 rounded-full transition-all group-data-[collapsible=icon]:hidden ${
+                                                        systemInfo?.enabledModules?.some(
+                                                            (m: any) =>
+                                                                (m.slug || m) === moduleSlug,
+                                                        )
+                                                            ? 'bg-emerald-500 shadow-[0_0_8px] shadow-emerald-500/50 animate-pulse-slow'
+                                                            : 'bg-primary/50 group-hover:bg-primary'
+                                                    }`}
+                                                />
                                             </NavLink>
                                         </SidebarMenuButton>
                                     </SidebarMenuItem>
