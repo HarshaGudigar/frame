@@ -60,7 +60,7 @@ interface HousekeepingTask {
 const STATUS_FLOW: Record<KanbanStatus, KanbanStatus | null> = {
     Pending: 'In Progress',
     'In Progress': 'Completed',
-    Completed: null,
+    Completed: 'Delayed',
     Delayed: 'In Progress',
 };
 
@@ -146,10 +146,7 @@ export default function Housekeeping() {
     const handleRoomStatus = async (roomId: string, newStatus: string) => {
         setUpdatingId(roomId);
         try {
-            const res = await api.patch(
-                `/m/hotel/rooms/${roomId}/status`,
-                { status: newStatus }
-            );
+            const res = await api.patch(`/m/hotel/rooms/${roomId}/status`, { status: newStatus });
             if (res.data.success) {
                 toast({ title: 'Updated', description: `Marked as ${newStatus}` });
                 setRooms(
@@ -170,10 +167,9 @@ export default function Housekeeping() {
     const handleTaskStatus = async (taskId: string, newStatus: KanbanStatus) => {
         setUpdatingId(taskId);
         try {
-            const res = await api.patch(
-                `/m/hotel/housekeeping/${taskId}/status`,
-                { status: newStatus }
-            );
+            const res = await api.patch(`/m/hotel/housekeeping/${taskId}/status`, {
+                status: newStatus,
+            });
             if (res.data.success) {
                 toast({ title: 'Task updated', description: `Moved to ${newStatus}` });
                 setTasks(tasks.map((t) => (t._id === taskId ? { ...t, status: newStatus } : t)));
@@ -392,7 +388,7 @@ export default function Housekeeping() {
                     <div>
                         <h3 className="text-base font-bold text-foreground">Task Board</h3>
                         <p className="text-xs text-muted-foreground">
-                            Drag-free Kanban — click tasks to advance them
+                            Interactive Kanban — drag tasks to any column or click to advance them
                         </p>
                     </div>
                     <Button
@@ -428,7 +424,24 @@ export default function Housekeeping() {
                                 </div>
 
                                 {/* Task Cards */}
-                                <div className="space-y-2 min-h-[120px]">
+                                <div
+                                    className="space-y-2 min-h-[150px] transition-colors rounded-xl p-1"
+                                    onDragOver={(e) => {
+                                        e.preventDefault();
+                                        e.currentTarget.classList.add('bg-muted/50');
+                                    }}
+                                    onDragLeave={(e) => {
+                                        e.currentTarget.classList.remove('bg-muted/50');
+                                    }}
+                                    onDrop={(e) => {
+                                        e.preventDefault();
+                                        e.currentTarget.classList.remove('bg-muted/50');
+                                        const taskId = e.dataTransfer.getData('taskId');
+                                        if (taskId && taskId !== '') {
+                                            handleTaskStatus(taskId, status);
+                                        }
+                                    }}
+                                >
                                     {colTasks.length === 0 ? (
                                         <div className="flex items-center justify-center h-20 rounded-xl border-2 border-dashed border-border/40 text-xs text-muted-foreground">
                                             No tasks
@@ -441,7 +454,23 @@ export default function Housekeeping() {
                                             return (
                                                 <div
                                                     key={task._id}
-                                                    className="group rounded-xl border bg-card p-3 shadow-sm hover:shadow-md transition-all"
+                                                    draggable
+                                                    onDragStart={(e) => {
+                                                        e.dataTransfer.setData('taskId', task._id);
+                                                        e.dataTransfer.effectAllowed = 'move';
+                                                        // Add a slight delay to the styling so it doesn't affect the drag image
+                                                        setTimeout(() => {
+                                                            (e.target as HTMLElement).classList.add(
+                                                                'opacity-40',
+                                                            );
+                                                        }, 0);
+                                                    }}
+                                                    onDragEnd={(e) => {
+                                                        (e.target as HTMLElement).classList.remove(
+                                                            'opacity-40',
+                                                        );
+                                                    }}
+                                                    className="group rounded-xl border bg-card p-3 shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing"
                                                     style={{
                                                         borderLeftWidth: 3,
                                                         borderLeftColor: priority.dot
