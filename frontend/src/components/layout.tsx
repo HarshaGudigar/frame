@@ -42,7 +42,6 @@ import { CopilotSidebar } from '@/components/ai/copilot-sidebar';
 const navCore = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/users', icon: UsersIcon, label: 'Users', role: 'admin' },
-    { to: '/roles', icon: Shield, label: 'Role Matrix', role: 'admin' },
 ];
 
 const navPlatform = [
@@ -179,13 +178,9 @@ function AppSidebar() {
                         <SidebarMenu>
                             {navModules.map((item) => {
                                 const moduleSlug = (item as any).module;
-                                const hasModuleAccess =
-                                    systemInfo?.enabledModules?.some(
-                                        (m: any) => m === moduleSlug || m.slug === moduleSlug,
-                                    ) ||
-                                    systemInfo?.modules?.some(
-                                        (m: any) => m.slug === moduleSlug || m.name === moduleSlug,
-                                    );
+                                const hasModuleAccess = systemInfo?.enabledModules?.some(
+                                    (m: any) => m === moduleSlug || m.slug === moduleSlug,
+                                );
                                 if (!hasModuleAccess && user?.role !== 'superuser') return null;
 
                                 return (
