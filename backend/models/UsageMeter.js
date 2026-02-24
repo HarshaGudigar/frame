@@ -6,10 +6,10 @@ const mongoose = require('mongoose');
  */
 const usageMeterSchema = new mongoose.Schema(
     {
-        tenant: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Tenant',
+        instanceId: {
+            type: String,
             required: true,
+            default: 'global',
         },
         module: {
             type: String,
@@ -36,7 +36,7 @@ const usageMeterSchema = new mongoose.Schema(
     },
 );
 
-// Ensure unique record per tenant/module per hour
-usageMeterSchema.index({ tenant: 1, module: 1, timestamp: 1 }, { unique: true });
+// Ensure unique record per instance/module per hour
+usageMeterSchema.index({ instanceId: 1, module: 1, timestamp: 1 }, { unique: true });
 
 module.exports = mongoose.model('UsageMeter', usageMeterSchema);

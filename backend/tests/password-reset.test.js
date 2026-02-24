@@ -1,5 +1,5 @@
 const { setupTestApp, teardownTestApp, clearCollections } = require('./helpers');
-const GlobalUser = require('../models/GlobalUser');
+const User = require('../models/User');
 const RefreshToken = require('../models/RefreshToken');
 const VerificationToken = require('../models/VerificationToken');
 
@@ -52,7 +52,7 @@ describe('Password Reset Flow', () => {
         it('should create a password_reset token for existing user', async () => {
             await request.post('/api/auth/forgot-password').send({ email: validUser.email });
 
-            const user = await GlobalUser.findOne({ email: validUser.email });
+            const user = await User.findOne({ email: validUser.email });
             const token = await VerificationToken.findOne({
                 user: user._id,
                 type: 'password_reset',
@@ -73,7 +73,7 @@ describe('Password Reset Flow', () => {
             // Request first reset
             await request.post('/api/auth/forgot-password').send({ email: validUser.email });
 
-            const user = await GlobalUser.findOne({ email: validUser.email });
+            const user = await User.findOne({ email: validUser.email });
             const firstToken = await VerificationToken.findOne({
                 user: user._id,
                 type: 'password_reset',
@@ -117,7 +117,7 @@ describe('Password Reset Flow', () => {
         beforeEach(async () => {
             await request.post('/api/auth/forgot-password').send({ email: validUser.email });
 
-            const user = await GlobalUser.findOne({ email: validUser.email });
+            const user = await User.findOne({ email: validUser.email });
             const tokenDoc = await VerificationToken.findOne({
                 user: user._id,
                 type: 'password_reset',

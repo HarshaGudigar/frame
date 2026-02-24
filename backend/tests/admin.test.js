@@ -19,172 +19,77 @@ afterAll(async () => {
 
 beforeEach(async () => {
     await clearCollections();
-    token = await registerAndGetToken(request, { role: 'owner' });
+    token = await registerAndGetToken(request, { role: 'superuser' });
 });
 
-describe('POST /api/admin/tenants', () => {
-    const validTenant = {
-        name: 'Acme Corp',
-        slug: 'acme-corp',
-    };
-
-    it('should create a tenant', async () => {
+describe('GET /api/admin/app-config', () => {
+    it('should retrieve instance configuration', async () => {
         const res = await request
-            .post('/api/admin/tenants')
-            .set('Authorization', `Bearer ${token}`)
-            .send(validTenant);
+            .get('/api/admin/app-config')
+            .set('Authorization', `Bearer ${token}`);
 
-        expect(res.status).toBe(201);
+        expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
-        expect(res.body.data.name).toBe('Acme Corp');
-        expect(res.body.data.slug).toBe('acme-corp');
+        expect(res.body.data.instanceName).toBeDefined();
     });
 
-    it('should reject duplicate slug with 409', async () => {
-        await request
-            .post('/api/admin/tenants')
-            .set('Authorization', `Bearer ${token}`)
-            .send(validTenant);
-
+    it('should require superuser or admin role', async () => {
+        // Staff role should also have read access according to admin.js:54
+        const staffToken = await registerAndGetToken(request, {
+            email: 'staff-read@test.com',
+            role: 'staff',
+        });
         const res = await request
-            .post('/api/admin/tenants')
-            .set('Authorization', `Bearer ${token}`)
-            .send(validTenant);
+            .get('/api/admin/app-config')
+            .set('Authorization', `Bearer ${staffToken}`);
 
-        expect(res.status).toBe(409);
-        expect(res.body.success).toBe(false);
-    });
-
-    it('should reject missing name (Zod)', async () => {
-        const res = await request
-            .post('/api/admin/tenants')
-            .set('Authorization', `Bearer ${token}`)
-            .send({ slug: 'test-slug' });
-
-        expect(res.status).toBe(400);
-        expect(res.body.errors).toEqual(
-            expect.arrayContaining([expect.objectContaining({ field: 'name' })]),
-        );
-    });
-
-    it('should reject invalid slug format', async () => {
-        const res = await request
-            .post('/api/admin/tenants')
-            .set('Authorization', `Bearer ${token}`)
-            .send({ name: 'Test', slug: 'Invalid Slug!' });
-
-        expect(res.status).toBe(400);
-        expect(res.body.errors).toEqual(
-            expect.arrayContaining([expect.objectContaining({ field: 'slug' })]),
-        );
-    });
-
-    it('should require auth', async () => {
-        const res = await request.post('/api/admin/tenants').send(validTenant);
-        expect(res.status).toBe(401);
+        expect(res.status).toBe(200);
     });
 });
 
-describe('GET /api/admin/tenants', () => {
-    it('should list all tenants', async () => {
-        await request
-            .post('/api/admin/tenants')
+describe('PATCH /api/admin/app-config', () => {
+    it('should update instance configuration', async () => {
+        const res = await request
+            .patch('/api/admin/app-config')
             .set('Authorization', `Bearer ${token}`)
-            .send({ name: 'Tenant A', slug: 'tenant-a' });
-        await request
-            .post('/api/admin/tenants')
-            .set('Authorization', `Bearer ${token}`)
-            .send({ name: 'Tenant B', slug: 'tenant-b' });
-
-        const res = await request.get('/api/admin/tenants').set('Authorization', `Bearer ${token}`);
+            .send({ instanceName: 'Updated Instance' });
 
         expect(res.status).toBe(200);
-        expect(res.body.data).toHaveLength(2);
+        expect(res.body.data.instanceName).toBe('Updated Instance');
     });
 
-    it('should return empty array when no tenants', async () => {
-        const res = await request.get('/api/admin/tenants').set('Authorization', `Bearer ${token}`);
+    it('should deny update for staff', async () => {
+        const staffToken = await registerAndGetToken(request, {
+            email: 'staff-write@test.com',
+            role: 'staff',
+        });
+        const res = await request
+            .patch('/api/admin/app-config')
+            .set('Authorization', `Bearer ${staffToken}`)
+            .send({ instanceName: 'Hacked' });
 
-        expect(res.status).toBe(200);
-        expect(res.body.data).toHaveLength(0);
+        expect(res.status).toBe(403);
     });
 });
 
-describe('GET /api/admin/tenants/:id', () => {
-    it('should get a specific tenant', async () => {
-        const createRes = await request
-            .post('/api/admin/tenants')
-            .set('Authorization', `Bearer ${token}`)
-            .send({ name: 'Acme', slug: 'acme' });
-
-        const id = createRes.body.data._id;
-
-        const res = await request
-            .get(`/api/admin/tenants/${id}`)
-            .set('Authorization', `Bearer ${token}`);
+describe('GET /api/admin/users', () => {
+    it('should list all users', async () => {
+        const res = await request.get('/api/admin/users').set('Authorization', `Bearer ${token}`);
 
         expect(res.status).toBe(200);
-        expect(res.body.data.slug).toBe('acme');
+        expect(res.body.success).toBe(true);
+        expect(res.body.data.length).toBeGreaterThan(0);
     });
 
-    it('should return 404 for nonexistent ID', async () => {
-        const fakeId = '507f1f77bcf86cd799439011';
+    it('should deny staff from listing users', async () => {
+        const staffToken = await registerAndGetToken(request, {
+            email: 'staff-users@test.com',
+            role: 'staff',
+        });
         const res = await request
-            .get(`/api/admin/tenants/${fakeId}`)
-            .set('Authorization', `Bearer ${token}`);
+            .get('/api/admin/users')
+            .set('Authorization', `Bearer ${staffToken}`);
 
-        expect(res.status).toBe(404);
-    });
-
-    it('should reject invalid ID format', async () => {
-        const res = await request
-            .get('/api/admin/tenants/not-a-valid-id')
-            .set('Authorization', `Bearer ${token}`);
-
-        expect(res.status).toBe(400);
-        expect(res.body.errors).toBeDefined();
-    });
-});
-
-describe('PUT /api/admin/tenants/:id', () => {
-    it('should update a tenant', async () => {
-        const createRes = await request
-            .post('/api/admin/tenants')
-            .set('Authorization', `Bearer ${token}`)
-            .send({ name: 'Original', slug: 'original' });
-
-        const id = createRes.body.data._id;
-
-        const res = await request
-            .put(`/api/admin/tenants/${id}`)
-            .set('Authorization', `Bearer ${token}`)
-            .send({ name: 'Updated Name' });
-
-        expect(res.status).toBe(200);
-        expect(res.body.data.name).toBe('Updated Name');
-    });
-});
-
-describe('DELETE /api/admin/tenants/:id', () => {
-    it('should delete a tenant', async () => {
-        const createRes = await request
-            .post('/api/admin/tenants')
-            .set('Authorization', `Bearer ${token}`)
-            .send({ name: 'ToDelete', slug: 'to-delete' });
-
-        const id = createRes.body.data._id;
-
-        const res = await request
-            .delete(`/api/admin/tenants/${id}`)
-            .set('Authorization', `Bearer ${token}`);
-
-        expect(res.status).toBe(200);
-
-        // Verify it's gone
-        const getRes = await request
-            .get(`/api/admin/tenants/${id}`)
-            .set('Authorization', `Bearer ${token}`);
-
-        expect(getRes.status).toBe(404);
+        expect(res.status).toBe(403);
     });
 });

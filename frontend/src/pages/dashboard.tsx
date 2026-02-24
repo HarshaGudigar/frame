@@ -30,8 +30,10 @@ import { MetricsChart } from '@/components/dashboard/metrics-chart';
 import { FleetStats } from '@/components/dashboard/fleet-stats';
 import { Link } from 'react-router-dom';
 
-// ─── SILO Dashboard ──────────────────────────────────────────────────────────
-function SiloDashboard({ api }: { api: any }) {
+// ─── Unified Dashboard ───────────────────────────────────────────────────────
+export function DashboardPage() {
+    const { api, systemInfo } = useAuth();
+    const { toast } = useToast();
     const [hotelStats, setHotelStats] = useState<any>(null);
     const [recentBookings, setRecentBookings] = useState<any[]>([]);
     const [systemHealth, setSystemHealth] = useState<any>(null);
@@ -89,7 +91,7 @@ function SiloDashboard({ api }: { api: any }) {
             }));
             setHistory(mockHistory);
         } catch (err) {
-            console.error('Failed to load SILO dashboard data', err);
+            console.error('Failed to load dashboard data', err);
         } finally {
             setLoading(false);
         }
@@ -102,11 +104,9 @@ function SiloDashboard({ api }: { api: any }) {
     }, []);
 
     const uptime = systemHealth ? systemHealth.uptime : null;
-
     const ramUsed = systemHealth
         ? Math.round((systemHealth.memory?.heapUsed || 0) / 1024 / 1024)
         : 0;
-
     const ramTotal = systemHealth ? Math.round((systemHealth.memory?.rss || 0) / 1024 / 1024) : 0;
 
     const statCards = [
@@ -172,7 +172,7 @@ function SiloDashboard({ api }: { api: any }) {
                 <div>
                     <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
                     <p className="text-sm text-muted-foreground">
-                        Real-time overview of your property
+                        Real-time overview of {systemInfo?.instanceName || 'your property'}
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
@@ -230,9 +230,8 @@ function SiloDashboard({ api }: { api: any }) {
                 ))}
             </div>
 
-            {/* Charts + Recent Bookings Row */}
+            {/* Charts Row */}
             <div className="grid gap-6 lg:grid-cols-12">
-                {/* Memory chart */}
                 <div className="lg:col-span-7">
                     <MetricsChart
                         title="Server Memory Usage — 24h"
@@ -243,9 +242,7 @@ function SiloDashboard({ api }: { api: any }) {
                     />
                 </div>
 
-                {/* Quick Stats Panel */}
                 <div className="lg:col-span-5 flex flex-col gap-4">
-                    {/* Room Status Breakdown */}
                     <Card className="glass-card flex-1">
                         <CardHeader className="pb-3 border-b border-border/30">
                             <div className="flex items-center justify-between">
@@ -279,17 +276,6 @@ function SiloDashboard({ api }: { api: any }) {
                                           total: hotelStats?.totalRooms ?? 1,
                                           color: 'bg-blue-500',
                                       },
-                                      {
-                                          label: 'Other',
-                                          value: Math.max(
-                                              0,
-                                              (hotelStats?.totalRooms ?? 0) -
-                                                  (hotelStats?.availableRooms ?? 0) -
-                                                  (hotelStats?.occupiedRooms ?? 0),
-                                          ),
-                                          total: hotelStats?.totalRooms ?? 1,
-                                          color: 'bg-yellow-500',
-                                      },
                                   ].map((row) => (
                                       <div key={row.label} className="space-y-1">
                                           <div className="flex items-center justify-between text-xs">
@@ -313,7 +299,6 @@ function SiloDashboard({ api }: { api: any }) {
                         </CardContent>
                     </Card>
 
-                    {/* System Status */}
                     <Card className="glass-card">
                         <CardHeader className="pb-3 border-b border-border/30">
                             <CardTitle className="text-sm font-semibold flex items-center gap-2">
@@ -332,12 +317,6 @@ function SiloDashboard({ api }: { api: any }) {
                                             ? 'ok'
                                             : 'warn',
                                 },
-                                {
-                                    label: 'Mode',
-                                    value: systemHealth?.mode ?? 'SILO',
-                                    status: 'info',
-                                },
-                                { label: 'Heap Used', value: `${ramUsed} MB`, status: 'info' },
                             ].map((item) => (
                                 <div
                                     key={item.label}
@@ -345,7 +324,7 @@ function SiloDashboard({ api }: { api: any }) {
                                 >
                                     <span className="text-muted-foreground">{item.label}</span>
                                     <span
-                                        className={`font-medium font-mono px-2 py-0.5 rounded-full text-[11px] ${item.status === 'ok' ? 'bg-green-500/10 text-green-400' : item.status === 'warn' ? 'bg-yellow-500/10 text-yellow-400' : 'bg-primary/10 text-primary'}`}
+                                        className={`font-medium font-mono px-2 py-0.5 rounded-full text-[11px] ${item.status === 'ok' ? 'bg-green-500/10 text-green-400' : 'bg-primary/10 text-primary'}`}
                                     >
                                         {item.value}
                                     </span>
@@ -400,7 +379,7 @@ function SiloDashboard({ api }: { api: any }) {
                                         className="text-center text-muted-foreground py-12"
                                     >
                                         <CalendarCheck className="size-8 mx-auto mb-2 opacity-30" />
-                                        No bookings found. Create one from the Hotel module.
+                                        No bookings found.
                                     </TableCell>
                                 </TableRow>
                             ) : (
@@ -453,281 +432,4 @@ function SiloDashboard({ api }: { api: any }) {
             </Card>
         </div>
     );
-}
-
-// ─── HUB Dashboard ───────────────────────────────────────────────────────────
-function HubDashboard({ api, user, isAdmin }: { api: any; user: any; isAdmin: boolean }) {
-    const { toast } = useToast();
-    const [tenants, setTenants] = useState<any[]>([]);
-    const [stats, setStats] = useState<any>(null);
-    const [history, setHistory] = useState<any[]>([]);
-    const [selectedTenant, setSelectedTenant] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
-
-    const fetchData = async () => {
-        try {
-            setLoading(true);
-            const promises: Promise<any>[] = [api.get('/admin/tenants')];
-            if (isAdmin) promises.push(api.get('/admin/fleet/stats'));
-
-            const results = await Promise.all(promises);
-            const tenantsRes = results[0];
-            const statsRes = isAdmin ? results[1] : null;
-
-            setTenants(tenantsRes.data.data);
-            if (statsRes) setStats(statsRes.data.data);
-
-            if (selectedTenant || tenantsRes.data.data.length > 0) {
-                const targetSlug = selectedTenant || tenantsRes.data.data[0].slug;
-                if (!selectedTenant) setSelectedTenant(targetSlug);
-                try {
-                    const historyRes = await api.get(`/admin/metrics/${targetSlug}`);
-                    setHistory(historyRes.data.data);
-                } catch (_) {
-                    /* ignored */
-                }
-            }
-        } catch (error: any) {
-            toast({
-                variant: 'destructive',
-                title: 'Error',
-                description: error.response?.data?.message || 'Failed to fetch dashboard data.',
-            });
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchData();
-        const interval = setInterval(fetchData, 30000);
-        return () => clearInterval(interval);
-    }, []);
-
-    useEffect(() => {
-        if (selectedTenant) {
-            api.get(`/admin/metrics/${selectedTenant}`)
-                .then((r: any) => setHistory(r.data.data))
-                .catch(() => {});
-        }
-    }, [selectedTenant]);
-
-    return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Fleet Dashboard</h1>
-                    <p className="text-sm text-muted-foreground">
-                        Real-time control plane and performance analytics
-                    </p>
-                </div>
-                <Button onClick={fetchData} variant="outline" size="sm" disabled={loading}>
-                    <RefreshCw className={`size-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                    Refresh
-                </Button>
-            </div>
-
-            {loading && tenants.length === 0 ? (
-                <>
-                    {isAdmin && (
-                        <div className="grid gap-4 md:grid-cols-3">
-                            {Array.from({ length: 3 }).map((_, i) => (
-                                <Card key={i}>
-                                    <CardHeader className="pb-2">
-                                        <Skeleton className="h-4 w-24" />
-                                    </CardHeader>
-                                    <CardContent>
-                                        <Skeleton className="h-8 w-16" />
-                                    </CardContent>
-                                </Card>
-                            ))}
-                        </div>
-                    )}
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <Skeleton className="h-[300px] w-full rounded-xl" />
-                        <Skeleton className="h-[300px] w-full rounded-xl" />
-                    </div>
-                </>
-            ) : (
-                <>
-                    {isAdmin && stats && <FleetStats stats={stats} />}
-                    <div className="grid gap-6 lg:grid-cols-12">
-                        <div className="lg:col-span-7 flex flex-col gap-6">
-                            <MetricsChart
-                                title="Fleet CPU Load — 24h Breakdown"
-                                data={history}
-                                dataKey="cpu"
-                                color="#00d4ff"
-                            />
-                            <MetricsChart
-                                title="Fleet RAM Usage"
-                                data={history}
-                                dataKey="ram"
-                                color="#10b981"
-                                unit="MB"
-                            />
-                        </div>
-                        <div className="lg:col-span-5 flex">
-                            <Card className="glass-card flex-1 flex flex-col overflow-hidden">
-                                <CardHeader className="border-b border-border/40 pb-4 bg-background/20">
-                                    <div className="flex items-center justify-between">
-                                        <CardTitle className="text-sm font-mono flex items-center gap-2">
-                                            <div className="size-2 rounded-full bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)] animate-pulse-slow shrink-0" />
-                                            Live Activity Feed
-                                        </CardTitle>
-                                        <Badge
-                                            variant="outline"
-                                            className="text-[10px] font-mono border-green-500/30 text-green-500 bg-green-500/10"
-                                        >
-                                            SOCKET.IO
-                                        </Badge>
-                                    </div>
-                                </CardHeader>
-                                <CardContent className="flex-1 p-8 text-center text-muted-foreground text-sm">
-                                    Connect to real-time events via WebSocket.
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </div>
-
-                    {isAdmin && (
-                        <Card className="glass-card overflow-hidden">
-                            <CardHeader className="flex flex-row items-center justify-between border-b border-border/40 bg-background/20">
-                                <CardTitle>Silo Fleet</CardTitle>
-                                <div className="text-xs text-muted-foreground flex gap-4">
-                                    <span className="flex items-center">
-                                        <Monitor className="size-3 mr-1" /> Monitoring Active
-                                    </span>
-                                    <span className="flex items-center">
-                                        <Cpu className="size-3 mr-1" /> Stats auto-refreshed
-                                    </span>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Instance</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead>IP Address</TableHead>
-                                            <TableHead>Current Load</TableHead>
-                                            <TableHead>Modules</TableHead>
-                                            <TableHead>Last Heartbeat</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {tenants.map((t) => (
-                                            <TableRow
-                                                key={t._id}
-                                                className={`cursor-pointer transition-colors ${selectedTenant === t.slug ? 'bg-primary/5 hover:bg-primary/10' : ''}`}
-                                                onClick={() => setSelectedTenant(t.slug)}
-                                            >
-                                                <TableCell>
-                                                    <div className="font-medium">{t.name}</div>
-                                                    <div className="text-xs text-muted-foreground">
-                                                        {t.slug}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Badge
-                                                        variant={
-                                                            t.status === 'online'
-                                                                ? 'default'
-                                                                : 'secondary'
-                                                        }
-                                                        className={
-                                                            t.status === 'online'
-                                                                ? 'bg-green-500/15 text-green-500 hover:bg-green-500/25 border-green-500/20'
-                                                                : 'bg-destructive/15 text-destructive hover:bg-destructive/25 border-destructive/20'
-                                                        }
-                                                    >
-                                                        {t.status || 'offline'}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="font-mono text-xs">
-                                                    {t.vmIpAddress || '—'}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex flex-col gap-1">
-                                                        <div className="flex items-center justify-between text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
-                                                            <span>
-                                                                CPU:{' '}
-                                                                {t.metrics?.cpu?.toFixed(1) || 0}%
-                                                            </span>
-                                                            <span>
-                                                                RAM:{' '}
-                                                                {Math.round(t.metrics?.ram || 0)}MB
-                                                            </span>
-                                                        </div>
-                                                        <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
-                                                            <div
-                                                                className={`h-full ${t.metrics?.cpu > 80 ? 'bg-red-500' : 'bg-primary'}`}
-                                                                style={{
-                                                                    width: `${Math.min(t.metrics?.cpu || 0, 100)}%`,
-                                                                }}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {t.subscribedModules
-                                                            ?.slice(0, 3)
-                                                            .map((m: string) => (
-                                                                <Badge
-                                                                    key={m}
-                                                                    variant="outline"
-                                                                    className="text-[10px] px-1 h-4"
-                                                                >
-                                                                    {m}
-                                                                </Badge>
-                                                            ))}
-                                                        {t.subscribedModules?.length > 3 && (
-                                                            <Badge
-                                                                variant="outline"
-                                                                className="text-[10px] px-1 h-4"
-                                                            >
-                                                                +{t.subscribedModules.length - 3}
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="text-xs text-muted-foreground font-mono">
-                                                    {t.lastHeartbeat
-                                                        ? new Date(
-                                                              t.lastHeartbeat,
-                                                          ).toLocaleTimeString()
-                                                        : 'Never'}
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                        {!tenants.length && !loading && (
-                                            <TableRow>
-                                                <TableCell
-                                                    colSpan={6}
-                                                    className="text-center text-muted-foreground py-8"
-                                                >
-                                                    No fleet instances found.
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    )}
-                </>
-            )}
-        </div>
-    );
-}
-
-// ─── Main Route ───────────────────────────────────────────────────────────────
-export function DashboardPage() {
-    const { api, user, systemInfo } = useAuth();
-    const isAdmin = user?.role === 'admin' || user?.role === 'superuser';
-    const isSilo = systemInfo?.mode === 'SILO';
-
-    if (isSilo) return <SiloDashboard api={api} />;
-    return <HubDashboard api={api} user={user} isAdmin={isAdmin} />;
 }

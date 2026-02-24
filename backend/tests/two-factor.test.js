@@ -1,6 +1,6 @@
 const { generateSync } = require('otplib');
 const { setupTestApp, teardownTestApp, clearCollections } = require('./helpers');
-const GlobalUser = require('../models/GlobalUser');
+const User = require('../models/User');
 
 let request;
 
@@ -97,7 +97,7 @@ describe('Two-Factor Authentication', () => {
 
             await request.post('/api/auth/2fa/setup').set('Authorization', `Bearer ${accessToken}`);
 
-            const dbUser = await GlobalUser.findById(user._id).select('+twoFactorSecret');
+            const dbUser = await User.findById(user._id).select('+twoFactorSecret');
             expect(dbUser.twoFactorSecret).toBeDefined();
             expect(dbUser.isTwoFactorEnabled).toBe(false);
         });
@@ -138,7 +138,7 @@ describe('Two-Factor Authentication', () => {
 
             expect(res.status).toBe(200);
 
-            const dbUser = await GlobalUser.findById(user._id);
+            const dbUser = await User.findById(user._id);
             expect(dbUser.isTwoFactorEnabled).toBe(true);
         });
 
@@ -296,7 +296,7 @@ describe('Two-Factor Authentication', () => {
             // Small delay to ensure expiry
             await new Promise((r) => setTimeout(r, 50));
 
-            const secret = (await GlobalUser.findById(user._id).select('+twoFactorSecret'))
+            const secret = (await User.findById(user._id).select('+twoFactorSecret'))
                 .twoFactorSecret;
             const code = generateSync({ secret });
 
@@ -360,7 +360,7 @@ describe('Two-Factor Authentication', () => {
 
             expect(res.status).toBe(200);
 
-            const dbUser = await GlobalUser.findById(user._id).select('+twoFactorSecret');
+            const dbUser = await User.findById(user._id).select('+twoFactorSecret');
             expect(dbUser.isTwoFactorEnabled).toBe(false);
             expect(dbUser.twoFactorSecret).toBeUndefined();
         });

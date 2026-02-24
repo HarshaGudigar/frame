@@ -11,6 +11,7 @@ import {
     LogOut,
     Server,
     Building2,
+    Shield,
     ShieldCheck,
     Brush,
 } from 'lucide-react';
@@ -41,6 +42,7 @@ import { CopilotSidebar } from '@/components/ai/copilot-sidebar';
 const navCore = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/users', icon: UsersIcon, label: 'Users', role: 'admin' },
+    { to: '/roles', icon: Shield, label: 'Role Matrix', role: 'admin' },
 ];
 
 const navPlatform = [

@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const { setupTestApp, teardownTestApp, clearCollections } = require('./helpers');
 const VerificationToken = require('../models/VerificationToken');
-const GlobalUser = require('../models/GlobalUser');
+const User = require('../models/User');
 
 let userId;
 
@@ -9,7 +9,7 @@ beforeAll(async () => {
     await setupTestApp();
 
     // Create a user to associate tokens with
-    const user = await GlobalUser.create({
+    const user = await User.create({
         email: 'token-test@example.com',
         password: 'Password123!',
         firstName: 'Token',

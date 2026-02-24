@@ -13,8 +13,8 @@ const LoginPage = lazy(() =>
 const DashboardPage = lazy(() =>
     import('@/pages/dashboard').then((module) => ({ default: module.DashboardPage })),
 );
-const TenantsPage = lazy(() =>
-    import('@/pages/tenants').then((module) => ({ default: module.TenantsPage })),
+const RolesPage = lazy(() =>
+    import('@/pages/roles').then((module) => ({ default: module.RolesPage })),
 );
 const MarketplacePage = lazy(() =>
     import('@/pages/marketplace').then((module) => ({ default: module.MarketplacePage })),
@@ -112,7 +112,7 @@ function AppRoutes() {
                         >
                             <Routes>
                                 <Route path="/" element={<DashboardPage />} />
-                                <Route path="/tenants" element={<TenantsPage />} />
+                                <Route path="/roles" element={<RolesPage />} />
                                 <Route path="/marketplace" element={<MarketplacePage />} />
                                 <Route path="/billing" element={<BillingPage />} />
                                 <Route path="/users" element={<UsersPage />} />

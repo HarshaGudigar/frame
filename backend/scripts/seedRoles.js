@@ -9,7 +9,7 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const Role = require('../models/Role');
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/alyxnet';
+const MONGO_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/mern-app';
 
 const defaultRoles = [
     {
@@ -17,39 +17,37 @@ const defaultRoles = [
         description:
             'System Administrator with full access aside from destructive core operations.',
         isSystem: true,
-        tenantId: null,
         permissions: [
             'users:read',
             'users:write',
-            'tenants:read',
-            'tenants:write',
             'marketplace:read',
             'marketplace:write',
             'roles:read',
             'roles:manage', // Required to view/edit the Role Matrix UI
             'audit:read',
             'system:read',
+            'system:write',
+            'hotel:read',
+            'hotel:write',
         ],
     },
     {
         name: 'staff',
         description: 'Internal staff with read-only access to most platform metrics.',
         isSystem: true,
-        tenantId: null,
         permissions: [
             'users:read',
-            'tenants:read',
             'marketplace:read',
             'roles:read', // Can view matrix, but cannot manage
             'system:read',
+            'hotel:read',
         ],
     },
     {
         name: 'user',
         description: 'Standard end-user with restricted self-serve capabilities.',
         isSystem: true,
-        tenantId: null,
-        permissions: ['users:read'],
+        permissions: ['users:read', 'hotel:read'],
     },
 ];
 
@@ -59,9 +57,9 @@ async function seed() {
         console.log('Connected to MongoDB. Seeding roles...');
 
         for (const roleDef of defaultRoles) {
-            // Upsert role based on name and global scope (tenantId: null)
+            // Upsert role based on name
             await Role.findOneAndUpdate(
-                { name: roleDef.name, tenantId: null },
+                { name: roleDef.name },
                 { $set: roleDef },
                 { upsert: true, new: true },
             );

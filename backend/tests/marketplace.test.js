@@ -30,10 +30,39 @@ describe('GET /api/marketplace/products', () => {
         expect(res.body.success).toBe(true);
         expect(Array.isArray(res.body.data)).toBe(true);
     });
+
+    it('should support search and category filtering', async () => {
+        const Product = require('../models/Product');
+        await Product.create([
+            {
+                name: 'Hotel Module',
+                slug: 'hotel',
+                category: 'Operations',
+                isActive: true,
+                price: 10,
+            },
+            {
+                name: 'Billing Module',
+                slug: 'billing',
+                category: 'Finance',
+                isActive: true,
+                price: 10,
+            },
+        ]);
+
+        // Test Search
+        const resSearch = await request.get('/api/marketplace/products?search=Hotel');
+        expect(resSearch.body.data.length).toBe(1);
+        expect(resSearch.body.data[0].slug).toBe('hotel');
+
+        // Test Category
+        const resCat = await request.get('/api/marketplace/products?category=Finance');
+        expect(resCat.body.data.length).toBe(1);
+        expect(resCat.body.data[0].slug).toBe('billing');
+    });
 });
 
 describe('POST /api/marketplace/products', () => {
-    // Zod schema expects price as number, not object
     const validProduct = {
         name: 'Accounting Module',
         slug: 'accounting',
@@ -81,6 +110,26 @@ describe('POST /api/marketplace/products', () => {
 
         expect(res.status).toBe(401);
     });
+
+    it('should allow editing and soft-deleting products', async () => {
+        const Product = require('../models/Product');
+        const product = await Product.create({ name: 'Old Name', slug: 'old-slug', price: 10 });
+
+        // Edit
+        const resEdit = await request
+            .put(`/api/marketplace/products/${product._id}`)
+            .set('Authorization', `Bearer ${token}`)
+            .send({ name: 'New Name' });
+        expect(resEdit.body.data.name).toBe('New Name');
+
+        // Delete (Soft)
+        await request
+            .delete(`/api/marketplace/products/${product._id}`)
+            .set('Authorization', `Bearer ${token}`);
+
+        const deleted = await Product.findById(product._id);
+        expect(deleted.isActive).toBe(false);
+    });
 });
 
 describe('POST /api/marketplace/purchase', () => {
@@ -93,8 +142,8 @@ describe('POST /api/marketplace/purchase', () => {
     });
 
     it('should allow admin to purchase', async () => {
-        // 1. Create a product first
-        const product = await require('../models/Product').create({
+        const Product = require('../models/Product');
+        const product = await Product.create({
             name: 'Billing Module',
             slug: 'billing',
             price: 50,
@@ -108,6 +157,25 @@ describe('POST /api/marketplace/purchase', () => {
 
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
+    });
+
+    it('should reject purchase if dependencies are missing', async () => {
+        const Product = require('../models/Product');
+        const analytics = await Product.create({
+            name: 'Analytics',
+            slug: 'analytics',
+            dependencies: ['hotel'],
+            price: 10,
+            isActive: true,
+        });
+
+        const res = await request
+            .post('/api/marketplace/purchase')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ productId: analytics._id.toString() });
+
+        expect(res.status).toBe(400);
+        expect(res.body.message).toContain('Missing required dependencies: hotel');
     });
 
     it('should reject non-admin users with 403', async () => {

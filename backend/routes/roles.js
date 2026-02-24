@@ -19,16 +19,8 @@ router.get(
     requirePermission('roles:read', 'roles:manage'),
     async (req, res) => {
         try {
-            const query = {};
-            if (req.tenant?._id) {
-                // Silo context: Show tenant-specific roles AND Hub system roles that apply
-                query.$or = [{ tenantId: req.tenant._id }, { tenantId: null, isSystem: true }];
-            } else {
-                // Hub context: Show only global Hub roles
-                query.tenantId = null;
-            }
-
-            const roles = await Role.find(query).sort({ name: 1 });
+            // Single instance mode: Show all global roles
+            const roles = await Role.find({}).sort({ name: 1 });
             return successResponse(res, roles, 'Roles retrieved successfully');
         } catch (err) {
             return errorResponse(res, 'Failed to fetch roles', 500, err);
@@ -52,21 +44,18 @@ router.post('/', authMiddleware, requirePermission('roles:manage'), async (req, 
             return errorResponse(res, 'Name and permissions array are required', 400);
         }
 
-        const tenantId = req.tenant?._id || null;
-
         const newRole = new Role({
             name,
             description,
             permissions,
-            tenantId,
-            isSystem: false, // Custom created roles are never system roles
+            isSystem: false,
         });
 
         await newRole.save();
         return successResponse(res, newRole, 'Role created successfully', 201);
     } catch (err) {
         if (err.code === 11000) {
-            return errorResponse(res, 'A role with this name already exists in this context', 409);
+            return errorResponse(res, 'A role with this name already exists', 409);
         }
         return errorResponse(res, 'Failed to create role', 500, err);
     }
@@ -90,23 +79,7 @@ router.put('/:id', authMiddleware, requirePermission('roles:manage'), async (req
             return errorResponse(res, 'Role not found', 404);
         }
 
-        // Context boundary check
-        const tenantIdStr = req.tenant?._id?.toString() || null;
-        const roleTenantStr = role.tenantId?.toString() || null;
-
-        if (tenantIdStr !== roleTenantStr) {
-            // Let Hub admins edit Hub roles, but don't let Tenant Admin edit Hub system roles
-            if (tenantIdStr !== null && roleTenantStr === null) {
-                return errorResponse(
-                    res,
-                    'Cannot modify global system roles from within a Tenant Silo',
-                    403,
-                );
-            }
-            if (tenantIdStr !== roleTenantStr) {
-                return errorResponse(res, 'Role does not belong to your tenant context', 403);
-            }
-        }
+        // Single instance node: No context boundary check needed
 
         // System roles cannot be completely overwritten, but perhaps permissions can be augmented by owner?
         // Actually, let's keep it simple: no editing System role names, only permissions.
@@ -139,11 +112,7 @@ router.delete('/:id', authMiddleware, requirePermission('roles:manage'), async (
             return errorResponse(res, 'System roles cannot be deleted', 403);
         }
 
-        const tenantIdStr = req.tenant?._id?.toString() || null;
-        const roleTenantStr = role.tenantId?.toString() || null;
-        if (tenantIdStr !== roleTenantStr) {
-            return errorResponse(res, 'Role does not belong to your tenant context', 403);
-        }
+        // Single instance node: No context boundary check needed
 
         await role.deleteOne();
         return successResponse(res, null, 'Role deleted successfully');

@@ -4,8 +4,8 @@
  */
 const generateSystemContext = (req) => {
     // Determine the environment/silo
-    const mode = req.tenant ? 'SILO' : 'HUB';
-    const tenantName = req.tenant ? req.tenant.name : 'Central Hub (Cross-Tenant Admin Area)';
+    const mode = req.appConfig?.runtimeMode || 'SINGLE_INSTANCE';
+    const instanceName = req.appConfig?.instanceName || 'Alyxnet Frame';
 
     // Determine the user's granular capabilities
     const userName = req.user.firstName || 'User';
@@ -22,7 +22,7 @@ const generateSystemContext = (req) => {
 
     return `
 You are the primary AI Orchestration Agent for the Alyxnet Frame Platform.
-You are currently operating in ${mode} mode within the context of: ${tenantName}.
+You are currenty operating in ${mode} mode within the context of: ${instanceName}.
 
 Identity & Context:
 - The human you are speaking to is named: ${userName}, with role: ${userRole}.
@@ -35,7 +35,7 @@ Directives:
 2. ALWAYS proactively use your tools to look up real-time data instead of saying you don't have access.
 3. If generating UI or data, format it clearly using markdown (tables, bold text).
 4. Do not offer abstract advice if a specific tool or data lookup is available to give an exact answer.
-5. Remember you are siloed strictly to ${tenantName}.
+5. Remember you are strictly operating within ${instanceName}.
 `;
 };
 

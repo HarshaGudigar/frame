@@ -88,15 +88,25 @@ function createApp() {
         next();
     });
 
+    // ─── Attach AppConfig to Request ────────────────────────────────────────
+    const AppConfig = require('./models/AppConfig');
+    app.use(async (req, res, next) => {
+        try {
+            req.appConfig = await AppConfig.getInstance();
+            next();
+        } catch (err) {
+            logger.error({ err }, 'Failed to fetch AppConfig');
+            next();
+        }
+    });
+
     // Legacy multi-tenancy middleware removed
 
     // ─── Developer Debug Panel ───────────────────────────────────────────────
     const debugMiddleware = require('./middleware/debugMiddleware');
     app.use(debugMiddleware);
 
-    // ─── Usage Metering ──────────────────────────────────────────────────────
-    const usageMiddleware = require('./middleware/usageMiddleware');
-    app.use(usageMiddleware);
+    // Usage metering disabled in single-instance mode for now
 
     // ─── Module Discovery ────────────────────────────────────────────────────
     const modules = discoverModules(logger);
@@ -141,7 +151,7 @@ function createApp() {
         res.status(200).json({
             message: 'Alyxnet Frame API',
             mode: config.RUNTIME_MODE,
-            tenant: req.tenant ? req.tenant.name : 'None (Global Context)',
+            instance: req.appConfig?.instanceName || 'Global Context',
             docs: '/api/docs',
         });
     });

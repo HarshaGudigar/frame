@@ -4,12 +4,12 @@ const {
     clearCollections,
     registerAndGetToken,
 } = require('./helpers');
-const GlobalUser = require('../models/GlobalUser');
+const User = require('../models/User');
 const AuditLog = require('../models/AuditLog');
 
 describe('Audit Logging Integration', () => {
     let request;
-    let ownerToken;
+    let superuserToken;
 
     beforeAll(async () => {
         const ctx = await setupTestApp();
@@ -23,9 +23,9 @@ describe('Audit Logging Integration', () => {
     beforeEach(async () => {
         await clearCollections();
         // Register and get token for owner
-        ownerToken = await registerAndGetToken(request, {
-            email: 'audit-owner@example.com',
-            role: 'owner',
+        superuserToken = await registerAndGetToken(request, {
+            email: 'audit-superuser@example.com',
+            role: 'superuser',
             firstName: 'Audit',
             lastName: 'Owner',
         });
@@ -34,7 +34,7 @@ describe('Audit Logging Integration', () => {
     it('should create an audit log when inviting a user', async () => {
         const res = await request
             .post('/api/admin/users/invite')
-            .set('Authorization', `Bearer ${ownerToken}`)
+            .set('Authorization', `Bearer ${superuserToken}`)
             .send({
                 email: 'audit-test-user@example.com',
                 firstName: 'Test',
@@ -48,7 +48,7 @@ describe('Audit Logging Integration', () => {
         expect(log).toBeDefined();
         expect(log.target).toBe('audit-test-user@example.com');
 
-        const owner = await GlobalUser.findOne({ email: 'audit-owner@example.com' });
+        const owner = await User.findOne({ email: 'audit-superuser@example.com' });
         expect(log.user.toString()).toBe(owner._id.toString());
     });
 
@@ -56,7 +56,7 @@ describe('Audit Logging Integration', () => {
         // Create multiple logs
         for (let i = 0; i < 15; i++) {
             await AuditLog.create({
-                user: (await GlobalUser.findOne({ email: 'audit-owner@example.com' }))._id,
+                user: (await User.findOne({ email: 'audit-superuser@example.com' }))._id,
                 action: 'PAGINATION_TEST',
                 target: `Log ${i}`,
             });
@@ -64,7 +64,7 @@ describe('Audit Logging Integration', () => {
 
         const res = await request
             .get('/api/admin/audit-logs?page=1&limit=10')
-            .set('Authorization', `Bearer ${ownerToken}`);
+            .set('Authorization', `Bearer ${superuserToken}`);
 
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);
@@ -76,14 +76,14 @@ describe('Audit Logging Integration', () => {
     it('should filter audit logs by action', async () => {
         // Create a specific log
         await AuditLog.create({
-            user: (await GlobalUser.findOne({ email: 'audit-owner@example.com' }))._id,
+            user: (await User.findOne({ email: 'audit-superuser@example.com' }))._id,
             action: 'FILTER_TEST_ACTION',
             target: 'Filter Target',
         });
 
         const res = await request
             .get('/api/admin/audit-logs?action=FILTER_TEST_ACTION')
-            .set('Authorization', `Bearer ${ownerToken}`);
+            .set('Authorization', `Bearer ${superuserToken}`);
 
         expect(res.status).toBe(200);
         expect(res.body.success).toBe(true);

@@ -25,8 +25,6 @@ interface RoleDoc {
 const AVAILABLE_PERMISSIONS = [
     { id: 'users:read', label: 'View Users' },
     { id: 'users:write', label: 'Manage Users' },
-    { id: 'tenants:read', label: 'View Tenants' },
-    { id: 'tenants:write', label: 'Manage Tenants' },
     { id: 'marketplace:read', label: 'View Marketplace' },
     { id: 'marketplace:write', label: 'Manage Marketplace' },
     { id: 'roles:read', label: 'View Roles' },

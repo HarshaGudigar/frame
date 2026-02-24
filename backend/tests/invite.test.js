@@ -4,7 +4,7 @@ const {
     clearCollections,
     registerAndGetToken,
 } = require('./helpers');
-const GlobalUser = require('../models/GlobalUser');
+const User = require('../models/User');
 const VerificationToken = require('../models/VerificationToken');
 
 let request;
@@ -23,12 +23,12 @@ afterEach(async () => {
 });
 
 describe('Email-Based Invite Flow', () => {
-    let ownerToken;
+    let superuserToken;
 
     beforeEach(async () => {
-        ownerToken = await registerAndGetToken(request, {
-            email: 'owner@example.com',
-            role: 'owner',
+        superuserToken = await registerAndGetToken(request, {
+            email: 'superuser@example.com',
+            role: 'superuser',
             firstName: 'Owner',
             lastName: 'Test',
         });
@@ -38,7 +38,7 @@ describe('Email-Based Invite Flow', () => {
         it('should create an inactive user without a password', async () => {
             const res = await request
                 .post('/api/admin/users/invite')
-                .set('Authorization', `Bearer ${ownerToken}`)
+                .set('Authorization', `Bearer ${superuserToken}`)
                 .send({
                     email: 'invited@example.com',
                     firstName: 'Invited',
@@ -51,9 +51,7 @@ describe('Email-Based Invite Flow', () => {
             expect(res.body.data.user.email).toBe('invited@example.com');
 
             // User should be inactive
-            const user = await GlobalUser.findOne({ email: 'invited@example.com' }).select(
-                '+password',
-            );
+            const user = await User.findOne({ email: 'invited@example.com' }).select('+password');
             expect(user.isActive).toBe(false);
             expect(user.isEmailVerified).toBe(false);
             expect(user.password).toBeUndefined();
@@ -62,7 +60,7 @@ describe('Email-Based Invite Flow', () => {
         it('should create an invite token', async () => {
             const res = await request
                 .post('/api/admin/users/invite')
-                .set('Authorization', `Bearer ${ownerToken}`)
+                .set('Authorization', `Bearer ${superuserToken}`)
                 .send({
                     email: 'invited2@example.com',
                     firstName: 'Invited',
@@ -70,7 +68,7 @@ describe('Email-Based Invite Flow', () => {
                     role: 'staff',
                 });
 
-            const user = await GlobalUser.findOne({ email: 'invited2@example.com' });
+            const user = await User.findOne({ email: 'invited2@example.com' });
             const token = await VerificationToken.findOne({
                 user: user._id,
                 type: 'invite',
@@ -83,7 +81,7 @@ describe('Email-Based Invite Flow', () => {
         it('should set invitedBy to the inviting user', async () => {
             await request
                 .post('/api/admin/users/invite')
-                .set('Authorization', `Bearer ${ownerToken}`)
+                .set('Authorization', `Bearer ${superuserToken}`)
                 .send({
                     email: 'invited3@example.com',
                     firstName: 'Invited',
@@ -91,8 +89,8 @@ describe('Email-Based Invite Flow', () => {
                     role: 'user',
                 });
 
-            const owner = await GlobalUser.findOne({ email: 'owner@example.com' });
-            const invited = await GlobalUser.findOne({ email: 'invited3@example.com' });
+            const owner = await User.findOne({ email: 'superuser@example.com' });
+            const invited = await User.findOne({ email: 'invited3@example.com' });
 
             expect(invited.invitedBy.toString()).toBe(owner._id.toString());
         });
@@ -100,7 +98,7 @@ describe('Email-Based Invite Flow', () => {
         it('should not return a tempPassword in the response', async () => {
             const res = await request
                 .post('/api/admin/users/invite')
-                .set('Authorization', `Bearer ${ownerToken}`)
+                .set('Authorization', `Bearer ${superuserToken}`)
                 .send({
                     email: 'invited4@example.com',
                     firstName: 'Invited',
@@ -114,7 +112,7 @@ describe('Email-Based Invite Flow', () => {
         it('should reject duplicate email', async () => {
             await request
                 .post('/api/admin/users/invite')
-                .set('Authorization', `Bearer ${ownerToken}`)
+                .set('Authorization', `Bearer ${superuserToken}`)
                 .send({
                     email: 'dup@example.com',
                     firstName: 'Dup',
@@ -124,7 +122,7 @@ describe('Email-Based Invite Flow', () => {
 
             const res = await request
                 .post('/api/admin/users/invite')
-                .set('Authorization', `Bearer ${ownerToken}`)
+                .set('Authorization', `Bearer ${superuserToken}`)
                 .send({
                     email: 'dup@example.com',
                     firstName: 'Dup',
@@ -143,7 +141,7 @@ describe('Email-Based Invite Flow', () => {
             // Invite a user
             await request
                 .post('/api/admin/users/invite')
-                .set('Authorization', `Bearer ${ownerToken}`)
+                .set('Authorization', `Bearer ${superuserToken}`)
                 .send({
                     email: 'accept@example.com',
                     firstName: 'Accept',
@@ -151,7 +149,7 @@ describe('Email-Based Invite Flow', () => {
                     role: 'staff',
                 });
 
-            const user = await GlobalUser.findOne({ email: 'accept@example.com' });
+            const user = await User.findOne({ email: 'accept@example.com' });
             const tokenDoc = await VerificationToken.findOne({
                 user: user._id,
                 type: 'invite',
@@ -181,7 +179,7 @@ describe('Email-Based Invite Flow', () => {
                 confirmPassword: 'NewPassword123!',
             });
 
-            const user = await GlobalUser.findOne({ email: 'accept@example.com' });
+            const user = await User.findOne({ email: 'accept@example.com' });
             expect(user.isActive).toBe(true);
             expect(user.isEmailVerified).toBe(true);
         });
@@ -292,7 +290,7 @@ describe('Email-Based Invite Flow', () => {
         it('should reject login for user without password', async () => {
             await request
                 .post('/api/admin/users/invite')
-                .set('Authorization', `Bearer ${ownerToken}`)
+                .set('Authorization', `Bearer ${superuserToken}`)
                 .send({
                     email: 'nologin@example.com',
                     firstName: 'No',

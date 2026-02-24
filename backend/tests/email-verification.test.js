@@ -1,5 +1,5 @@
 const { setupTestApp, teardownTestApp, clearCollections } = require('./helpers');
-const GlobalUser = require('../models/GlobalUser');
+const User = require('../models/User');
 const VerificationToken = require('../models/VerificationToken');
 
 let request;
@@ -62,7 +62,7 @@ describe('Email Verification', () => {
 
         it('should return isEmailVerified: true after verification', async () => {
             await request.post('/api/auth/register').send(validUser);
-            await GlobalUser.updateOne({ email: validUser.email }, { isEmailVerified: true });
+            await User.updateOne({ email: validUser.email }, { isEmailVerified: true });
 
             const res = await request
                 .post('/api/auth/login')
@@ -91,7 +91,7 @@ describe('Email Verification', () => {
             expect(res.body.message).toMatch(/verified/i);
 
             // User should now be verified
-            const user = await GlobalUser.findById(userId);
+            const user = await User.findById(userId);
             expect(user.isEmailVerified).toBe(true);
 
             // Token should be consumed
@@ -183,7 +183,7 @@ describe('Email Verification', () => {
             const regRes = await request.post('/api/auth/register').send(validUser);
             const accessToken = regRes.body.data.accessToken;
 
-            await GlobalUser.updateOne({ email: validUser.email }, { isEmailVerified: true });
+            await User.updateOne({ email: validUser.email }, { isEmailVerified: true });
 
             const res = await request
                 .post('/api/auth/resend-verification')
@@ -204,13 +204,13 @@ describe('requireVerifiedEmail middleware', () => {
     it('should block unverified users from admin routes', async () => {
         // Register user (unverified) and manually set role to owner
         const regRes = await request.post('/api/auth/register').send({
-            email: 'unverified-owner@example.com',
+            email: 'unverified-superuser@example.com',
             password: 'Password123!',
             firstName: 'Unverified',
             lastName: 'Owner',
         });
         const accessToken = regRes.body.data.accessToken;
-        await GlobalUser.updateOne({ email: 'unverified-owner@example.com' }, { role: 'owner' });
+        await User.updateOne({ email: 'unverified-superuser@example.com' }, { role: 'superuser' });
 
         const res = await request
             .get('/api/admin/users')
@@ -222,15 +222,15 @@ describe('requireVerifiedEmail middleware', () => {
 
     it('should allow verified users to access admin routes', async () => {
         const regRes = await request.post('/api/auth/register').send({
-            email: 'verified-owner@example.com',
+            email: 'verified-superuser@example.com',
             password: 'Password123!',
             firstName: 'Verified',
             lastName: 'Owner',
         });
         const accessToken = regRes.body.data.accessToken;
-        await GlobalUser.updateOne(
-            { email: 'verified-owner@example.com' },
-            { role: 'owner', isEmailVerified: true },
+        await User.updateOne(
+            { email: 'verified-superuser@example.com' },
+            { role: 'superuser', isEmailVerified: true },
         );
 
         const res = await request

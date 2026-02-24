@@ -1,5 +1,5 @@
 const { setupTestApp, teardownTestApp, clearCollections } = require('./helpers');
-const GlobalUser = require('../models/GlobalUser');
+const User = require('../models/User');
 const RefreshToken = require('../models/RefreshToken');
 
 let request;
