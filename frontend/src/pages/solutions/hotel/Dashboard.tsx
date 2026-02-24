@@ -653,20 +653,24 @@ export function HotelDashboard() {
 
                             {/* Today's Schedule */}
                             <div className="rounded-2xl border bg-card shadow-sm p-4">
-                                <h3 className="text-xs font-bold text-foreground mb-3 flex items-center gap-2">
+                                <h3 className="text-xs font-bold text-foreground mb-3 flex items-center gap-2 border-b border-border/40 pb-2">
                                     <CalendarCheck className="h-3.5 w-3.5 text-purple-500" />
                                     Today's Schedule
                                 </h3>
-                                <ScheduleFeed arrivals={arrivals} departures={departures} />
+                                <div className="max-h-[280px] overflow-y-auto pr-1 custom-scrollbar">
+                                    <ScheduleFeed arrivals={arrivals} departures={departures} />
+                                </div>
                             </div>
 
                             {/* Activity Feed */}
                             <div className="rounded-2xl border bg-card shadow-sm p-4">
-                                <h3 className="text-xs font-bold text-foreground mb-3 flex items-center gap-2">
+                                <h3 className="text-xs font-bold text-foreground mb-3 flex items-center gap-2 border-b border-border/40 pb-2">
                                     <Clock className="h-3.5 w-3.5 text-orange-500" />
                                     Activity Feed
                                 </h3>
-                                <ActivityFeed items={activities} />
+                                <div className="max-h-[400px] overflow-y-auto pr-1 custom-scrollbar">
+                                    <ActivityFeed items={activities} />
+                                </div>
                             </div>
                         </div>
                     </div>
