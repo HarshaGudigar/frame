@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { CreditCard, ExternalLink, Package, ShieldCheck, Info, AlertCircle, RefreshCw } from 'lucide-react';
+import {
+    CreditCard,
+    ExternalLink,
+    Package,
+    ShieldCheck,
+    Info,
+    AlertCircle,
+    RefreshCw,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -37,9 +45,13 @@ export function BillingPage() {
             if (systemInfo?.enabledModules) {
                 const subSlugs = systemInfo.enabledModules;
                 // Only show modules that exist as products in the marketplace
-                const filteredSubs = subSlugs.map((slug: string) =>
-                    marketProducts.find((p: any) => p.slug === slug),
-                ).filter(Boolean).map((p: any) => ({ product: p }));
+                const filteredSubs = subSlugs
+                    .map((mod: any) => {
+                        const targetSlug = typeof mod === 'string' ? mod : mod.slug || mod.name;
+                        return marketProducts.find((p: any) => p.slug === targetSlug);
+                    })
+                    .filter(Boolean)
+                    .map((p: any) => ({ product: p }));
                 setSubscriptions(filteredSubs);
             } else {
                 setSubscriptions([]);
@@ -155,7 +167,9 @@ export function BillingPage() {
                                     </CardHeader>
                                     <CardContent className="flex-1">
                                         <p className="text-sm text-foreground font-semibold mb-1">
-                                            {details.price?.amount ? `$${details.price.amount}/${details.price.interval || 'mo'}` : 'Free'}
+                                            {details.price?.amount
+                                                ? `$${details.price.amount}/${details.price.interval || 'mo'}`
+                                                : 'Free'}
                                         </p>
                                         <p className="text-sm text-muted-foreground line-clamp-2">
                                             {details.description ||
@@ -166,7 +180,12 @@ export function BillingPage() {
                                         <Button
                                             variant="outline"
                                             className="w-full border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 hover:border-red-300 transition-colors dark:border-red-900/50 dark:hover:bg-red-900/20"
-                                            onClick={() => setModuleToCancel({ id: details._id, name: details.name })}
+                                            onClick={() =>
+                                                setModuleToCancel({
+                                                    id: details._id,
+                                                    name: details.name,
+                                                })
+                                            }
                                         >
                                             Cancel Plan
                                         </Button>
@@ -191,7 +210,10 @@ export function BillingPage() {
             </div>
 
             {/* Cancel Confirmation Dialog */}
-            <Dialog open={!!moduleToCancel} onOpenChange={(open) => !open && setModuleToCancel(null)}>
+            <Dialog
+                open={!!moduleToCancel}
+                onOpenChange={(open) => !open && setModuleToCancel(null)}
+            >
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle className="text-red-600 flex items-center gap-2">
@@ -199,15 +221,24 @@ export function BillingPage() {
                             Cancel Subscription
                         </DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to cancel your subscription for <strong>{moduleToCancel?.name}</strong>?
-                            This action will immediately disable access to the module.
+                            Are you sure you want to cancel your subscription for{' '}
+                            <strong>{moduleToCancel?.name}</strong>? This action will immediately
+                            disable access to the module.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter className="mt-4">
-                        <Button variant="outline" onClick={() => setModuleToCancel(null)} disabled={unsubProcessing}>
+                        <Button
+                            variant="outline"
+                            onClick={() => setModuleToCancel(null)}
+                            disabled={unsubProcessing}
+                        >
                             Keep Subscription
                         </Button>
-                        <Button variant="destructive" onClick={handleUnsubscribe} disabled={unsubProcessing}>
+                        <Button
+                            variant="destructive"
+                            onClick={handleUnsubscribe}
+                            disabled={unsubProcessing}
+                        >
                             {unsubProcessing ? (
                                 <>
                                     <RefreshCw className="size-4 animate-spin mr-2" />
