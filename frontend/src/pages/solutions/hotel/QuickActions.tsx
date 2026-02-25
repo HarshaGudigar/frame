@@ -41,7 +41,7 @@ export function QuickActions({
     ];
 
     return (
-        <Card className={`border-primary/20 bg-muted/50 transition-all ${className}`}>
+        <Card className={`border-primary/20 bg-muted/50 ${className}`}>
             <CardHeader className="pb-3 flex flex-row items-center justify-between">
                 <CardTitle className="text-base font-semibold">Quick Actions</CardTitle>
                 <Zap className="h-4 w-4 text-primary" />
@@ -51,7 +51,7 @@ export function QuickActions({
                     <Button
                         key={action.id}
                         variant="ghost"
-                        className="h-auto flex-col items-center justify-center gap-2 p-3 hover:bg-muted border border-transparent hover:border-border transition-colors"
+                        className="h-auto flex-col items-center justify-center gap-2 p-3 hover:bg-muted border border-transparent hover:border-border"
                         onClick={() => onAction(action.id)}
                     >
                         <div className={`p-2 rounded-lg ${action.bg}`}>

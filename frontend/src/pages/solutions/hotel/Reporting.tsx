@@ -106,7 +106,7 @@ export function Reporting() {
 
     if (loading || !metrics) {
         return (
-            <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="space-y-6">
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     {[1, 2, 3, 4].map((i) => (
                         <Skeleton key={i} className="h-24 rounded-xl" />
@@ -284,7 +284,7 @@ export function Reporting() {
                             </div>
                             <div className="h-3 w-full bg-muted rounded-full overflow-hidden border">
                                 <div
-                                    className="h-full bg-primary transition-all duration-1000 ease-out"
+                                    className="h-full bg-primary"
                                     style={{ width: `${metrics.occupancyRate}%` }}
                                 />
                             </div>

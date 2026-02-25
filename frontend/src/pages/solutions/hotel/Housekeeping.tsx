@@ -244,7 +244,7 @@ export default function Housekeeping() {
     );
 
     return (
-        <div className="space-y-6 animate-in fade-in duration-300">
+        <div className="space-y-6">
             {/* ─── Stats Row ─────────────────────────── */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 {[
@@ -320,7 +320,7 @@ export default function Housekeeping() {
                             return (
                                 <div
                                     key={room._id}
-                                    className="relative overflow-hidden rounded-xl border-l-4 bg-muted/30 hover:bg-muted/50 transition-all p-4 border border-border/50"
+                                    className="relative overflow-hidden rounded-xl border-l-4 bg-muted/30 hover:bg-muted/50 p-4 border border-border/50"
                                     style={{
                                         borderLeftColor: roomBorderColors[room.status] || '#94a3b8',
                                     }}
@@ -470,7 +470,7 @@ export default function Housekeeping() {
                                                             'opacity-40',
                                                         );
                                                     }}
-                                                    className="group rounded-xl border bg-card p-3 shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing"
+                                                    className="group rounded-xl border bg-card p-3 shadow-sm hover:shadow-md cursor-grab active:cursor-grabbing"
                                                     style={{
                                                         borderLeftWidth: 3,
                                                         borderLeftColor: priority.dot

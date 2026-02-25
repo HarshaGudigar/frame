@@ -122,10 +122,10 @@ function StatCard({
 }) {
     return (
         <div
-            className={`relative overflow-hidden rounded-2xl border p-4 flex items-center gap-3 bg-card shadow-sm hover:shadow-md transition-all duration-200 group`}
+            className={`relative overflow-hidden rounded-2xl border p-4 flex items-center gap-3 bg-card shadow-sm hover:shadow-md group`}
         >
             <div
-                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${color} transition-transform duration-200 group-hover:scale-110`}
+                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${color}`}
             >
                 <Icon className="h-4.5 w-4.5" />
             </div>
@@ -417,7 +417,7 @@ export function HotelDashboard() {
 
     if (loading && !stats.totalRooms) {
         return (
-            <div className="p-6 space-y-6 animate-in fade-in duration-300">
+            <div className="p-6 space-y-6">
                 <Skeleton className="h-24 w-full rounded-2xl" />
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     {[1, 2, 3, 4].map((i) => (
@@ -451,7 +451,7 @@ export function HotelDashboard() {
     };
 
     return (
-        <div className="space-y-0 animate-in fade-in duration-300">
+        <div className="space-y-0">
             {/* ─── Page Header ─────────────────────────────────────────── */}
             <div className="rounded-2xl border bg-card shadow-sm p-4 mb-4">
                 <div className="flex items-center justify-between">
@@ -491,7 +491,7 @@ export function HotelDashboard() {
                             <button
                                 key={tab.key}
                                 onClick={() => setActiveTab(tab.key)}
-                                className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 transition-all -mb-px whitespace-nowrap rounded-t-sm ${
+                                className={`flex items-center gap-1.5 px-3 py-2.5 text-sm font-medium border-b-2 -mb-px whitespace-nowrap rounded-t-sm ${
                                     activeTab === tab.key
                                         ? 'border-primary text-primary bg-primary/5'
                                         : 'border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30 hover:bg-muted/40'
@@ -645,7 +645,7 @@ export function HotelDashboard() {
                                 </div>
                                 <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                                     <div
-                                        className={`h-full rounded-full transition-all duration-700 ease-out ${occupancyPct >= 80 ? 'bg-green-500' : occupancyPct >= 50 ? 'bg-blue-500' : 'bg-orange-400'}`}
+                                        className={`h-full rounded-full ${occupancyPct >= 80 ? 'bg-green-500' : occupancyPct >= 50 ? 'bg-blue-500' : 'bg-orange-400'}`}
                                         style={{ width: `${occupancyPct}%` }}
                                     />
                                 </div>
@@ -711,7 +711,7 @@ export function HotelDashboard() {
                                 <button
                                     key={label}
                                     onClick={() => setActiveTab(tab)}
-                                    className={`flex flex-col items-center gap-2 rounded-xl p-4 text-center transition-all hover:shadow-md hover:scale-105 active:scale-95 ${color}`}
+                                    className={`flex flex-col items-center gap-2 rounded-xl p-4 text-center hover:shadow-md ${color}`}
                                 >
                                     <Icon className="h-5 w-5" />
                                     <span className="text-xs font-semibold">{label}</span>

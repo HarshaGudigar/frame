@@ -50,6 +50,7 @@ interface Booking {
     room: { _id: string; number: string };
     checkInDate: string;
     checkOutDate: string;
+    rooms?: { _id: string; number: string }[];
     status: string;
 }
 
@@ -288,7 +289,7 @@ export function RoomGrid({ bookings = [] }: { bookings?: Booking[] }) {
     }
 
     return (
-        <div className="space-y-4 animate-in fade-in duration-500">
+        <div className="space-y-4">
             <Sheet open={!!peekRoom} onOpenChange={(open) => !open && setPeekRoom(null)}>
                 <SheetContent className="sm:max-w-md">
                     <SheetHeader>
@@ -683,7 +684,7 @@ export function RoomGrid({ bookings = [] }: { bookings?: Booking[] }) {
                                                 ? toggleRoomSelection(room._id)
                                                 : setPeekRoom(room)
                                         }
-                                        className={`p-4 rounded-xl border-2 ${getRoomStatusStyle(room.status)} flex flex-col justify-between h-36 hover:shadow-md transition-all group relative cursor-pointer ${selectedRooms.has(room._id) ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+                                        className={`p-4 rounded-xl border-2 ${getRoomStatusStyle(room.status)} flex flex-col justify-between h-36 hover:shadow-md group relative cursor-pointer ${selectedRooms.has(room._id) ? 'ring-2 ring-primary ring-offset-2' : ''}`}
                                     >
                                         {isSelectMode && (
                                             <div className="absolute top-2 right-2 z-10">
