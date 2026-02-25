@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
 type Theme = 'dark' | 'light' | 'system';
 
@@ -8,11 +8,22 @@ type ThemeProviderState = {
 };
 
 const initialState: ThemeProviderState = {
-    theme: 'system',
+    theme: 'light', // Set a default to satisfy the type but fix unused warning if it's coming from destructuring
     setTheme: () => null,
 };
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
+
+// Notify Electron main process to update the titleBarOverlay colors
+function notifyElectronTheme(isDark: boolean) {
+    try {
+        const { ipcRenderer } = window.require?.('electron') ?? {};
+        if (!ipcRenderer) return;
+        ipcRenderer.send('theme-changed', isDark);
+    } catch {
+        // Not in Electron — silently ignore
+    }
+}
 
 export function ThemeProvider({
     children,
@@ -34,15 +45,16 @@ export function ThemeProvider({
         root.classList.remove('light', 'dark');
 
         if (theme === 'system') {
-            const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-                ? 'dark'
-                : 'light';
+            const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            const systemTheme = isDark ? 'dark' : 'light';
 
             root.classList.add(systemTheme);
+            notifyElectronTheme(isDark);
             return;
         }
 
         root.classList.add(theme);
+        notifyElectronTheme(theme === 'dark');
     }, [theme]);
 
     const value = {

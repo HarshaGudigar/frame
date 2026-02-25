@@ -1,7 +1,9 @@
+import { isElectron } from '@/components/title-bar';
+
 export function BackgroundDecoration() {
     return (
         <div className="fixed inset-0 -z-50 overflow-hidden pointer-events-none select-none">
-            {/* Base Background Fill */}
+            {/* Base Background Fill — solid, always opaque */}
             <div className="absolute inset-0 bg-background" />
 
             {/* Ambient Blobs - Light Mode Oriented */}
@@ -26,9 +28,13 @@ export function BackgroundDecoration() {
             {/* Modern Grid Overlay */}
             <div className="absolute inset-0 bg-[linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] [background-size:64px_64px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-[0.05] dark:opacity-[0.08]" />
 
-            {/* Noise & Vignette Overlay */}
-            <div className="absolute inset-0 noise-overlay opacity-[0.15] dark:opacity-[0.25]" />
-            <div className="absolute inset-0 vignette opacity-40 dark:opacity-60" />
+            {/* Noise & Vignette Overlay — disabled in Electron to prevent grain bleed through transparent surfaces */}
+            {!isElectron() && (
+                <>
+                    <div className="absolute inset-0 noise-overlay opacity-[0.15] dark:opacity-[0.25]" />
+                    <div className="absolute inset-0 vignette opacity-40 dark:opacity-60" />
+                </>
+            )}
         </div>
     );
 }

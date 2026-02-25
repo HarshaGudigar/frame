@@ -2,6 +2,34 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
+/* Global scrollbar — hidden by default, theme-aware */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+}
+
+*:hover {
+    scrollbar-color: var(--border) transparent;
+}
+
+::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 99px;
+}
+
+*:hover::-webkit-scrollbar-thumb {
+    background: var(--border);
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -233,4 +261,18 @@
     .custom-scrollbar::-webkit-scrollbar-thumb:hover {
         background: var(--border);
     }
+}
+
+/* Electron-specific layout overrides — outside @layer so they beat Tailwind utilities */
+body[data-electron='true'] {
+    --titlebar-height: 32px;
+}
+
+body[data-electron='true'] #root > * {
+    padding-top: var(--titlebar-height);
+}
+
+body[data-electron='true'] [data-slot='sidebar-container'] {
+    top: var(--titlebar-height) !important;
+    height: calc(100svh - var(--titlebar-height)) !important;
 }

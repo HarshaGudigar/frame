@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/auth-context';
 import { usePermission } from '@/hooks/use-permission';
@@ -37,6 +37,7 @@ import { Separator } from '@/components/ui/separator';
 import { BRAND } from '@/config/brand';
 import { BackgroundDecoration } from './ui/background-decoration';
 import { CopilotSidebar } from '@/components/ai/copilot-sidebar';
+import { TitleBar, isElectron } from '@/components/title-bar';
 
 const navCore = [
     { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
@@ -268,46 +269,63 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
     const activeTenantSlug = systemInfo?.instanceName || 'Local Instance';
 
+    useEffect(() => {
+        if (isElectron()) {
+            document.body.setAttribute('data-electron', 'true');
+        } else {
+            document.body.removeAttribute('data-electron');
+        }
+    }, []);
+
     const activeTenantRole = user?.role === 'superuser' ? 'Superuser' : user?.role || 'User';
 
     return (
-        <SidebarProvider>
-            <BackgroundDecoration />
-            <AppSidebar />
-            <SidebarInset className="bg-background/20 dark:bg-background/40">
-                <header className="flex h-16 shrink-0 items-center justify-between px-6 border-b glass-panel sticky top-0 z-10 transition-all">
-                    <div className="flex items-center gap-2">
-                        {/* Title or Breadcrumbs could go here */}
-                    </div>
-                    <div className="flex items-center gap-4">
-                        <div className="bg-primary/5 hover:bg-primary/10 transition-colors border border-primary/20 rounded-lg flex items-center justify-between px-3 py-1.5 cursor-default gap-3 h-9">
-                            <div className="flex flex-col items-end">
-                                <span className="text-[10px] text-muted-foreground capitalize leading-none">
-                                    {activeTenantRole}
-                                </span>
-                            </div>
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger>
-                                        <div
-                                            className={`size-2 rounded-full shadow-[0_0_8px] ${isConnected ? 'bg-green-500 shadow-green-500/50 animate-pulse-slow' : 'bg-red-500 shadow-red-500/50'}`}
-                                        />
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        {isConnected
-                                            ? 'Real-time WebSocket connected'
-                                            : 'WebSocket disconnected'}
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
+        <div className="flex flex-col min-h-svh">
+            {isElectron() && <TitleBar />}
+            <SidebarProvider className="flex-1">
+                <BackgroundDecoration />
+                <AppSidebar />
+                <SidebarInset className="bg-background/20 dark:bg-background/40">
+                    <header
+                        className="flex h-16 shrink-0 items-center justify-between px-6 border-b glass-panel sticky top-0 z-10 transition-all"
+                        style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+                    >
+                        <div className="flex items-center gap-2">
+                            {/* Title or Breadcrumbs could go here */}
                         </div>
-                        <CopilotSidebar />
-                        <ModeToggle />
-                        <NotificationCenter />
-                    </div>
-                </header>
-                <main className="flex-1 p-6 page-transition relative">{children}</main>
-            </SidebarInset>
-        </SidebarProvider>
+                        <div
+                            className="flex items-center gap-4"
+                            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+                        >
+                            <div className="bg-primary/5 hover:bg-primary/10 transition-colors border border-primary/20 rounded-lg flex items-center justify-between px-3 py-1.5 cursor-default gap-3 h-9">
+                                <div className="flex flex-col items-end">
+                                    <span className="text-[10px] text-muted-foreground capitalize leading-none">
+                                        {activeTenantRole}
+                                    </span>
+                                </div>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger>
+                                            <div
+                                                className={`size-2 rounded-full shadow-[0_0_8px] ${isConnected ? 'bg-green-500 shadow-green-500/50 animate-pulse-slow' : 'bg-red-500 shadow-red-500/50'}`}
+                                            />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            {isConnected
+                                                ? 'Real-time WebSocket connected'
+                                                : 'WebSocket disconnected'}
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            </div>
+                            <CopilotSidebar />
+                            <ModeToggle />
+                            <NotificationCenter />
+                        </div>
+                    </header>
+                    <main className="flex-1 p-6 page-transition relative">{children}</main>
+                </SidebarInset>
+            </SidebarProvider>
+        </div>
     );
 }
