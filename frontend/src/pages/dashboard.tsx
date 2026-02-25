@@ -67,7 +67,7 @@ export function DashboardPage() {
                 totalRooms > 0 ? Math.round((occupiedRooms / totalRooms) * 100) : 0;
 
             const activeBookings = bookings.filter(
-                (b: any) => b.status === 'confirmed' || b.status === 'checked_in',
+                (b: any) => b.status === 'Confirmed' || b.status === 'CheckedIn',
             );
 
             setHotelStats({
@@ -150,20 +150,23 @@ export function DashboardPage() {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'confirmed':
+            case 'Confirmed':
                 return 'bg-blue-500/15 text-blue-400 border-blue-500/20';
-            case 'checked_in':
+            case 'CheckedIn':
                 return 'bg-green-500/15 text-green-400 border-green-500/20';
-            case 'checked_out':
+            case 'CheckedOut':
                 return 'bg-gray-500/15 text-gray-400 border-gray-500/20';
-            case 'cancelled':
+            case 'Cancelled':
                 return 'bg-red-500/15 text-red-400 border-red-500/20';
-            case 'pending':
+            case 'NoShow':
                 return 'bg-yellow-500/15 text-yellow-400 border-yellow-500/20';
             default:
                 return 'bg-primary/15 text-primary border-primary/20';
         }
     };
+
+    // Convert PascalCase status to readable label e.g. "CheckedIn" → "Checked In"
+    const formatStatus = (status: string) => status?.replace(/([a-z])([A-Z])/g, '$1 $2') ?? '—';
 
     return (
         <div className="space-y-6">
@@ -398,16 +401,16 @@ export function DashboardPage() {
                                             </div>
                                         </TableCell>
                                         <TableCell className="font-mono text-xs text-muted-foreground">
-                                            {b.room?.roomNumber ?? b.roomNumber ?? '—'}
+                                            {b.rooms?.[0]?.number ?? '—'}
                                         </TableCell>
                                         <TableCell className="text-xs text-muted-foreground">
-                                            {b.checkIn
-                                                ? new Date(b.checkIn).toLocaleDateString()
+                                            {b.checkInDate
+                                                ? new Date(b.checkInDate).toLocaleDateString()
                                                 : '—'}
                                         </TableCell>
                                         <TableCell className="text-xs text-muted-foreground">
-                                            {b.checkOut
-                                                ? new Date(b.checkOut).toLocaleDateString()
+                                            {b.checkOutDate
+                                                ? new Date(b.checkOutDate).toLocaleDateString()
                                                 : '—'}
                                         </TableCell>
                                         <TableCell>
@@ -415,7 +418,7 @@ export function DashboardPage() {
                                                 variant="outline"
                                                 className={`text-[11px] capitalize ${getStatusColor(b.status)}`}
                                             >
-                                                {b.status?.replace('_', ' ') ?? '—'}
+                                                {formatStatus(b.status)}
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="text-right font-medium text-sm">

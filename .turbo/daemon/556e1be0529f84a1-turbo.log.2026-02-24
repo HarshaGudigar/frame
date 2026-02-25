@@ -6,3 +6,87 @@
 2026-02-24T09:23:48.782223Z  WARN daemon_server: turborepo_lib::commands::daemon: daemon already running
 2026-02-24T09:25:32.087123Z  WARN daemon_server: turborepo_lib::commands::daemon: daemon already running
 2026-02-24T17:22:32.671081Z  WARN daemon_server: turborepo_lib::commands::daemon: daemon already running
+2026-02-24T17:53:32.410264Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedwoYkoK: could not find 'G:\Alyxnet\frame\backend\tests\sedwoYkoK' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:53:32.424317Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedPTpXim: could not find 'G:\Alyxnet\frame\backend\tests\sedPTpXim' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:53:32.440179Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sed3vvMXv: could not find 'G:\Alyxnet\frame\backend\tests\sed3vvMXv' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:53:32.456949Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedTSFNFK: could not find 'G:\Alyxnet\frame\backend\tests\sedTSFNFK' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:53:32.470228Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sed8j6aIR: could not find 'G:\Alyxnet\frame\backend\tests\sed8j6aIR' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:53:32.487011Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedCy6Bnd: could not find 'G:\Alyxnet\frame\backend\tests\sedCy6Bnd' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:53:32.518399Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedJcTJgq: could not find 'G:\Alyxnet\frame\backend\tests\sedJcTJgq' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:53:32.532610Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedUFu2kL: could not find 'G:\Alyxnet\frame\backend\tests\sedUFu2kL' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:53:32.548901Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sed06HtZ1: could not find 'G:\Alyxnet\frame\backend\tests\sed06HtZ1' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:53:32.562395Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedhkgFRA: could not find 'G:\Alyxnet\frame\backend\tests\sedhkgFRA' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:53:32.607415Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\seds7UdJx: could not find 'G:\Alyxnet\frame\backend\tests\seds7UdJx' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:15.606446Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sednBfBTv: could not find 'G:\Alyxnet\frame\backend\tests\sednBfBTv' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:15.650222Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedhD5rqi: could not find 'G:\Alyxnet\frame\backend\tests\sedhD5rqi' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:15.666486Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedrkItmR: could not find 'G:\Alyxnet\frame\backend\tests\sedrkItmR' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:15.682110Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedfoPkqN: could not find 'G:\Alyxnet\frame\backend\tests\sedfoPkqN' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:15.697722Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedAPn2PV: could not find 'G:\Alyxnet\frame\backend\tests\sedAPn2PV' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:15.819870Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sed53rW1x: could not find 'G:\Alyxnet\frame\backend\tests\sed53rW1x' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:15.841195Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedSmPZQj: could not find 'G:\Alyxnet\frame\backend\tests\sedSmPZQj' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:15.905269Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedyej4o9: could not find 'G:\Alyxnet\frame\backend\tests\sedyej4o9' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:15.958125Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedVEoP2L: could not find 'G:\Alyxnet\frame\backend\tests\sedVEoP2L' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:16.020224Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedceGODC: could not find 'G:\Alyxnet\frame\backend\tests\sedceGODC' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:16.071566Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedjFPRiQ: could not find 'G:\Alyxnet\frame\backend\tests\sedjFPRiQ' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:16.089833Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedAyVuJj: could not find 'G:\Alyxnet\frame\backend\tests\sedAyVuJj' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:16.137326Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedEmZVkV: could not find 'G:\Alyxnet\frame\backend\tests\sedEmZVkV' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:16.161701Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sed6AQBIc: could not find 'G:\Alyxnet\frame\backend\tests\sed6AQBIc' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:16.207957Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedncGPHJ: could not find 'G:\Alyxnet\frame\backend\tests\sedncGPHJ' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:16.318195Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedRCgqn8: could not find 'G:\Alyxnet\frame\backend\tests\sedRCgqn8' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:16.333697Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedXi4ptp: could not find 'G:\Alyxnet\frame\backend\tests\sedXi4ptp' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:16.351532Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedosdedj: could not find 'G:\Alyxnet\frame\backend\tests\sedosdedj' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:16.488412Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedqkecBy: could not find 'G:\Alyxnet\frame\backend\tests\sedqkecBy' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:16.557464Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sed9z9dRR: could not find 'G:\Alyxnet\frame\backend\tests\sed9z9dRR' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:16.593485Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\seds0qN6G: could not find 'G:\Alyxnet\frame\backend\tests\seds0qN6G' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:16.660645Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedK57Vhu: could not find 'G:\Alyxnet\frame\backend\tests\sedK57Vhu' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:16.679852Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedE5juoU: could not find 'G:\Alyxnet\frame\backend\tests\sedE5juoU' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:16.745203Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedC3oIeI: could not find 'G:\Alyxnet\frame\backend\tests\sedC3oIeI' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:16.794120Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedUVpqmf: could not find 'G:\Alyxnet\frame\backend\tests\sedUVpqmf' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:16.812916Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedXf44g1: could not find 'G:\Alyxnet\frame\backend\tests\sedXf44g1' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:16.856613Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedxSFj05: could not find 'G:\Alyxnet\frame\backend\tests\sedxSFj05' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:16.926572Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedSx5ReG: could not find 'G:\Alyxnet\frame\backend\tests\sedSx5ReG' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:16.969671Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sed3IDSnn: could not find 'G:\Alyxnet\frame\backend\tests\sed3IDSnn' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:17.022472Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedfdH2UU: could not find 'G:\Alyxnet\frame\backend\tests\sedfdH2UU' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
+2026-02-24T17:56:17.041301Z  WARN get_package_file_hashes{include_default_files=true telemetry=None}: turborepo_scm::package_deps: git hashing failed for AnchoredSystemPath("backend") with resource error: Git error on G:\Alyxnet\frame\backend\tests\sedm26GqH: could not find 'G:\Alyxnet\frame\backend\tests\sedm26GqH' to open: The system cannot find the file specified.
+; class=Os (2); code=NotFound (-3)
