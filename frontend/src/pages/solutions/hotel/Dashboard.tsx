@@ -451,7 +451,7 @@ export function HotelDashboard() {
     };
 
     return (
-        <div className="space-y-0 max-w-[1600px] mx-auto animate-in fade-in duration-300">
+        <div className="space-y-0 animate-in fade-in duration-300">
             {/* ─── Page Header ─────────────────────────────────────────── */}
             <div className="rounded-2xl border bg-card shadow-sm p-4 mb-4">
                 <div className="flex items-center justify-between">
