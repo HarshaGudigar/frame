@@ -27,15 +27,15 @@ function resolveMongoTool(envVar: string, binaryName: string): string {
     const candidates =
         process.platform === 'win32'
             ? [
-                path.join(
-                    process.env.USERPROFILE || '',
-                    'mongodb-tools',
-                    'mongodb-database-tools-windows-x86_64-100.10.0',
-                    'bin',
-                    `${binaryName}.exe`,
-                ),
-                path.join('C:\\Program Files\\MongoDB\\Tools\\100\\bin', `${binaryName}.exe`),
-            ]
+                  path.join(
+                      process.env.USERPROFILE || '',
+                      'mongodb-tools',
+                      'mongodb-database-tools-windows-x86_64-100.10.0',
+                      'bin',
+                      `${binaryName}.exe`,
+                  ),
+                  path.join('C:\\Program Files\\MongoDB\\Tools\\100\\bin', `${binaryName}.exe`),
+              ]
             : [`/usr/bin/${binaryName}`, `/usr/local/bin/${binaryName}`];
 
     const fs = require('fs');
@@ -106,22 +106,18 @@ module.exports = {
     APP_URL: process.env.APP_URL || 'http://localhost:5173',
     EMAIL_FROM: process.env.EMAIL_FROM || 'Alyxnet Frame <noreply@yourdomain.com>',
 
-    // Rate Limiting
+    // Rate Limiting (Increased defaults to prevent lockouts during testing)
     RATE_LIMIT_WINDOW_MS: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '', 10) || 15 * 60 * 1000, // 15 min
-    RATE_LIMIT_MAX_AUTH:
-        parseInt(process.env.RATE_LIMIT_MAX_AUTH || '', 10) || 5000,
+    RATE_LIMIT_MAX_AUTH: parseInt(process.env.RATE_LIMIT_MAX_AUTH || '', 10) || 50000,
     RATE_LIMIT_LOGIN_WINDOW_MS:
         parseInt(process.env.RATE_LIMIT_LOGIN_WINDOW_MS || '', 10) || 15 * 60 * 1000,
-    RATE_LIMIT_LOGIN_MAX:
-        parseInt(process.env.RATE_LIMIT_LOGIN_MAX || '', 10) || 5000,
+    RATE_LIMIT_LOGIN_MAX: parseInt(process.env.RATE_LIMIT_LOGIN_MAX || '', 10) || 50000,
     RATE_LIMIT_REGISTER_WINDOW_MS:
         parseInt(process.env.RATE_LIMIT_REGISTER_WINDOW_MS || '', 10) || 15 * 60 * 1000,
-    RATE_LIMIT_REGISTER_MAX:
-        parseInt(process.env.RATE_LIMIT_REGISTER_MAX || '', 10) || 5000,
+    RATE_LIMIT_REGISTER_MAX: parseInt(process.env.RATE_LIMIT_REGISTER_MAX || '', 10) || 50000,
     RATE_LIMIT_FORGOT_PW_WINDOW_MS:
         parseInt(process.env.RATE_LIMIT_FORGOT_PW_WINDOW_MS || '', 10) || 15 * 60 * 1000,
-    RATE_LIMIT_FORGOT_PW_MAX:
-        parseInt(process.env.RATE_LIMIT_FORGOT_PW_MAX || '', 10) || 5000,
+    RATE_LIMIT_FORGOT_PW_MAX: parseInt(process.env.RATE_LIMIT_FORGOT_PW_MAX || '', 10) || 50000,
 
     // Request Limits
     BODY_SIZE_LIMIT: process.env.BODY_SIZE_LIMIT || '10kb',
