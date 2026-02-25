@@ -276,3 +276,14 @@ body[data-electron='true'] [data-slot='sidebar-container'] {
     top: var(--titlebar-height) !important;
     height: calc(100svh - var(--titlebar-height)) !important;
 }
+
+/* Copilot sidebar layout adjustment */
+body.copilot-open [data-slot='sidebar-inset'] {
+    @media (min-width: 1024px) {
+        margin-right: 400px;
+    }
+}
+
+body [data-slot='sidebar-inset'] {
+    transition: margin-right 0.3s ease-in-out;
+}

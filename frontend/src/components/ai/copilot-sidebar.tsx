@@ -28,6 +28,17 @@ export function CopilotSidebar() {
         if (isOpen && messages.length === 0) {
             fetchHistory();
         }
+
+        // Toggle body class to allow main content to adjust its margins/padding
+        if (isOpen) {
+            document.body.classList.add('copilot-open');
+        } else {
+            document.body.classList.remove('copilot-open');
+        }
+
+        return () => {
+            document.body.classList.remove('copilot-open');
+        };
     }, [isOpen]);
 
     // Auto-scroll to bottom
@@ -137,6 +148,7 @@ export function CopilotSidebar() {
                                 'fixed inset-y-0 right-0 w-[400px] max-w-[100vw] bg-background/95 backdrop-blur-xl border-l shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col',
                                 isOpen ? 'translate-x-0' : 'translate-x-full',
                             )}
+                            style={{ top: 'var(--titlebar-height, 0px)' }}
                         >
                             {/* Header */}
                             <div className="shrink-0 flex items-center justify-between p-4 border-b bg-background/50 backdrop-blur-md relative overflow-hidden">
@@ -207,7 +219,7 @@ export function CopilotSidebar() {
                                                         ? 'bg-muted border border-border/50 text-foreground'
                                                         : 'ring-1 ring-primary/20 bg-primary/10 text-primary shadow-[0_0_10px_rgba(var(--primary),0.2)]',
                                                     msg.role === 'system' &&
-                                                    'bg-destructive/10 text-destructive ring-1 ring-destructive/30',
+                                                        'bg-destructive/10 text-destructive ring-1 ring-destructive/30',
                                                 )}
                                             >
                                                 {msg.role === 'user' ? (
@@ -223,7 +235,7 @@ export function CopilotSidebar() {
                                                         ? 'bg-gradient-to-br from-primary to-primary/80 text-primary-foreground rounded-tr-sm shadow-[0_4px_14px_0_rgba(var(--primary),0.2)] border border-primary/20'
                                                         : 'glass-card rounded-tl-sm text-foreground/90 font-medium',
                                                     msg.role === 'system' &&
-                                                    'bg-destructive/10 border-destructive/20 text-destructive text-[11px] font-mono font-semibold shadow-none',
+                                                        'bg-destructive/10 border-destructive/20 text-destructive text-[11px] font-mono font-semibold shadow-none',
                                                 )}
                                             >
                                                 {msg.content}
