@@ -145,10 +145,11 @@ export function CopilotSidebar() {
                         {/* Slide-out Panel */}
                         <div
                             className={cn(
-                                'fixed inset-y-0 right-0 w-[400px] max-w-[100vw] bg-background/95 backdrop-blur-xl border-l shadow-2xl z-50 transform transition-transform duration-300 ease-in-out flex flex-col',
-                                isOpen ? 'translate-x-0' : 'translate-x-full',
+                                'fixed bottom-4 right-4 w-[420px] max-w-[calc(100vw-32px)] h-[600px] max-h-[calc(100vh-100px)] bg-background/95 backdrop-blur-xl border shadow-2xl z-50 rounded-3xl overflow-hidden transform transition-all duration-300 ease-in-out flex flex-col',
+                                isOpen
+                                    ? 'translate-y-0 opacity-100 scale-100'
+                                    : 'translate-y-10 opacity-0 scale-95 pointer-events-none',
                             )}
-                            style={{ top: 'var(--titlebar-height, 0px)' }}
                         >
                             {/* Header */}
                             <div className="shrink-0 flex items-center justify-between p-4 border-b bg-background/50 backdrop-blur-md relative overflow-hidden">
@@ -156,11 +157,11 @@ export function CopilotSidebar() {
                                 <div className="absolute inset-0 bg-grid-pattern opacity-10 pointer-events-none" />
 
                                 <div className="flex items-center gap-3 relative z-10">
-                                    <div className="flex items-center justify-center size-9 rounded-full ring-1 ring-primary/30 bg-primary/10 text-primary glow-primary shadow-sm">
-                                        <Bot className="size-5 drop-shadow-md" />
+                                    <div className="flex items-center justify-center size-8 rounded-full ring-1 ring-primary/30 bg-primary/10 text-primary glow-primary shadow-sm">
+                                        <Bot className="size-4 drop-shadow-md" />
                                     </div>
                                     <div>
-                                        <h3 className="font-semibold leading-none mb-1 text-[15px] tracking-tight">
+                                        <h3 className="font-bold leading-none mb-1 text-[14px] tracking-tight">
                                             Platform Copilot
                                         </h3>
                                         <div className="flex items-center gap-2">
@@ -183,17 +184,17 @@ export function CopilotSidebar() {
                                         size="icon"
                                         onClick={handleClear}
                                         title="Clear chat history"
-                                        className="rounded-full hover:bg-destructive/10 hover:text-destructive text-muted-foreground transition-colors size-8"
+                                        className="rounded-full hover:bg-destructive/10 hover:text-destructive text-muted-foreground transition-colors size-7"
                                     >
-                                        <Trash2 className="size-3.5" />
+                                        <Trash2 className="size-3" />
                                     </Button>
                                     <Button
                                         variant="ghost"
                                         size="icon"
                                         onClick={() => setIsOpen(false)}
-                                        className="rounded-full hover:bg-muted/50 hover:text-foreground text-muted-foreground transition-colors size-8"
+                                        className="rounded-full hover:bg-muted/50 hover:text-foreground text-muted-foreground transition-colors size-7"
                                     >
-                                        <X className="size-4" />
+                                        <X className="size-3.5" />
                                     </Button>
                                 </div>
                             </div>
@@ -266,38 +267,26 @@ export function CopilotSidebar() {
                                         value={input}
                                         onChange={(e) => setInput(e.target.value)}
                                         disabled={isTyping}
-                                        className="pr-12 rounded-full bg-muted/30 border-border/50 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary focus-visible:bg-background shadow-inner h-[50px] text-[13px] transition-all"
+                                        className="pr-12 rounded-2xl bg-muted/40 border-border/40 focus-visible:ring-1 focus-visible:ring-primary focus-visible:border-primary focus-visible:bg-background shadow-none h-[44px] text-[13px] transition-all"
                                     />
                                     <Button
                                         type="submit"
                                         size="icon"
                                         disabled={!input.trim() || isTyping}
                                         className={cn(
-                                            'absolute right-1.5 h-9 w-9 rounded-full transition-all duration-300',
+                                            'absolute right-1 text-primary h-8 w-8 rounded-xl transition-all duration-300 bg-transparent hover:bg-primary/10',
                                             input.trim() && !isTyping
-                                                ? 'bg-primary text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.4)] hover:scale-105 active:scale-95'
-                                                : 'bg-muted text-muted-foreground hover:bg-muted',
+                                                ? 'opacity-100'
+                                                : 'opacity-40',
                                         )}
                                     >
                                         {isTyping ? (
-                                            <Loader2 className="size-4 animate-spin text-primary" />
+                                            <Loader2 className="size-4 animate-spin" />
                                         ) : (
-                                            <Send
-                                                className={cn(
-                                                    'size-4 transition-transform',
-                                                    input.trim() && !isTyping
-                                                        ? '-ml-0.5 mt-0.5'
-                                                        : 'm-0',
-                                                )}
-                                            />
+                                            <Send className="size-4" />
                                         )}
                                     </Button>
                                 </form>
-                                <div className="text-center mt-3">
-                                    <span className="text-[9px] text-muted-foreground/50 font-medium uppercase tracking-wider">
-                                        AI can make mistakes. Verify important information.
-                                    </span>
-                                </div>
                             </div>
                         </div>
 
