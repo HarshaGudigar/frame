@@ -36,7 +36,6 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { BRAND } from '@/config/brand';
 import { BackgroundDecoration } from './ui/background-decoration';
-import { DebugPanel } from '@/components/debug-panel';
 import { CopilotSidebar } from '@/components/ai/copilot-sidebar';
 
 const navCore = [
@@ -309,7 +308,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </header>
                 <main className="flex-1 p-6 page-transition relative">{children}</main>
             </SidebarInset>
-            <DebugPanel />
         </SidebarProvider>
     );
 }

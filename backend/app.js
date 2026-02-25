@@ -102,10 +102,6 @@ function createApp() {
 
     // Legacy multi-tenancy middleware removed
 
-    // ─── Developer Debug Panel ───────────────────────────────────────────────
-    const debugMiddleware = require('./middleware/debugMiddleware');
-    app.use(debugMiddleware);
-
     // Usage metering disabled in single-instance mode for now
 
     // ─── Module Discovery ────────────────────────────────────────────────────
