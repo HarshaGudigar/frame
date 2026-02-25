@@ -40,7 +40,7 @@ function AppMenu() {
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
             <DropdownMenu>
-                <DropdownMenuTrigger className="px-2 py-0 h-6 flex items-center text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted rounded focus:outline-none focus:bg-muted transition-colors leading-none">
+                <DropdownMenuTrigger className="px-2 py-1 text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted rounded focus:outline-none focus:bg-muted transition-colors">
                     File
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-48 text-[12px]">
@@ -61,7 +61,7 @@ function AppMenu() {
             </DropdownMenu>
 
             <DropdownMenu>
-                <DropdownMenuTrigger className="px-2 py-0 h-6 flex items-center text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted rounded focus:outline-none focus:bg-muted transition-colors leading-none">
+                <DropdownMenuTrigger className="px-2 py-1 text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted rounded focus:outline-none focus:bg-muted transition-colors">
                     Edit
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-48 text-[12px]">
@@ -85,7 +85,7 @@ function AppMenu() {
             </DropdownMenu>
 
             <DropdownMenu>
-                <DropdownMenuTrigger className="px-2 py-0 h-6 flex items-center text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted rounded focus:outline-none focus:bg-muted transition-colors leading-none">
+                <DropdownMenuTrigger className="px-2 py-1 text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted rounded focus:outline-none focus:bg-muted transition-colors">
                     View
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-48 text-[12px]">
@@ -118,7 +118,7 @@ function AppMenu() {
             </DropdownMenu>
 
             <DropdownMenu>
-                <DropdownMenuTrigger className="px-2 py-0 h-6 flex items-center text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted rounded focus:outline-none focus:bg-muted transition-colors leading-none">
+                <DropdownMenuTrigger className="px-2 py-1 text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted rounded focus:outline-none focus:bg-muted transition-colors">
                     Help
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-48 text-[12px]">
@@ -207,7 +207,7 @@ export function TitleBar() {
 
             {/* Center: Current page name — Hidden on narrow windows */}
             <div
-                className="absolute inset-y-0 left-1/2 -translate-x-1/2 hidden md:flex items-center gap-2"
+                className="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center gap-2"
                 style={{ pointerEvents: 'none' }}
             >
                 <span
