@@ -101,6 +101,20 @@ function SidebarProvider({
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [toggleSidebar]);
 
+    // Auto-collapse sidebar on smaller desktop widths
+    React.useEffect(() => {
+        const handleResize = () => {
+            if (!isMobile && window.innerWidth < 1024 && open) {
+                setOpen(false);
+            }
+        };
+
+        window.addEventListener('resize', handleResize);
+        // Run once on mount
+        handleResize();
+        return () => window.removeEventListener('resize', handleResize);
+    }, [isMobile, open, setOpen]);
+
     // We add a state so that we can do data-state="expanded" or "collapsed".
     // This makes it easier to style the sidebar with Tailwind classes.
     const state = open ? 'expanded' : 'collapsed';

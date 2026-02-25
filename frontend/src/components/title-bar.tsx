@@ -201,13 +201,13 @@ export function TitleBar() {
             }
         >
             {/* Left: App Menu */}
-            <div className="flex items-center gap-1.5 min-w-[300px]">
+            <div className="flex items-center gap-1.5 flex-1">
                 <AppMenu />
             </div>
 
-            {/* Center: Current page name */}
+            {/* Center: Current page name — Hidden on narrow windows */}
             <div
-                className="absolute left-1/2 -translate-x-1/2 flex items-center gap-2"
+                className="absolute left-1/2 -translate-x-1/2 hidden md:flex items-center gap-2"
                 style={{ pointerEvents: 'none' }}
             >
                 <span
