@@ -66,7 +66,6 @@ nativeTheme.on('updated', () => {
     });
 });
 
-// Allow the React app to notify Electron when the user manually toggles theme
 ipcMain.on('theme-changed', (_event, isDark) => {
     if (!win) return;
     const colors = isDark ? THEME.dark : THEME.light;
@@ -76,6 +75,11 @@ ipcMain.on('theme-changed', (_event, isDark) => {
         height: 32,
     });
 });
+
+// App Control IPCs
+ipcMain.on('app-quit', () => app.quit());
+ipcMain.on('app-reload', () => win.webContents.reload());
+ipcMain.on('app-toggle-devtools', () => win.webContents.toggleDevTools());
 
 app.whenReady().then(createWindow);
 
