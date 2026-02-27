@@ -74,11 +74,13 @@ router.patch(
     requireVerifiedEmail,
     requireRole('superuser', 'admin'),
     asyncHandler(async (req, res) => {
-        const { instanceName, slug, branding, enabledModules, billingStatus } = req.body;
+        const { instanceName, instanceDescription, slug, branding, enabledModules, billingStatus } =
+            req.body;
 
         const config = await AppConfig.getInstance();
 
         if (instanceName !== undefined) config.instanceName = instanceName;
+        if (instanceDescription !== undefined) config.instanceDescription = instanceDescription;
         if (slug !== undefined) config.slug = slug;
         if (branding !== undefined) config.branding = { ...config.branding, ...branding };
         if (enabledModules !== undefined) config.enabledModules = enabledModules;

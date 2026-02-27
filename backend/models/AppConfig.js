@@ -15,6 +15,11 @@ const appConfigSchema = new mongoose.Schema(
             trim: true,
             default: 'Alyxnet Frame',
         },
+        instanceDescription: {
+            type: String,
+            trim: true,
+            default: 'Enterprise Control Plane',
+        },
         slug: {
             type: String,
             required: true,
@@ -72,6 +77,7 @@ appConfigSchema.statics.getInstance = async function () {
     if (!config) {
         config = await this.create({
             instanceName: process.env.INSTANCE_NAME || 'Alyxnet Frame',
+            instanceDescription: process.env.INSTANCE_DESCRIPTION || 'Enterprise Control Plane',
             slug: process.env.INSTANCE_SLUG || 'default',
             enabledModules: (process.env.ENABLED_MODULES || '')
                 .split(',')

@@ -34,7 +34,6 @@ import {
     SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { Separator } from '@/components/ui/separator';
-import { BRAND } from '@/config/brand';
 import { BackgroundDecoration } from './ui/background-decoration';
 import { CopilotSidebar } from '@/components/ai/copilot-sidebar';
 import { TitleBar, isElectron } from '@/components/title-bar';
@@ -98,7 +97,7 @@ function AppSidebar() {
                                 </div>
                                 <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                                     <span className="truncate font-bold tracking-tight text-base leading-none">
-                                        {systemInfo?.instanceName || BRAND.fullName}
+                                        {systemInfo?.instanceName || 'Alyxnet Framework'}
                                     </span>
                                     <span className="text-[10px] text-muted-foreground/80 font-medium uppercase tracking-wider mt-0.5 leading-none">
                                         v2.1.0 · {systemInfo?.mode || 'LOCAL'}

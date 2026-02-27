@@ -2,6 +2,7 @@ import { ProfileForm } from '@/components/settings/profile-form';
 import { TwoFactorSettings } from '@/components/settings/two-factor-settings';
 import { DatabaseBackups } from '@/components/settings/database-backups';
 import { RoleMatrix } from '@/components/settings/role-matrix';
+import { SystemSettings } from '@/components/settings/system-settings';
 import { Can } from '@/hooks/use-permission';
 
 export function SettingsPage() {
@@ -22,6 +23,7 @@ export function SettingsPage() {
             </Can>
 
             <Can role="superuser">
+                <SystemSettings />
                 <DatabaseBackups />
             </Can>
         </div>

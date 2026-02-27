@@ -43,6 +43,7 @@ router.get('/', async (req, res) => {
             success: isHealthy,
             mode: config.RUNTIME_MODE,
             instanceName: appConfig.instanceName,
+            instanceDescription: appConfig.instanceDescription,
             branding: appConfig.branding,
             enabledModules: appConfig.enabledModules,
             uptime: `${Math.floor(process.uptime())}s`,

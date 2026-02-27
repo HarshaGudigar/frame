@@ -26,7 +26,15 @@ interface AuthContextType {
     api: AxiosInstance;
     login: (token: string, refreshToken: string, user: User) => void;
     logout: () => void;
-    systemInfo: { mode: string; instanceName?: string; branding?: any; enabledModules?: string[]; success?: boolean } | null;
+    systemInfo: {
+        mode: string;
+        instanceName?: string;
+        instanceDescription?: string;
+        branding?: any;
+        enabledModules?: string[];
+        success?: boolean;
+    } | null;
+    refreshSystemInfo: () => Promise<void>;
     refreshUser: () => Promise<void>;
 }
 
@@ -56,6 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [systemInfo, setSystemInfo] = useState<{
         mode: string;
         instanceName?: string;
+        instanceDescription?: string;
         branding?: any;
         enabledModules?: string[];
         success?: boolean;
@@ -81,6 +90,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 // System Info (Platform Config)
                 const configResponse = await axios.get(`${API_BASE}/health`);
                 setSystemInfo(configResponse.data);
+                if (configResponse.data?.instanceName) {
+                    document.title = configResponse.data.instanceName;
+                }
 
                 // User Profile & Permissions
                 if (tokenRef.current) {
@@ -97,6 +109,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
         fetchInitialData();
     }, [api]);
+
+    const refreshSystemInfo = async () => {
+        try {
+            const configResponse = await axios.get(`${API_BASE}/health`);
+            setSystemInfo(configResponse.data);
+            // Also dispatch custom event for components outside context (like index.html title)
+            if (configResponse.data?.instanceName) {
+                document.title = configResponse.data.instanceName;
+            }
+        } catch (err) {
+            console.error('Failed to refresh system info', err);
+        }
+    };
 
     const refreshUser = async () => {
         if (!tokenRef.current) return;
@@ -225,7 +250,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (refreshTokenRef.current) {
             axios
                 .post(`${API_BASE}/auth/logout`, { refreshToken: refreshTokenRef.current })
-                .catch(() => { });
+                .catch(() => {});
         }
 
         setToken(null);
@@ -237,7 +262,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, token, api, login, logout, systemInfo, refreshUser }}>
+        <AuthContext.Provider
+            value={{ user, token, api, login, logout, systemInfo, refreshSystemInfo, refreshUser }}
+        >
             {children}
         </AuthContext.Provider>
     );

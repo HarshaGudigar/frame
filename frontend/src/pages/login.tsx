@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/auth-context';
-import { BRAND } from '@/config/brand';
 
 const API_BASE = `${window.location.protocol}//${window.location.hostname}:5000/api`;
 
@@ -84,7 +83,7 @@ export function LoginPage() {
         setError(null);
     };
 
-    const displayTitle = systemInfo?.instanceName || BRAND.fullName;
+    const displayTitle = systemInfo?.instanceName || 'Alyxnet Framework';
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/50">
@@ -102,7 +101,9 @@ export function LoginPage() {
                         )}
                     </div>
                     <h1 className="text-2xl font-bold tracking-tight">{displayTitle}</h1>
-                    <p className="text-sm text-muted-foreground">{BRAND.description}</p>
+                    <p className="text-sm text-muted-foreground">
+                        {systemInfo?.instanceDescription || 'Enterprise Control Plane'}
+                    </p>
                 </CardHeader>
                 <CardContent>
                     {twoFactorPending ? (

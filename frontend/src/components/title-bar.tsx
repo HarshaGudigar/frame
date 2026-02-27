@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import { useSocket } from '@/components/providers/socket-provider';
-import { BRAND } from '@/config/brand';
+import { useAuth } from '@/contexts/auth-context';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
     DropdownMenu,
@@ -33,7 +33,7 @@ const sendIPC = (channel: string, ...args: any[]) => {
     }
 };
 
-function AppMenu() {
+function AppMenu({ instanceName }: { instanceName: string }) {
     return (
         <div
             className="flex items-center gap-0.5 px-1"
@@ -141,7 +141,7 @@ function AppMenu() {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem>
                         <Info className="mr-2 h-3.5 w-3.5" />
-                        About {BRAND.fullName}
+                        About {instanceName}
                     </DropdownMenuItem>
                 </DropdownMenuContent>
             </DropdownMenu>
@@ -161,22 +161,23 @@ const routeNames: Record<string, string> = {
     '/billing': 'Billing',
 };
 
-function getPageName(pathname: string): string {
+function getPageName(pathname: string, instanceName: string): string {
     // Exact match first
     if (routeNames[pathname]) return routeNames[pathname];
     // Prefix match (e.g. /hotel/bookings)
     for (const [key, label] of Object.entries(routeNames)) {
         if (key !== '/' && pathname.startsWith(key)) return label;
     }
-    return BRAND.fullName;
+    return instanceName;
 }
 
 export function TitleBar() {
     const { isConnected } = useSocket();
-
+    const { systemInfo } = useAuth();
     const { pathname } = useLocation();
 
-    const pageName = getPageName(pathname);
+    const instanceName = systemInfo?.instanceName || 'Alyxnet Framework';
+    const pageName = getPageName(pathname, instanceName);
 
     return (
         <div
@@ -202,7 +203,7 @@ export function TitleBar() {
         >
             {/* Left: App Menu */}
             <div className="flex items-center gap-1.5 flex-1">
-                <AppMenu />
+                <AppMenu instanceName={instanceName} />
             </div>
 
             {/* Center: Current page name — Hidden on narrow windows */}
