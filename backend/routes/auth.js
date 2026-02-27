@@ -74,12 +74,17 @@ router.post('/register', registerLimiter, validate({ body: registerSchema }), as
             return errorResponse(res, 'Email already registered', 409);
         }
 
+        // The very first user to register becomes an admin automatically
+        const userCount = await User.countDocuments();
+        const isFirstUser = userCount === 0;
+
         const user = new User({
             email,
             password,
             firstName,
             lastName,
             isEmailVerified: false,
+            ...(isFirstUser && { role: 'admin' }),
         });
         await user.save();
 
@@ -135,8 +140,7 @@ router.post('/login', loginLimiter, validate({ body: loginSchema }), async (req,
     const ipAddress = req.ip;
 
     try {
-        const user = await User.findOne({ email })
-            .select('+password');
+        const user = await User.findOne({ email }).select('+password');
 
         if (!user || !user.isActive) {
             return errorResponse(res, 'Invalid credentials', 401);
