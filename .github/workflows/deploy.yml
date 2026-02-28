@@ -27,6 +27,71 @@ jobs:
                     echo "host=${{ secrets.LIGHTSAIL_HOST }}" >> $GITHUB_OUTPUT
                   fi
 
+            - name: Write production .env on server
+              uses: appleboy/ssh-action@v1.0.3
+              env:
+                  PROD_INSTANCE_NAME: ${{ secrets.PROD_INSTANCE_NAME }}
+                  PROD_INSTANCE_SLUG: ${{ secrets.PROD_INSTANCE_SLUG }}
+                  PROD_INSTANCE_DESCRIPTION: ${{ secrets.PROD_INSTANCE_DESCRIPTION }}
+                  PROD_MONGODB_URI: ${{ secrets.PROD_MONGODB_URI }}
+                  PROD_JWT_SECRET: ${{ secrets.PROD_JWT_SECRET }}
+                  PROD_JWT_EXPIRY: ${{ secrets.PROD_JWT_EXPIRY }}
+                  PROD_REFRESH_TOKEN_SECRET: ${{ secrets.PROD_REFRESH_TOKEN_SECRET }}
+                  PROD_REFRESH_TOKEN_EXPIRY: ${{ secrets.PROD_REFRESH_TOKEN_EXPIRY }}
+                  PROD_HEARTBEAT_SECRET: ${{ secrets.PROD_HEARTBEAT_SECRET }}
+                  PROD_RESEND_API_KEY: ${{ secrets.PROD_RESEND_API_KEY }}
+                  PROD_APP_URL: ${{ secrets.PROD_APP_URL }}
+                  PROD_EMAIL_FROM: ${{ secrets.PROD_EMAIL_FROM }}
+                  PROD_CORS_ORIGINS: ${{ secrets.PROD_CORS_ORIGINS }}
+                  PROD_AWS_REGION: ${{ secrets.PROD_AWS_REGION }}
+                  PROD_AWS_ACCESS_KEY_ID: ${{ secrets.PROD_AWS_ACCESS_KEY_ID }}
+                  PROD_AWS_SECRET_ACCESS_KEY: ${{ secrets.PROD_AWS_SECRET_ACCESS_KEY }}
+                  PROD_BEDROCK_MODEL_ID: ${{ secrets.PROD_BEDROCK_MODEL_ID }}
+              with:
+                  host: ${{ steps.set-host.outputs.host }}
+                  username: ${{ secrets.LIGHTSAIL_USERNAME }}
+                  key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+                  timeout: 5m
+                  envs: PROD_INSTANCE_NAME,PROD_INSTANCE_SLUG,PROD_INSTANCE_DESCRIPTION,PROD_MONGODB_URI,PROD_JWT_SECRET,PROD_JWT_EXPIRY,PROD_REFRESH_TOKEN_SECRET,PROD_REFRESH_TOKEN_EXPIRY,PROD_HEARTBEAT_SECRET,PROD_RESEND_API_KEY,PROD_APP_URL,PROD_EMAIL_FROM,PROD_CORS_ORIGINS,PROD_AWS_REGION,PROD_AWS_ACCESS_KEY_ID,PROD_AWS_SECRET_ACCESS_KEY,PROD_BEDROCK_MODEL_ID
+                  script: |
+                      mkdir -p ~/frame/backend
+                      cat > ~/frame/backend/.env << ENVEOF
+                      NODE_ENV=production
+                      PORT=5000
+
+                      # ─── Branding ──────────────────────────────────────
+                      INSTANCE_NAME="${PROD_INSTANCE_NAME}"
+                      INSTANCE_SLUG="${PROD_INSTANCE_SLUG}"
+                      INSTANCE_DESCRIPTION="${PROD_INSTANCE_DESCRIPTION}"
+
+                      # ─── Database ──────────────────────────────────────
+                      MONGODB_URI="${PROD_MONGODB_URI}"
+
+                      # ─── Auth ──────────────────────────────────────────
+                      JWT_SECRET="${PROD_JWT_SECRET}"
+                      JWT_EXPIRY="${PROD_JWT_EXPIRY:-15m}"
+                      REFRESH_TOKEN_SECRET="${PROD_REFRESH_TOKEN_SECRET}"
+                      REFRESH_TOKEN_EXPIRY="${PROD_REFRESH_TOKEN_EXPIRY:-7d}"
+
+                      # ─── Fleet Manager ─────────────────────────────────
+                      HEARTBEAT_SECRET="${PROD_HEARTBEAT_SECRET}"
+
+                      # ─── Email ─────────────────────────────────────────
+                      RESEND_API_KEY="${PROD_RESEND_API_KEY}"
+                      APP_URL="${PROD_APP_URL}"
+                      EMAIL_FROM="${PROD_EMAIL_FROM}"
+
+                      # ─── CORS ──────────────────────────────────────────
+                      CORS_ORIGINS="${PROD_CORS_ORIGINS}"
+
+                      # ─── AI (AWS Bedrock) ──────────────────────────────
+                      AWS_REGION="${PROD_AWS_REGION}"
+                      AWS_ACCESS_KEY_ID="${PROD_AWS_ACCESS_KEY_ID}"
+                      AWS_SECRET_ACCESS_KEY="${PROD_AWS_SECRET_ACCESS_KEY}"
+                      BEDROCK_MODEL_ID="${PROD_BEDROCK_MODEL_ID}"
+                      ENVEOF
+                      echo ".env written successfully."
+
             - name: Deploy via SSH with rollback
               uses: appleboy/ssh-action@v1.0.3
               with:

@@ -85,8 +85,26 @@ appConfigSchema.statics.getInstance = async function () {
                 .filter((m) => m.slug),
         });
     } else {
-        // Migration: Ensure all enabledModules are objects
+        // Always sync env-var overrides into the DB so a redeploy picks them up
         let changed = false;
+
+        if (process.env.INSTANCE_NAME && config.instanceName !== process.env.INSTANCE_NAME) {
+            config.instanceName = process.env.INSTANCE_NAME;
+            changed = true;
+        }
+        if (
+            process.env.INSTANCE_DESCRIPTION &&
+            config.instanceDescription !== process.env.INSTANCE_DESCRIPTION
+        ) {
+            config.instanceDescription = process.env.INSTANCE_DESCRIPTION;
+            changed = true;
+        }
+        if (process.env.INSTANCE_SLUG && config.slug !== process.env.INSTANCE_SLUG) {
+            config.slug = process.env.INSTANCE_SLUG;
+            changed = true;
+        }
+
+        // Migration: Ensure all enabledModules are objects
         config.enabledModules = config.enabledModules.map((m) => {
             if (typeof m === 'string') {
                 changed = true;
@@ -96,6 +114,7 @@ appConfigSchema.statics.getInstance = async function () {
             }
             return m;
         });
+
         if (changed) {
             await config.save();
         }
