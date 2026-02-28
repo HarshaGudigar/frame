@@ -27,8 +27,34 @@ jobs:
                     echo "host=${{ secrets.LIGHTSAIL_HOST }}" >> $GITHUB_OUTPUT
                   fi
 
+            - name: Validate required secrets
+              env:
+                  CHECK_JWT_SECRET: ${{ secrets.PROD_JWT_SECRET }}
+                  CHECK_REFRESH_SECRET: ${{ secrets.PROD_REFRESH_TOKEN_SECRET }}
+                  CHECK_HEARTBEAT_SECRET: ${{ secrets.PROD_HEARTBEAT_SECRET }}
+                  CHECK_RESEND_KEY: ${{ secrets.PROD_RESEND_API_KEY }}
+                  CHECK_MONGODB_URI: ${{ secrets.PROD_MONGODB_URI }}
+                  CHECK_INSTANCE_NAME: ${{ secrets.PROD_INSTANCE_NAME }}
+              run: |
+                  MISSING=()
+                  [ -z "$CHECK_JWT_SECRET" ]       && MISSING+=("PROD_JWT_SECRET")
+                  [ -z "$CHECK_REFRESH_SECRET" ]   && MISSING+=("PROD_REFRESH_TOKEN_SECRET")
+                  [ -z "$CHECK_HEARTBEAT_SECRET" ] && MISSING+=("PROD_HEARTBEAT_SECRET")
+                  [ -z "$CHECK_RESEND_KEY" ]        && MISSING+=("PROD_RESEND_API_KEY")
+                  [ -z "$CHECK_MONGODB_URI" ]       && MISSING+=("PROD_MONGODB_URI")
+                  [ -z "$CHECK_INSTANCE_NAME" ]     && MISSING+=("PROD_INSTANCE_NAME")
+                  if [ ${#MISSING[@]} -gt 0 ]; then
+                    echo "❌ The following required GitHub Secrets are not set:"
+                    for s in "${MISSING[@]}"; do echo "   • $s"; done
+                    echo ""
+                    echo "Go to: GitHub → Settings → Secrets and variables → Actions"
+                    exit 1
+                  fi
+                  echo "✅ All required secrets are present."
+
             - name: Write production .env on server
               uses: appleboy/ssh-action@v1.0.3
+
               env:
                   PROD_INSTANCE_NAME: ${{ secrets.PROD_INSTANCE_NAME }}
                   PROD_INSTANCE_SLUG: ${{ secrets.PROD_INSTANCE_SLUG }}
