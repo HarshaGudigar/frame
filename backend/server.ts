@@ -42,6 +42,10 @@ if (require.main === module) {
                 const { seedDefaultAdmin } = require('./jobs/seedAdmin');
                 await seedDefaultAdmin();
 
+                // Seed default roles (idempotent — safe on every restart)
+                const { seedDefaultRoles } = require('./jobs/seedRoles');
+                await seedDefaultRoles();
+
                 return;
             } catch (err) {
                 logger.warn(
