@@ -1,7 +1,7 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
-const { authenticator } = require('otplib');
+const { generateSecret, generateURI, verifySync } = require('otplib');
 const QRCode = require('qrcode');
 const router = express.Router();
 const User = require('../models/User');
@@ -628,7 +628,7 @@ router.post(
 
             let isValid = false;
             try {
-                isValid = authenticator.check(code, user.twoFactorSecret);
+                isValid = verifySync({ secret: user.twoFactorSecret, token: code }).valid;
             } catch (e) {
                 console.error('OTP login verify error:', e);
             }
@@ -675,18 +675,18 @@ router.post('/2fa/setup', authMiddleware, async (req, res) => {
             return errorResponse(res, 'Two-factor authentication is already enabled', 400);
         }
 
-        const secret = authenticator.generateSecret();
+        const secret = generateSecret();
 
         // Save secret but don't enable 2FA yet
         user.twoFactorSecret = secret;
         await user.save();
 
-        const otpauthUrl = authenticator.generateSecret({
-            name: 'Alyxnet Frame',
-            account: user.email,
+        const finalUrl = generateURI({
+            type: 'totp',
+            issuer: 'Alyxnet Frame',
+            accountName: user.email,
+            secret,
         });
-        // NOTE: Actually modern otplib uses 'authenticator.keyuri(user.email, "Alyxnet Frame", secret)'
-        const finalUrl = authenticator.keyuri(user.email, 'Alyxnet Frame', secret);
         const qrCode = await QRCode.toDataURL(finalUrl);
 
         return successResponse(res, { qrCode, secret }, 'Two-factor setup initiated');
@@ -722,7 +722,7 @@ router.post(
 
             let isValid = false;
             try {
-                isValid = authenticator.check(code, user.twoFactorSecret);
+                isValid = verifySync({ secret: user.twoFactorSecret, token: code }).valid;
             } catch (e) {
                 console.error('OTP verification error:', e);
             }
@@ -763,7 +763,7 @@ router.post(
 
             let isValid = false;
             try {
-                isValid = authenticator.check(code, user.twoFactorSecret);
+                isValid = verifySync({ secret: user.twoFactorSecret, token: code }).valid;
             } catch (e) {
                 console.error('OTP disable error:', e);
             }
