@@ -122,7 +122,10 @@ router.get(
     requireRole('superuser', 'admin'),
     async (req, res) => {
         try {
-            const users = await User.find({}, 'firstName lastName email role isActive createdAt');
+            const users = await User.find(
+                {},
+                'firstName lastName email role isActive isEmailVerified createdAt',
+            );
 
             res.json({ success: true, count: users.length, data: users });
         } catch (error) {
@@ -238,6 +241,95 @@ router.post(
 
 /**
  * @swagger
+ * /api/admin/users/{id}/resend-verification:
+ *   post:
+ *     summary: Resend verification or invite email for a user
+ *     tags: [Admin]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: Verification email sent
+ */
+router.post(
+    '/users/:id/resend-verification',
+    authMiddleware,
+    requireVerifiedEmail,
+    requireRole('superuser', 'admin'),
+    validate({ params: mongoIdParam }),
+    async (req, res) => {
+        try {
+            const { id } = req.params;
+            const targetUser = await User.findById(id);
+
+            if (!targetUser) {
+                return errorResponse(res, 'User not found', 404);
+            }
+
+            if (targetUser.isEmailVerified) {
+                return errorResponse(res, 'User email is already verified', 400);
+            }
+
+            // If user has not accepted invite yet, send an invite email.
+            // Otherwise, send standard verification email.
+            const isInvite = !targetUser.isActive && targetUser.invitedBy;
+            const tokenType = isInvite ? 'invite' : 'email_verification';
+            const expiresInHours = isInvite ? 48 : 24;
+
+            const verificationToken = await VerificationToken.createToken(
+                targetUser._id,
+                tokenType,
+                expiresInHours,
+            );
+
+            try {
+                if (isInvite) {
+                    const inviterName =
+                        `${req.user.firstName || ''} ${req.user.lastName || ''}`.trim() ||
+                        req.user.email;
+                    await emailService.sendInviteEmail(
+                        targetUser.email,
+                        targetUser.firstName,
+                        inviterName,
+                        verificationToken.token,
+                    );
+                } else {
+                    await emailService.sendVerificationEmail(
+                        targetUser.email,
+                        targetUser.firstName,
+                        verificationToken.token,
+                    );
+                }
+            } catch (emailErr) {
+                logger.error(
+                    { err: emailErr, userId: targetUser._id },
+                    'Failed to send verification/invite email from admin',
+                );
+                return errorResponse(
+                    res,
+                    'Failed to send email. Check mail server configuration.',
+                    500,
+                );
+            }
+
+            await logAction(req, 'ADMIN_RESENT_VERIFICATION', targetUser._id, {
+                targetEmail: targetUser.email,
+                type: tokenType,
+            });
+
+            return successResponse(res, null, 'Verification email sent successfully');
+        } catch (error) {
+            logger.error({ err: error }, 'Failed to resend verification email');
+            return errorResponse(res, 'Failed to resend verification email', 500);
+        }
+    },
+);
+
+/**
+ * @swagger
  * /api/admin/users/{id}:
  *   delete:
  *     summary: Deactivate a user
@@ -260,9 +352,22 @@ router.delete(
     async (req, res) => {
         try {
             const { id } = req.params;
+            const hardDelete = req.query.hard === 'true';
 
             if (id === req.user.id) {
                 return errorResponse(res, 'Cannot deactivate yourself', 400);
+            }
+
+            if (hardDelete) {
+                const user = await User.findByIdAndDelete(id);
+                if (!user) {
+                    return errorResponse(res, 'User not found', 404);
+                }
+                logger.info({ adminId: req.user.id, targetUserId: id }, 'User permanently deleted');
+
+                await logAction(req, 'USER_DELETED_PERMANENTLY', id, { targetEmail: user.email });
+
+                return res.json({ success: true, message: 'User permanently deleted' });
             }
 
             const user = await User.findByIdAndUpdate(id, { isActive: false }, { new: true });

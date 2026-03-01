@@ -205,8 +205,10 @@ router.post('/accept-invite', validate({ body: acceptInviteSchema }), async (req
     const ipAddress = req.ip;
 
     try {
+        console.log('Accept Invite attempt for token:', token);
         const tokenDoc = await VerificationToken.findValidToken(token, 'invite');
         if (!tokenDoc) {
+            console.log('Token not found or invalid in DB:', token);
             return errorResponse(res, 'Invalid or expired invitation token', 400);
         }
 

@@ -1,17 +1,25 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import axios from 'axios';
 import { Server, AlertCircle, Check, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/auth-context';
 
 const API_BASE = `${window.location.protocol}//${window.location.hostname}:5000/api`;
 
 export function VerifyEmailPage() {
+    const { logout, token: authToken } = useAuth();
     const [searchParams] = useSearchParams();
     const token = searchParams.get('token');
     const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
     const [message, setMessage] = useState('');
+
+    useEffect(() => {
+        if (authToken) {
+            logout();
+        }
+    }, [authToken, logout]);
 
     useEffect(() => {
         if (!token) {

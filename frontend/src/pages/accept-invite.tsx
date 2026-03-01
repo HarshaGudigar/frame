@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Server, AlertCircle, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,16 +7,25 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/auth-context';
+import { useToast } from '@/hooks/use-toast';
 
 const API_BASE = `${window.location.protocol}//${window.location.hostname}:5000/api`;
 
 export function AcceptInvitePage() {
-    const { login } = useAuth();
+    const { login, logout, token: authToken } = useAuth();
     const [searchParams] = useSearchParams();
+    const navigate = useNavigate();
+    const { toast } = useToast();
     const token = searchParams.get('token');
     const [form, setForm] = useState({ password: '', confirmPassword: '' });
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (authToken) {
+            logout();
+        }
+    }, [authToken, logout]);
 
     if (!token) {
         return (
@@ -50,6 +59,11 @@ export function AcceptInvitePage() {
                 confirmPassword: form.confirmPassword,
             });
             login(res.data.data.accessToken, res.data.data.refreshToken, res.data.data.user);
+            toast({
+                title: 'Account Activated',
+                description: 'Your account is now active. Welcome!',
+            });
+            navigate('/');
         } catch (err: any) {
             const msg = err.response?.data?.message || 'Failed to accept invitation';
             setError(msg);

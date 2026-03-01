@@ -23,7 +23,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Trash2, ShieldCheck, KeyRound } from 'lucide-react';
+import { MoreHorizontal, Trash2, ShieldCheck, KeyRound, Mail } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 export default function Users() {
@@ -62,10 +62,49 @@ export default function Users() {
             } catch (error: any) {
                 toast({
                     variant: 'destructive',
+                    title: 'Deactivate Failed',
+                    description: error.response?.data?.message || 'Failed to deactivate user.',
+                });
+            }
+        }
+    };
+
+    const handleHardDelete = async (id: string, name: string) => {
+        if (
+            confirm(
+                `Are you sure you want to permanently delete user ${name}? This action cannot be undone.`,
+            )
+        ) {
+            try {
+                await api.delete(`/admin/users/${id}?hard=true`);
+                fetchUsers(); // Refresh list
+                toast({
+                    title: 'User Deleted',
+                    description: `User ${name} has been permanently deleted.`,
+                });
+            } catch (error: any) {
+                toast({
+                    variant: 'destructive',
                     title: 'Delete Failed',
                     description: error.response?.data?.message || 'Failed to delete user.',
                 });
             }
+        }
+    };
+
+    const handleResendVerification = async (id: string, name: string) => {
+        try {
+            await api.post(`/admin/users/${id}/resend-verification`);
+            toast({
+                title: 'Email Sent',
+                description: `Verification/Invite email sent to ${name}.`,
+            });
+        } catch (error: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Failed to send email',
+                description: error.response?.data?.message || 'Something went wrong.',
+            });
         }
     };
 
@@ -119,8 +158,8 @@ export default function Users() {
                                                 user.role === 'superuser'
                                                     ? 'default'
                                                     : user.role === 'admin'
-                                                        ? 'secondary'
-                                                        : 'outline'
+                                                      ? 'secondary'
+                                                      : 'outline'
                                             }
                                         >
                                             {user.role}
@@ -167,6 +206,21 @@ export default function Users() {
                                                             <KeyRound className="mr-2 h-4 w-4" />
                                                             Change Password
                                                         </DropdownMenuItem>
+                                                        {(!user.isEmailVerified ||
+                                                            !user.isActive) && (
+                                                            <DropdownMenuItem
+                                                                onClick={() =>
+                                                                    user._id &&
+                                                                    handleResendVerification(
+                                                                        user._id,
+                                                                        `${user.firstName} ${user.lastName}`,
+                                                                    )
+                                                                }
+                                                            >
+                                                                <Mail className="mr-2 h-4 w-4" />
+                                                                Resend Verification
+                                                            </DropdownMenuItem>
+                                                        )}
                                                         <DropdownMenuItem
                                                             className="text-red-600"
                                                             onClick={() =>
@@ -175,6 +229,19 @@ export default function Users() {
                                                         >
                                                             <Trash2 className="mr-2 h-4 w-4" />
                                                             Deactivate
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem
+                                                            className="text-red-700 font-medium"
+                                                            onClick={() =>
+                                                                user._id &&
+                                                                handleHardDelete(
+                                                                    user._id,
+                                                                    `${user.firstName} ${user.lastName}`,
+                                                                )
+                                                            }
+                                                        >
+                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                            Delete
                                                         </DropdownMenuItem>
                                                     </>
                                                 )}

@@ -1,6 +1,7 @@
 const { Resend } = require('resend');
 const { RESEND_API_KEY, APP_URL, EMAIL_FROM } = require('../config');
 const logger = require('../utils/logger');
+const AppConfig = require('../models/AppConfig');
 
 let resend;
 function getResend() {
@@ -8,6 +9,19 @@ function getResend() {
         resend = new Resend(RESEND_API_KEY);
     }
     return resend;
+}
+
+/**
+ * Get brand name dynamically from AppConfig.
+ */
+async function getBrandName() {
+    try {
+        const config = await AppConfig.getInstance();
+        return config.instanceName || 'Alyxnet Frame';
+    } catch (error) {
+        logger.error({ err: error }, 'Failed to get AppConfig for brand name');
+        return 'Alyxnet Frame';
+    }
 }
 
 /**
@@ -33,13 +47,14 @@ async function sendEmail(to, subject, html) {
  * Send invite email with link to accept-invite page.
  */
 async function sendInviteEmail(to, firstName, inviterName, token) {
+    const brandName = await getBrandName();
     const link = `${APP_URL}/accept-invite?token=${token}`;
-    const subject = "You've been invited to Alyxnet Frame";
+    const subject = `You've been invited to ${brandName}`;
     const html = `
         <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
-            <h2 style="color: #111;">Welcome to Alyxnet Frame</h2>
+            <h2 style="color: #111;">Welcome to ${brandName}</h2>
             <p>Hi ${firstName},</p>
-            <p>${inviterName} has invited you to join Alyxnet Frame. Click the button below to set your password and activate your account.</p>
+            <p>${inviterName} has invited you to join ${brandName}. Click the button below to set your password and activate your account.</p>
             <div style="text-align: center; margin: 32px 0;">
                 <a href="${link}" style="background-color: #111; color: #fff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: 600;">
                     Accept Invitation
@@ -55,8 +70,9 @@ async function sendInviteEmail(to, firstName, inviterName, token) {
  * Send email verification link.
  */
 async function sendVerificationEmail(to, firstName, token) {
+    const brandName = await getBrandName();
     const link = `${APP_URL}/verify-email?token=${token}`;
-    const subject = 'Verify your email - Alyxnet Frame';
+    const subject = `Verify your email - ${brandName}`;
     const html = `
         <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
             <h2 style="color: #111;">Verify Your Email</h2>
@@ -77,8 +93,9 @@ async function sendVerificationEmail(to, firstName, token) {
  * Send password reset email.
  */
 async function sendPasswordResetEmail(to, firstName, token) {
+    const brandName = await getBrandName();
     const link = `${APP_URL}/reset-password?token=${token}`;
-    const subject = 'Reset your password - Alyxnet Frame';
+    const subject = `Reset your password - ${brandName}`;
     const html = `
         <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
             <h2 style="color: #111;">Reset Your Password</h2>

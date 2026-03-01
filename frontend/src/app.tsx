@@ -91,6 +91,23 @@ function AppRoutes() {
     // Authenticated and verified
     return (
         <Routes>
+            {/* Allow access to public auth routes even when logged in (to prevent redirect loops when clicking emails) */}
+            <Route
+                path="/accept-invite"
+                element={
+                    <Suspense fallback={FullPageLoader}>
+                        <AcceptInvitePage />
+                    </Suspense>
+                }
+            />
+            <Route
+                path="/verify-email"
+                element={
+                    <Suspense fallback={FullPageLoader}>
+                        <VerifyEmailPage />
+                    </Suspense>
+                }
+            />
             <Route
                 path="/solutions/hotel/invoice/:id"
                 element={
