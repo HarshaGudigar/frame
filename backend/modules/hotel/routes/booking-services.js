@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router({ mergeParams: true });
 const { authMiddleware } = require('../../../middleware/authMiddleware');
+const authorize = require('../../../middleware/rbacMiddleware');
 const { validate } = require('../../../middleware/validate');
 const { successResponse, errorResponse } = require('../../../utils/responseWrapper');
 const getModels = require('../getModels');
@@ -12,25 +13,32 @@ const {
 } = require('../schemas');
 
 // GET /bookings/:bookingId/services
-router.get('/', authMiddleware, validate({ params: bookingIdParam }), async (req, res) => {
-    try {
-        const { BookingService, Booking } = await getModels(req);
-        const booking = await Booking.findById(req.params.bookingId);
-        if (!booking) return errorResponse(res, 'Booking not found', 404);
+router.get(
+    '/',
+    authMiddleware,
+    authorize(['superuser', 'admin', 'agent']),
+    validate({ params: bookingIdParam }),
+    async (req, res) => {
+        try {
+            const { BookingService, Booking } = await getModels(req);
+            const booking = await Booking.findById(req.params.bookingId);
+            if (!booking) return errorResponse(res, 'Booking not found', 404);
 
-        const services = await BookingService.find({ booking: req.params.bookingId })
-            .populate('service')
-            .sort({ createdAt: -1 });
-        return successResponse(res, services);
-    } catch (error) {
-        return errorResponse(res, 'Failed to fetch booking services', 500, error);
-    }
-});
+            const services = await BookingService.find({ booking: req.params.bookingId })
+                .populate('service')
+                .sort({ createdAt: -1 });
+            return successResponse(res, services);
+        } catch (error) {
+            return errorResponse(res, 'Failed to fetch booking services', 500, error);
+        }
+    },
+);
 
 // POST /bookings/:bookingId/services
 router.post(
     '/',
     authMiddleware,
+    authorize(['superuser', 'admin', 'agent']),
     validate({ params: bookingIdParam, body: createBookingServiceSchema }),
     async (req, res) => {
         try {
@@ -65,6 +73,7 @@ router.post(
 router.patch(
     '/:id',
     authMiddleware,
+    authorize(['superuser', 'admin', 'agent']),
     validate({ params: bookingServiceIdParam, body: updateBookingServiceSchema }),
     async (req, res) => {
         try {
@@ -96,6 +105,7 @@ router.patch(
 router.delete(
     '/:id',
     authMiddleware,
+    authorize(['superuser', 'admin', 'agent']),
     validate({ params: bookingServiceIdParam }),
     async (req, res) => {
         try {

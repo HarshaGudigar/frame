@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { authMiddleware } = require('../../../middleware/authMiddleware');
+const authorize = require('../../../middleware/rbacMiddleware');
 const { successResponse, errorResponse } = require('../../../utils/responseWrapper');
 
 // Configure storage
@@ -42,7 +43,7 @@ const upload = multer({
  * POST /api/m/hotel/uploads/id-proof
  * Upload an ID proof image.
  */
-router.post('/id-proof', authMiddleware, (req, res) => {
+router.post('/id-proof', authMiddleware, authorize(['superuser', 'admin', 'agent']), (req, res) => {
     upload.single('file')(req, res, (err) => {
         if (err instanceof multer.MulterError) {
             return errorResponse(res, `Multer error: ${err.message}`, 400);

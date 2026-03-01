@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const getModels = require('../getModels');
 const { authMiddleware } = require('../../../middleware/authMiddleware');
+const authorize = require('../../../middleware/rbacMiddleware');
 const { validate } = require('../../../middleware/validate');
 const { successResponse, errorResponse } = require('../../../utils/responseWrapper');
 const {
@@ -17,6 +18,7 @@ const {
 router.post(
     '/',
     authMiddleware,
+    authorize(['superuser', 'admin', 'agent']),
     validate({ body: createInventoryItemSchema }),
     async (req, res) => {
         try {
@@ -34,7 +36,7 @@ router.post(
  * @route   GET /api/hotel/inventory
  * @desc    List all inventory items
  */
-router.get('/', authMiddleware, async (req, res) => {
+router.get('/', authMiddleware, authorize(['superuser', 'admin', 'agent']), async (req, res) => {
     try {
         const { InventoryItem } = await getModels(req);
         const { category, lowStock } = req.query;
@@ -63,6 +65,7 @@ router.get('/', authMiddleware, async (req, res) => {
 router.patch(
     '/:id',
     authMiddleware,
+    authorize(['superuser', 'admin', 'agent']),
     validate({ params: mongoIdParam, body: updateInventoryItemSchema }),
     async (req, res) => {
         try {
@@ -90,15 +93,21 @@ router.patch(
 /**
  * @route   DELETE /api/hotel/inventory/:id
  */
-router.delete('/:id', authMiddleware, validate({ params: mongoIdParam }), async (req, res) => {
-    try {
-        const { InventoryItem } = await getModels(req);
-        const item = await InventoryItem.findByIdAndDelete(req.params.id);
-        if (!item) return errorResponse(res, 'Item not found', 404);
-        return successResponse(res, { message: 'Item deleted' });
-    } catch (error) {
-        return errorResponse(res, 'Failed to delete item', 500, error);
-    }
-});
+router.delete(
+    '/:id',
+    authMiddleware,
+    authorize(['superuser', 'admin']),
+    validate({ params: mongoIdParam }),
+    async (req, res) => {
+        try {
+            const { InventoryItem } = await getModels(req);
+            const item = await InventoryItem.findByIdAndDelete(req.params.id);
+            if (!item) return errorResponse(res, 'Item not found', 404);
+            return successResponse(res, { message: 'Item deleted' });
+        } catch (error) {
+            return errorResponse(res, 'Failed to delete item', 500, error);
+        }
+    },
+);
 
 module.exports = router;

@@ -49,7 +49,13 @@ const navPlatform = [
 ];
 
 const navModules = [
-    { to: '/hotel', icon: Building2, label: 'Hotel Mgmt', module: 'hotel' },
+    {
+        to: '/hotel',
+        icon: Building2,
+        label: 'Hotel Mgmt',
+        module: 'hotel',
+        roles: ['admin', 'agent'],
+    },
     { to: '/billing', icon: Store, label: 'Billing', module: 'billing' },
 ];
 
@@ -181,6 +187,13 @@ function AppSidebar() {
                                     (m: any) => m === moduleSlug || m.slug === moduleSlug,
                                 );
                                 if (!hasModuleAccess && user?.role !== 'superuser') return null;
+
+                                // Check role restrictions for module navigation items
+                                if (item.roles && user?.role !== 'superuser') {
+                                    if (!item.roles.includes(user?.role as string)) {
+                                        return null;
+                                    }
+                                }
 
                                 return (
                                     <SidebarMenuItem key={item.to}>

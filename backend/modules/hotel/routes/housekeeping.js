@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const getModels = require('../getModels');
+const authorize = require('../../../middleware/rbacMiddleware');
 const { validate } = require('../../../middleware/validate');
 const { authMiddleware } = require('../../../middleware/authMiddleware');
 const { successResponse, errorResponse } = require('../../../utils/responseWrapper');
@@ -18,6 +19,7 @@ const {
 router.post(
     '/',
     authMiddleware,
+    authorize(['superuser', 'admin', 'agent']),
     validate({ body: createHousekeepingTaskSchema }),
     async (req, res) => {
         try {
@@ -45,7 +47,7 @@ router.post(
  * @desc    Get all housekeeping tasks
  * @access  Private (Hotel Staff)
  */
-router.get('/', authMiddleware, async (req, res) => {
+router.get('/', authMiddleware, authorize(['superuser', 'admin', 'agent']), async (req, res) => {
     try {
         const { HousekeepingTask } = await getModels(req);
         const { status, roomId, staffName } = req.query;
@@ -71,6 +73,7 @@ router.get('/', authMiddleware, async (req, res) => {
 router.patch(
     '/:id/status',
     authMiddleware,
+    authorize(['superuser', 'admin', 'agent']),
     validate({ params: mongoIdParam, body: updateHousekeepingTaskStatusSchema }),
     async (req, res) => {
         try {
@@ -106,16 +109,22 @@ router.patch(
  * @desc    Delete a housekeeping task
  * @access  Private (Admin)
  */
-router.delete('/:id', authMiddleware, validate({ params: mongoIdParam }), async (req, res) => {
-    try {
-        const { HousekeepingTask } = await getModels(req);
-        const task = await HousekeepingTask.findByIdAndDelete(req.params.id);
-        if (!task) return errorResponse(res, 'Task not found', 404);
-        return successResponse(res, { message: 'Housekeeping task deleted' });
-    } catch (err) {
-        console.error(err);
-        return errorResponse(res, 'Server error deleting task', 500, err);
-    }
-});
+router.delete(
+    '/:id',
+    authMiddleware,
+    authorize(['superuser', 'admin']),
+    validate({ params: mongoIdParam }),
+    async (req, res) => {
+        try {
+            const { HousekeepingTask } = await getModels(req);
+            const task = await HousekeepingTask.findByIdAndDelete(req.params.id);
+            if (!task) return errorResponse(res, 'Task not found', 404);
+            return successResponse(res, { message: 'Housekeeping task deleted' });
+        } catch (err) {
+            console.error(err);
+            return errorResponse(res, 'Server error deleting task', 500, err);
+        }
+    },
+);
 
 module.exports = router;
